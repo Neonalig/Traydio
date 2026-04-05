@@ -22,7 +22,7 @@ public sealed class TrayController : ITrayController
 
     public void Initialize(IClassicDesktopStyleApplicationLifetime lifetime)
     {
-        using var iconStream = AssetLoader.Open(new Uri("avares://Traydio/Assets/avalonia-logo.ico"));
+        using var iconStream = AssetLoader.Open(new Uri("avares://Traydio/Assets/internet-radio.ico"));
 
         _trayIcon = new TrayIcon
         {
