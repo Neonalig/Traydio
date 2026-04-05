@@ -10,17 +10,26 @@ using Traydio.Common;
 
 namespace Traydio.Plugin.FmStreamOrg;
 
-public sealed class FmStreamOrgPlugin : IRadioStationProviderPlugin
+public sealed class FmStreamOrgPlugin : ITraydioPlugin
 {
-    private static readonly HttpClient HttpClient = new();
+    private static readonly HttpClient _httpClient = new();
 
-    public string Id => "fmstream.org";
+    public FmStreamOrgPlugin()
+    {
+        Capabilities = [new StationDiscoveryCapability(this)];
+    }
+
+    public string Id => "plugin.fmstream.org";
 
     public string DisplayName => "FMStream.org";
 
-    public async Task<IReadOnlyList<DiscoveredStation>> SearchAsync(StationSearchRequest request, CancellationToken cancellationToken)
+    public IReadOnlyList<IPluginCapability> Capabilities { get; }
+
+    private static string _providerId => "fmstream.org";
+
+    private static async Task<IReadOnlyList<DiscoveredStation>> SearchStationsAsync(StationSearchRequest request, CancellationToken cancellationToken)
     {
-        var query = Uri.EscapeDataString(request.Query ?? string.Empty);
+        var query = Uri.EscapeDataString(request.Query);
         var stations = await TryJsonApiAsync(query, cancellationToken).ConfigureAwait(false);
         if (stations.Count > 0)
         {
@@ -34,7 +43,7 @@ public sealed class FmStreamOrgPlugin : IRadioStationProviderPlugin
     {
         try
         {
-            using var response = await HttpClient.GetAsync($"https://fmstream.org/api/search?q={query}", cancellationToken).ConfigureAwait(false);
+            using var response = await _httpClient.GetAsync($"https://fmstream.org/api/search?q={query}", cancellationToken).ConfigureAwait(false);
             if (!response.IsSuccessStatusCode)
             {
                 return [];
@@ -80,7 +89,7 @@ public sealed class FmStreamOrgPlugin : IRadioStationProviderPlugin
     {
         try
         {
-            var html = await HttpClient.GetStringAsync($"https://fmstream.org/search/{query}", cancellationToken).ConfigureAwait(false);
+            var html = await _httpClient.GetStringAsync($"https://fmstream.org/search/{query}", cancellationToken).ConfigureAwait(false);
 
             var urlPattern = new Regex("https?://[^\"'\\s<>]+", RegexOptions.Compiled | RegexOptions.IgnoreCase);
             var titlePattern = new Regex("<h[1-6][^>]*>(?<t>[^<]+)</h[1-6]>", RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -122,6 +131,27 @@ public sealed class FmStreamOrgPlugin : IRadioStationProviderPlugin
         return element.TryGetProperty(propertyName, out var value) && value.ValueKind == JsonValueKind.String
             ? value.GetString()
             : null;
+    }
+
+    private sealed class StationDiscoveryCapability : IStationDiscoveryCapability
+    {
+        private readonly FmStreamOrgPlugin _plugin;
+
+        public StationDiscoveryCapability(FmStreamOrgPlugin plugin)
+        {
+            _plugin = plugin;
+        }
+
+        public string CapabilityId => "station-discovery";
+
+        public string ProviderId => _providerId;
+
+        public string DisplayName => _plugin.DisplayName;
+
+        public Task<IReadOnlyList<DiscoveredStation>> SearchAsync(StationSearchRequest request, CancellationToken cancellationToken)
+        {
+            return SearchStationsAsync(request, cancellationToken);
+        }
     }
 }
 

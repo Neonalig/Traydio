@@ -35,7 +35,7 @@ public partial class App : Application
             var relayCoordinator = Program.Services.GetRequiredService<ICommandRelayCoordinator>();
             relayCoordinator.StartPrimaryRelay();
 
-            var pluginManager = Program.Services.GetRequiredService<IStationDiscoveryPluginManager>();
+            var pluginManager = Program.Services.GetRequiredService<IPluginManager>();
             pluginManager.Start();
 
             var trayController = Program.Services.GetRequiredService<ITrayController>();
@@ -51,7 +51,7 @@ public partial class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
-    private void DisableAvaloniaDataAnnotationValidation()
+    private static void DisableAvaloniaDataAnnotationValidation()
     {
         // Get an array of plugins to remove
         var dataValidationPluginsToRemove =

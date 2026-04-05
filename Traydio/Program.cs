@@ -77,7 +77,7 @@ sealed class Program
         {
             services.AddSingleton<IProtocolRegistrationService, NoOpProtocolRegistrationService>();
         }
-        services.AddSingleton<IStationDiscoveryPluginManager, StationDiscoveryPluginManager>();
+        services.AddSingleton<IPluginManager, PluginManager>();
         services.AddSingleton<IStationDiscoveryService, StationDiscoveryService>();
         services.AddSingleton<IInstanceGate, MutexInstanceGate>();
         services.AddSingleton<ICommandRelayClient, NamedPipeCommandRelayClient>();

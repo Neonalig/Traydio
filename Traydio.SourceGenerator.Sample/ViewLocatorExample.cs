@@ -5,7 +5,7 @@ namespace Traydio.SourceGenerator.Sample;
 
 public class ViewLocatorExample
 {
-    public Type[] GetLinkedTypes()
+    public static Type[] GetLinkedTypes()
     {
         return new[]
         {
@@ -14,7 +14,7 @@ public class ViewLocatorExample
         };
     }
 
-    public SampleView? CreateViewFor(SampleViewModel viewModel)
+    public static SampleView? CreateViewFor(SampleViewModel viewModel)
     {
         var services = new ServiceCollection()
             .AddSingleton<IGreetingService, GreetingService>()

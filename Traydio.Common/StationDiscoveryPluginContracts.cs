@@ -4,6 +4,29 @@ using System.Threading.Tasks;
 
 namespace Traydio.Common;
 
+public interface IPluginCapability
+{
+    string CapabilityId { get; }
+}
+
+public interface IStationDiscoveryCapability : IPluginCapability
+{
+    string ProviderId { get; }
+
+    string DisplayName { get; }
+
+    Task<IReadOnlyList<DiscoveredStation>> SearchAsync(StationSearchRequest request, CancellationToken cancellationToken);
+}
+
+public interface ITraydioPlugin
+{
+    string Id { get; }
+
+    string DisplayName { get; }
+
+    IReadOnlyList<IPluginCapability> Capabilities { get; }
+}
+
 public sealed class StationSearchRequest
 {
     public string Query { get; init; } = string.Empty;

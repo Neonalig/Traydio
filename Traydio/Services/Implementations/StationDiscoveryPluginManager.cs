@@ -3,30 +3,32 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
 using Avalonia.Threading;
 using Traydio.Common;
 
 namespace Traydio.Services.Implementations;
 
-public sealed class StationDiscoveryPluginManager : IStationDiscoveryPluginManager
+public sealed class PluginManager : IPluginManager
 {
     private readonly IStationRepository _stationRepository;
-    private readonly List<IRadioStationProviderPlugin> _providers = new();
+    private readonly List<ITraydioPlugin> _plugins = new();
     private readonly Dictionary<string, LoadedPlugin> _loadedPlugins = new(StringComparer.OrdinalIgnoreCase);
 
     private FileSystemWatcher? _watcher;
     private string? _pluginDirectory;
 
-    public event EventHandler? ProvidersChanged;
+    public event EventHandler? PluginsChanged;
 
-    public StationDiscoveryPluginManager(IStationRepository stationRepository)
+    public PluginManager(IStationRepository stationRepository)
     {
         _stationRepository = stationRepository;
     }
 
-    public IReadOnlyList<IRadioStationProviderPlugin> GetProviders()
+    public IReadOnlyList<ITraydioPlugin> GetPlugins()
     {
-        return _providers.ToArray();
+        return _plugins.ToArray();
     }
 
     public bool AddPlugin(string sourceDllPath, out string? error)
@@ -41,7 +43,7 @@ public sealed class StationDiscoveryPluginManager : IStationDiscoveryPluginManag
         EnsurePluginDirectory();
         var targetPath = Path.Combine(_pluginDirectory!, Path.GetFileName(sourceDllPath));
         File.Copy(sourceDllPath, targetPath, overwrite: true);
-        ReloadProviders();
+        ReloadPlugins();
         return true;
     }
 
@@ -50,7 +52,7 @@ public sealed class StationDiscoveryPluginManager : IStationDiscoveryPluginManag
         error = null;
         var settings = _stationRepository.StationDiscoveryPlugins;
 
-        if (_providers.Any(p => string.Equals(p.Id, pluginId, StringComparison.OrdinalIgnoreCase)))
+        if (_plugins.Any(p => string.Equals(p.Id, pluginId, StringComparison.OrdinalIgnoreCase)))
         {
             if (!settings.DisabledPluginIds.Contains(pluginId, StringComparer.OrdinalIgnoreCase))
             {
@@ -58,7 +60,7 @@ public sealed class StationDiscoveryPluginManager : IStationDiscoveryPluginManag
                 _stationRepository.SaveStationDiscoveryPluginSettings(settings);
             }
 
-            ReloadProviders();
+            ReloadPlugins();
             return true;
         }
 
@@ -69,7 +71,7 @@ public sealed class StationDiscoveryPluginManager : IStationDiscoveryPluginManag
     public void Start()
     {
         EnsurePluginDirectory();
-        ReloadProviders();
+        ReloadPlugins();
 
         _watcher = new FileSystemWatcher(_pluginDirectory!, "*.dll")
         {
@@ -77,10 +79,10 @@ public sealed class StationDiscoveryPluginManager : IStationDiscoveryPluginManag
             NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
         };
 
-        _watcher.Created += (_, _) => ReloadProvidersOnUiThread();
-        _watcher.Deleted += (_, _) => ReloadProvidersOnUiThread();
-        _watcher.Renamed += (_, _) => ReloadProvidersOnUiThread();
-        _watcher.Changed += (_, _) => ReloadProvidersOnUiThread();
+        _watcher.Created += (_, _) => ReloadPluginsOnUiThread();
+        _watcher.Deleted += (_, _) => ReloadPluginsOnUiThread();
+        _watcher.Renamed += (_, _) => ReloadPluginsOnUiThread();
+        _watcher.Changed += (_, _) => ReloadPluginsOnUiThread();
     }
 
     public void Stop()
@@ -97,18 +99,18 @@ public sealed class StationDiscoveryPluginManager : IStationDiscoveryPluginManag
         }
 
         _loadedPlugins.Clear();
-        _providers.Clear();
+        _plugins.Clear();
     }
 
-    private void ReloadProvidersOnUiThread()
+    private void ReloadPluginsOnUiThread()
     {
-        Dispatcher.UIThread.Post(ReloadProviders);
+        Dispatcher.UIThread.Post(ReloadPlugins);
     }
 
-    private void ReloadProviders()
+    private void ReloadPlugins()
     {
         EnsurePluginDirectory();
-        _providers.Clear();
+        _plugins.Clear();
 
         foreach (var loadedPlugin in _loadedPlugins.Values)
         {
@@ -117,14 +119,14 @@ public sealed class StationDiscoveryPluginManager : IStationDiscoveryPluginManag
 
         _loadedPlugins.Clear();
 
-        LoadProvidersFromFolder(_pluginDirectory!);
-        LoadProvidersFromReferencedAssemblies();
-        LoadProvidersFromBaseDirectory();
+        LoadPluginsFromFolder(_pluginDirectory!);
+        LoadPluginsFromReferencedAssemblies();
+        LoadPluginsFromBaseDirectory();
 
         var disabled = _stationRepository.StationDiscoveryPlugins.DisabledPluginIds;
-        _providers.RemoveAll(provider => disabled.Contains(provider.Id, StringComparer.OrdinalIgnoreCase));
+        _plugins.RemoveAll(plugin => disabled.Contains(plugin.Id, StringComparer.OrdinalIgnoreCase));
 
-        ProvidersChanged?.Invoke(this, EventArgs.Empty);
+        PluginsChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private void EnsurePluginDirectory()
@@ -137,15 +139,15 @@ public sealed class StationDiscoveryPluginManager : IStationDiscoveryPluginManag
         Directory.CreateDirectory(_pluginDirectory);
     }
 
-    private void LoadProvidersFromFolder(string pluginDirectory)
+    private void LoadPluginsFromFolder(string pluginDirectory)
     {
         foreach (var pluginPath in Directory.GetFiles(pluginDirectory, "*.dll"))
         {
-            TryLoadProvidersFromAssembly(pluginPath);
+            TryLoadPluginsFromAssembly(pluginPath);
         }
     }
 
-    private void LoadProvidersFromReferencedAssemblies()
+    private void LoadPluginsFromReferencedAssemblies()
     {
         var assemblies = AppDomain.CurrentDomain.GetAssemblies()
             .Where(a => !a.IsDynamic)
@@ -154,39 +156,39 @@ public sealed class StationDiscoveryPluginManager : IStationDiscoveryPluginManag
 
         foreach (var assembly in assemblies)
         {
-            foreach (var plugin in CreateProviders(assembly))
+            foreach (var plugin in CreatePlugins(assembly))
             {
                 AddIfNotExists(plugin);
             }
         }
     }
 
-    private void LoadProvidersFromBaseDirectory()
+    private void LoadPluginsFromBaseDirectory()
     {
         foreach (var pluginPath in Directory.GetFiles(AppContext.BaseDirectory, "Traydio.Plugin.*.dll"))
         {
-            TryLoadProvidersFromAssembly(pluginPath);
+            TryLoadPluginsFromAssembly(pluginPath);
         }
     }
 
-    private void TryLoadProvidersFromAssembly(string pluginPath)
+    private void TryLoadPluginsFromAssembly(string pluginPath)
     {
         try
         {
             var loadContext = new PluginLoadContext(pluginPath);
             var assembly = loadContext.LoadFromAssemblyPath(pluginPath);
-            var providers = CreateProviders(assembly).ToArray();
+            var plugins = CreatePlugins(assembly).ToArray();
 
-            if (providers.Length == 0)
+            if (plugins.Length == 0)
             {
                 loadContext.Unload();
                 return;
             }
 
-            _loadedPlugins[pluginPath] = new LoadedPlugin(loadContext, providers);
-            foreach (var provider in providers)
+            _loadedPlugins[pluginPath] = new LoadedPlugin(loadContext, plugins);
+            foreach (var plugin in plugins)
             {
-                AddIfNotExists(provider);
+                AddIfNotExists(plugin);
             }
         }
         catch
@@ -195,43 +197,93 @@ public sealed class StationDiscoveryPluginManager : IStationDiscoveryPluginManag
         }
     }
 
-    private static IEnumerable<IRadioStationProviderPlugin> CreateProviders(Assembly assembly)
+    private static IEnumerable<ITraydioPlugin> CreatePlugins(Assembly assembly)
     {
-        var types = assembly.GetTypes()
+        var pluginTypes = assembly.GetTypes()
+            .Where(t => !t.IsAbstract && typeof(ITraydioPlugin).IsAssignableFrom(t))
+            .Where(t => t.GetConstructor(Type.EmptyTypes) is not null)
+            .ToArray();
+
+        foreach (var type in pluginTypes)
+        {
+            if (Activator.CreateInstance(type) is ITraydioPlugin plugin)
+            {
+                yield return plugin;
+            }
+        }
+
+        var legacyProviderTypes = assembly.GetTypes()
             .Where(t => !t.IsAbstract && typeof(IRadioStationProviderPlugin).IsAssignableFrom(t))
             .Where(t => t.GetConstructor(Type.EmptyTypes) is not null)
             .ToArray();
 
-        foreach (var type in types)
+        foreach (var type in legacyProviderTypes)
         {
             if (Activator.CreateInstance(type) is IRadioStationProviderPlugin provider)
             {
-                yield return provider;
+                yield return new LegacyStationProviderPluginAdapter(provider);
             }
         }
     }
 
-    private void AddIfNotExists(IRadioStationProviderPlugin provider)
+    private void AddIfNotExists(ITraydioPlugin plugin)
     {
-        if (_providers.Any(p => string.Equals(p.Id, provider.Id, StringComparison.OrdinalIgnoreCase)))
+        if (_plugins.Any(p => string.Equals(p.Id, plugin.Id, StringComparison.OrdinalIgnoreCase)))
         {
             return;
         }
 
-        _providers.Add(provider);
+        _plugins.Add(plugin);
     }
 
     private sealed class LoadedPlugin
     {
-        public LoadedPlugin(PluginLoadContext context, IReadOnlyList<IRadioStationProviderPlugin> providers)
+        public LoadedPlugin(PluginLoadContext context, IReadOnlyList<ITraydioPlugin> plugins)
         {
             Context = context;
-            Providers = providers;
+            Plugins = plugins;
         }
 
         public PluginLoadContext Context { get; }
 
-        public IReadOnlyList<IRadioStationProviderPlugin> Providers { get; }
+        public IReadOnlyList<ITraydioPlugin> Plugins { get; }
+    }
+
+    private sealed class LegacyStationProviderPluginAdapter : ITraydioPlugin
+    {
+        private readonly IRadioStationProviderPlugin _provider;
+
+        public LegacyStationProviderPluginAdapter(IRadioStationProviderPlugin provider)
+        {
+            _provider = provider;
+            Capabilities = [new LegacyStationDiscoveryCapability(provider)];
+        }
+
+        public string Id => "legacy." + _provider.Id;
+
+        public string DisplayName => _provider.DisplayName;
+
+        public IReadOnlyList<IPluginCapability> Capabilities { get; }
+    }
+
+    private sealed class LegacyStationDiscoveryCapability : IStationDiscoveryCapability
+    {
+        private readonly IRadioStationProviderPlugin _provider;
+
+        public LegacyStationDiscoveryCapability(IRadioStationProviderPlugin provider)
+        {
+            _provider = provider;
+        }
+
+        public string CapabilityId => "station-discovery";
+
+        public string ProviderId => _provider.Id;
+
+        public string DisplayName => _provider.DisplayName;
+
+        public Task<IReadOnlyList<DiscoveredStation>> SearchAsync(StationSearchRequest request, CancellationToken cancellationToken)
+        {
+            return _provider.SearchAsync(request, cancellationToken);
+        }
     }
 }
-

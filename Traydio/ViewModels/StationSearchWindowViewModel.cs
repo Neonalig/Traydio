@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading;
@@ -16,7 +17,7 @@ namespace Traydio.ViewModels;
 public partial class StationSearchWindowViewModel : ViewModelBase
 {
     private readonly IStationDiscoveryService _stationDiscoveryService;
-    private readonly IStationDiscoveryPluginManager _pluginManager;
+    private readonly IPluginManager _pluginManager;
     private readonly IStationRepository _stationRepository;
 
     private CancellationTokenSource? _searchCancellation;
@@ -48,14 +49,14 @@ public partial class StationSearchWindowViewModel : ViewModelBase
 
     public StationSearchWindowViewModel(
         IStationDiscoveryService stationDiscoveryService,
-        IStationDiscoveryPluginManager pluginManager,
+        IPluginManager pluginManager,
         IStationRepository stationRepository)
     {
         _stationDiscoveryService = stationDiscoveryService;
         _pluginManager = pluginManager;
         _stationRepository = stationRepository;
 
-        _pluginManager.ProvidersChanged += (_, _) => RefreshProviders();
+        _pluginManager.PluginsChanged += (_, _) => RefreshProviders();
         RefreshProviders();
     }
 
@@ -133,7 +134,7 @@ public partial class StationSearchWindowViewModel : ViewModelBase
             return;
         }
 
-        if (_pluginManager.RemovePlugin(SelectedProvider.Id, out var error))
+        if (_pluginManager.RemovePlugin(SelectedProvider.PluginId, out var error))
         {
             Status = $"Provider '{SelectedProvider.DisplayName}' disabled.";
             RefreshProviders();
@@ -214,10 +215,16 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         void Update()
         {
             Providers.Clear();
-            foreach (var provider in _pluginManager.GetProviders()
-                         .OrderBy(p => p.DisplayName, StringComparer.OrdinalIgnoreCase))
+            var providers = _pluginManager.GetPlugins()
+                .SelectMany(plugin => plugin.Capabilities
+                    .OfType<IStationDiscoveryCapability>()
+                    .Select(capability => new ProviderOption(plugin.Id, capability.ProviderId, capability.DisplayName)))
+                .OrderBy(option => option.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            foreach (var provider in providers)
             {
-                Providers.Add(new ProviderOption(provider.Id, provider.DisplayName));
+                Providers.Add(provider);
             }
 
             SelectedProvider ??= Providers.FirstOrDefault();
@@ -234,11 +241,14 @@ public partial class StationSearchWindowViewModel : ViewModelBase
 
     public sealed class ProviderOption
     {
-        public ProviderOption(string id, string displayName)
+        public ProviderOption(string pluginId, string id, string displayName)
         {
+            PluginId = pluginId;
             Id = id;
             DisplayName = displayName;
         }
+
+        public string PluginId { get; }
 
         public string Id { get; }
 
