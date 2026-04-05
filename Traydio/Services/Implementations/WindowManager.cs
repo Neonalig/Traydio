@@ -72,7 +72,17 @@ public sealed class WindowManager(
             return false;
         }
 
-        var content = settingsCapability.CreateSettingsView(new PluginSettingsAccessor(pluginSettingsProvider, plugin.Id));
+        object? content;
+        try
+        {
+            content = settingsCapability.CreateSettingsView(new PluginSettingsAccessor(pluginSettingsProvider, plugin.Id));
+        }
+        catch (Exception ex)
+        {
+            error = "Plugin settings failed to open: " + ex.Message;
+            return false;
+        }
+
         if (content is not Control control)
         {
             error = "Plugin returned an unsupported settings view.";

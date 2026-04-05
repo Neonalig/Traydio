@@ -56,9 +56,13 @@
                         <ListBox Grid.Row="1" Classes="list-surface" ItemsSource="{Binding InstalledPlugins}" SelectedItem="{Binding SelectedInstalledPlugin}">
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="vm:PluginManagementWindowViewModel+InstalledPluginItem">
-                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                        <TextBlock Grid.Column="0" Text="{Binding DisplayName}" VerticalAlignment="Center"/>
-                                        <Button Grid.Column="1"
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                        <Image Grid.Column="0" Source="/Assets/Icons9x/plugins.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
+                                        <StackPanel Grid.Column="1" Spacing="2">
+                                            <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding VersionText, StringFormat='v{0}'}" Classes="subtle-text"/>
+                                        </StackPanel>
+                                        <Button Grid.Column="2"
                                                 Classes="command-button"
                                                 IsVisible="{Binding HasSettings}"
                                                 Click="OnPluginSettingsClick">
@@ -78,12 +82,23 @@
                         <ListBox Grid.Row="1" Classes="list-surface" ItemsSource="{Binding PluginCandidates}" SelectedItem="{Binding SelectedPluginCandidate}">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
                                         <Image Source="/Assets/Icons9x/plugins.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
                                         <StackPanel Grid.Column="1">
                                             <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding VersionText, StringFormat='v{0}'}" Classes="subtle-text"/>
+                                            <TextBlock Text="{Binding InstalledVersionText, StringFormat='Installed v{0}'}" Classes="subtle-text"/>
                                             <TextBlock Text="{Binding Path}" Classes="subtle-text" TextWrapping="Wrap"/>
                                         </StackPanel>
+                                        <Button Grid.Column="2"
+                                                Classes="command-button"
+                                                IsVisible="{Binding IsUpgrade}"
+                                                Click="OnUpgradeCandidateClick">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <Image Source="/Assets/Icons9x/add.ico" Classes="icon-small"/>
+                                                <TextBlock Text="Upgrade" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
                                     </Grid>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
@@ -92,7 +107,7 @@
                         <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                             <TextBox Grid.Column="0" Watermark="Browse or paste plugin DLL path" Text="{Binding PluginDllPath}"/>
                             <Button Grid.Column="1" Classes="command-button" Click="OnBrowsePluginClick">Browse...</Button>
-                            <Button Grid.Column="2" Classes="command-button" Command="{Binding InstallFromPathCommand}">
+                            <Button Grid.Column="2" Classes="command-button" Click="OnInstallFromPathClick">
                                 <StackPanel Orientation="Horizontal" Spacing="6">
                                     <Image Source="/Assets/Icons9x/add.ico" Classes="icon-small"/>
                                     <TextBlock Text="Install From Path" VerticalAlignment="Center"/>

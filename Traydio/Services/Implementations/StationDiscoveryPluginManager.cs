@@ -150,8 +150,9 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
 
         _loadedPlugins.Clear();
 
-        LoadPluginsFromFolder(_pluginDirectory!);
+        // Prefer referenced plugin assemblies so locally-built plugins win over stale copied DLLs.
         LoadPluginsFromReferencedAssemblies();
+        LoadPluginsFromFolder(_pluginDirectory!);
         LoadPluginsFromBaseDirectory();
 
         var disabled = stationRepository.StationDiscoveryPlugins.DisabledPluginIds;

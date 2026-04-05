@@ -1,4 +1,5 @@
-﻿using Avalonia.Controls;
+﻿using System;
+using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Traydio.Common;
@@ -8,26 +9,36 @@ namespace Traydio.Plugin.LibVlc;
 public partial class LibVlcPluginSettingsView : UserControl
 {
     private readonly IPluginSettingsAccessor _settingsAccessor;
+    private readonly TextBox _outputModuleBox;
+    private readonly TextBox _outputDeviceIdBox;
+    private readonly TextBlock _statusText;
 
     public LibVlcPluginSettingsView(IPluginSettingsAccessor settingsAccessor)
     {
         _settingsAccessor = settingsAccessor;
         AvaloniaXamlLoader.Load(this);
 
-        OutputModuleBox.Text = _settingsAccessor.GetValue(LibVlcPluginSettings.OutputModuleKey);
-        OutputDeviceIdBox.Text = _settingsAccessor.GetValue(LibVlcPluginSettings.OutputDeviceIdKey);
+        _outputModuleBox = this.FindControl<TextBox>("OutputModuleBox")
+            ?? throw new InvalidOperationException("LibVLC settings view is missing OutputModuleBox.");
+        _outputDeviceIdBox = this.FindControl<TextBox>("OutputDeviceIdBox")
+            ?? throw new InvalidOperationException("LibVLC settings view is missing OutputDeviceIdBox.");
+        _statusText = this.FindControl<TextBlock>("StatusText")
+            ?? throw new InvalidOperationException("LibVLC settings view is missing StatusText.");
+
+        _outputModuleBox.Text = _settingsAccessor.GetValue(LibVlcPluginSettings.OutputModuleKey);
+        _outputDeviceIdBox.Text = _settingsAccessor.GetValue(LibVlcPluginSettings.OutputDeviceIdKey);
     }
 
     private void OnSaveClick(object? sender, RoutedEventArgs e)
     {
-        var module = OutputModuleBox.Text?.Trim();
-        var deviceId = OutputDeviceIdBox.Text?.Trim();
+        var module = _outputModuleBox.Text?.Trim();
+        var deviceId = _outputDeviceIdBox.Text?.Trim();
 
         _settingsAccessor.SetValue(LibVlcPluginSettings.OutputModuleKey, string.IsNullOrWhiteSpace(module) ? null : module);
         _settingsAccessor.SetValue(LibVlcPluginSettings.OutputDeviceIdKey, string.IsNullOrWhiteSpace(deviceId) ? null : deviceId);
         _settingsAccessor.Save();
 
-        StatusText.Text = "Saved LibVLC output settings. Restart playback to apply changes.";
+        _statusText.Text = "Saved LibVLC output settings. Restart playback to apply changes.";
     }
 }
 
