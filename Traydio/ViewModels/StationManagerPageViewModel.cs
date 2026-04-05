@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -29,6 +30,25 @@ public partial class StationManagerPageViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _newStationUrl = string.Empty;
+
+    public void PrefillNewStation(string name, string url)
+    {
+        NewStationName = name;
+        NewStationUrl = url;
+    }
+
+    public void AddStationsFromDrop(IEnumerable<(string Name, string Url)> stations)
+    {
+        foreach (var (name, url) in stations)
+        {
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(url))
+            {
+                continue;
+            }
+
+            _stationRepository.AddStation(name, url);
+        }
+    }
 
     public StationManagerPageViewModel(IStationRepository stationRepository, IAppCommandDispatcher commandDispatcher)
     {
