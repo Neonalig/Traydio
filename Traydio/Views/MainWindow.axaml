@@ -11,7 +11,7 @@
         Height="760"
         Title="Traydio">
 
-    <Grid RowDefinitions="Auto,*" Margin="12" RowSpacing="12">
+    <Grid RowDefinitions="Auto,*,Auto" Margin="12" RowSpacing="12">
         <WrapPanel Grid.Row="0" Orientation="Horizontal" ItemWidth="240" ItemHeight="120" HorizontalAlignment="Center">
             <Button Command="{Binding OpenStationsCommand}" Margin="6">
                 <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
@@ -44,6 +44,32 @@
 
         <Border Grid.Row="1" BorderBrush="#445" BorderThickness="1" CornerRadius="8" Padding="8">
             <ContentControl Content="{Binding CurrentPageViewModel}"/>
+        </Border>
+
+        <Border Grid.Row="2"
+                BorderBrush="#445"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="8"
+                IsVisible="{Binding IsMediaBarVisible}">
+            <Grid RowDefinitions="Auto,Auto" RowSpacing="6" Opacity="{Binding MediaControlsOpacity}">
+                <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="10">
+                    <Button Grid.Column="0" Content="{Binding PlayPauseIcon}" Command="{Binding TogglePlayPauseCommand}" MinWidth="92"/>
+                    <Button Grid.Column="1" Content="Mute" Command="{Binding ToggleMuteCommand}" MinWidth="80"/>
+                    <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="{Binding PlaybackTimeText}"/>
+                    <TextBlock Grid.Column="3" VerticalAlignment="Center" Text="{Binding CurrentStationText}" FontWeight="SemiBold"/>
+                    <ProgressBar Grid.Column="4" Width="120" IsIndeterminate="True" IsVisible="{Binding IsMediaLoading}"/>
+                </Grid>
+
+                <Grid Grid.Row="1" ColumnDefinitions="Auto,*,*" ColumnSpacing="8">
+                    <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Volume"/>
+                    <Slider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding FooterVolume}"/>
+                    <StackPanel Grid.Column="2" Spacing="2">
+                        <TextBlock Text="{Binding NowPlayingText}" Opacity="0.85" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding MediaErrorText}" Foreground="#E57373" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Grid>
+            </Grid>
         </Border>
     </Grid>
 </Window>

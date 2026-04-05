@@ -31,6 +31,9 @@ public partial class StationManagerPageViewModel : ViewModelBase
     [ObservableProperty]
     private string _newStationUrl = string.Empty;
 
+    [ObservableProperty]
+    private bool _isAddFlyoutOpen;
+
     public void PrefillNewStation(string name, string url)
     {
         NewStationName = name;
@@ -71,6 +74,7 @@ public partial class StationManagerPageViewModel : ViewModelBase
         _stationRepository.AddStation(NewStationName, NewStationUrl);
         NewStationName = string.Empty;
         NewStationUrl = string.Empty;
+        IsAddFlyoutOpen = false;
     }
 
     [RelayCommand]

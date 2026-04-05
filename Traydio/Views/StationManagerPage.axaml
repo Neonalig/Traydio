@@ -11,7 +11,7 @@
         <StackPanel Orientation="Horizontal" Spacing="8">
             <Button x:Name="AddStationButton" Content="Add Station" MinWidth="120">
                 <Button.Flyout>
-                    <Flyout Placement="Bottom">
+                    <Flyout Placement="Bottom" IsOpen="{Binding IsAddFlyoutOpen, Mode=TwoWay}">
                         <StackPanel Width="360" Spacing="8" Margin="8">
                             <TextBlock Text="Add Station" FontWeight="SemiBold"/>
                             <TextBox Watermark="Station name" Text="{Binding NewStationName}"/>
