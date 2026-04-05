@@ -1,12 +1,22 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Traydio.ViewModels"
+             xmlns:conv="using:Traydio.Converters"
+             xmlns:imaging="clr-namespace:Avalonia.Media.Imaging;assembly=Avalonia.Base"
              x:Class="Traydio.Views.StationManagerPage"
              x:Name="Root"
              x:DataType="vm:StationManagerPageViewModel"
              DragDrop.AllowDrop="True"
              DragDrop.DragOver="OnDragOver"
              DragDrop.Drop="OnDrop">
+    <UserControl.Resources>
+        <imaging:Bitmap x:Key="PlayIcon">avares://Traydio/Assets/Icons9x/play.ico</imaging:Bitmap>
+        <imaging:Bitmap x:Key="PauseIcon">avares://Traydio/Assets/Icons9x/pause.ico</imaging:Bitmap>
+        <conv:BooleanToImageConverter x:Key="PlayPauseGlyphConverter"
+                                      TrueImage="{StaticResource PauseIcon}"
+                                      FalseImage="{StaticResource PlayIcon}"/>
+    </UserControl.Resources>
+
 
     <Grid RowDefinitions="Auto,*" RowSpacing="6" Margin="0">
         <Border Grid.Row="0" Classes="status-strip" Margin="0">
@@ -27,23 +37,29 @@
                              DoubleTapped="OnStationsListDoubleTapped">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
-                                    <Image Source="/Assets/Icons9x/stations.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
-                                    <StackPanel Grid.Column="1">
-                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                                        <TextBlock Text="{Binding StreamUrl}" Classes="subtle-text"/>
-                                    </StackPanel>
-                                    <Button Grid.Column="2"
-                                            Classes="icon-only"
-                                            Click="OnPlayStationClick">
-                                        <Image Source="/Assets/Icons9x/play.ico" Classes="icon-small"/>
-                                    </Button>
-                                    <Button Grid.Column="3"
-                                            Classes="icon-only"
-                                            Click="OnRemoveStationClick">
-                                        <Image Source="/Assets/Icons9x/remove.ico" Classes="icon-small"/>
-                                    </Button>
-                                </Grid>
+                                <Border Classes="station-entry" Classes.playing-station="{Binding IsActivePlaying}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+                                        <Image Source="/Assets/Icons9x/stations.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
+                                        <StackPanel Grid.Column="1">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                                <TextBlock Text="Now Playing" Classes="accent-text" IsVisible="{Binding IsActivePlaying}"/>
+                                            </StackPanel>
+                                            <TextBlock Text="{Binding StreamUrl}" Classes="subtle-text"/>
+                                            <TextBlock Text="{Binding Station.Id}" Classes="subtle-text" Opacity="0.6" FontSize="10"/>
+                                        </StackPanel>
+                                        <Button Grid.Column="2"
+                                                Classes="icon-only"
+                                                Click="OnPlayStationClick">
+                                            <Image Source="{Binding IsActivePlaying, Converter={StaticResource PlayPauseGlyphConverter}}" Classes="icon-small"/>
+                                        </Button>
+                                        <Button Grid.Column="3"
+                                                Classes="icon-only"
+                                                Click="OnRemoveStationClick">
+                                            <Image Source="/Assets/Icons9x/remove.ico" Classes="icon-small"/>
+                                        </Button>
+                                    </Grid>
+                                </Border>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>

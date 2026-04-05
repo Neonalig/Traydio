@@ -65,34 +65,41 @@ public partial class StationSearchPage : UserControl
 
     private async void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (!string.Equals(e.PropertyName, nameof(StationSearchWindowViewModel.Status), StringComparison.Ordinal))
+        try
         {
-            return;
-        }
+            if (!string.Equals(e.PropertyName, nameof(StationSearchWindowViewModel.Status), StringComparison.Ordinal))
+            {
+                return;
+            }
 
-        if (sender is not StationSearchWindowViewModel viewModel)
+            if (sender is not StationSearchWindowViewModel viewModel)
+            {
+                return;
+            }
+
+            var status = viewModel.Status.Trim();
+            if (string.IsNullOrWhiteSpace(status))
+            {
+                return;
+            }
+
+            if (string.Equals(status, "Searching...", StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            if (string.Equals(status, _lastStatusShown, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _lastStatusShown = status;
+            await ShowInfoDialogAsync("Station search", status);
+        }
+        catch (Exception ex)
         {
-            return;
+            Services.AppErrorHandler.Report(ex, "Station search status dialog", showDialog: true);
         }
-
-        var status = viewModel.Status?.Trim();
-        if (string.IsNullOrWhiteSpace(status))
-        {
-            return;
-        }
-
-        if (string.Equals(status, "Searching...", StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        if (string.Equals(status, _lastStatusShown, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        _lastStatusShown = status;
-        await ShowInfoDialogAsync("Station search", status);
     }
 
     private async System.Threading.Tasks.Task ShowInfoDialogAsync(string title, string message)

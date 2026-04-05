@@ -239,7 +239,7 @@ public partial class StationSearchWindowViewModel : ViewModelBase
 
             if (SelectedProvider is not null && _lastSearchResults.Count == 0 && !IsBusy)
             {
-                _ = SearchAsync();
+                SearchAsync().ForgetWithErrorHandling("Station provider initial search", showDialog: true);
             }
         }
 

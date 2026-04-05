@@ -8,6 +8,7 @@ using Avalonia.Input;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using Traydio.Common;
+using Traydio.Services;
 using Traydio.ViewModels;
 
 namespace Traydio.Views;
@@ -36,12 +37,14 @@ public partial class StationManagerPage : UserControl
 
     private async void OnDrop(object? sender, DragEventArgs e)
     {
-        if (DataContext is not StationManagerPageViewModel viewModel)
+        try
         {
-            return;
-        }
+            if (DataContext is not StationManagerPageViewModel viewModel)
+            {
+                return;
+            }
 
-        var files = e.DataTransfer.TryGetFiles()
+            var files = e.DataTransfer.TryGetFiles()
             ?.OfType<IStorageFile>()
             .Select(f => f.TryGetLocalPath())
             .Where(p => !string.IsNullOrWhiteSpace(p) && File.Exists(p))
@@ -49,61 +52,66 @@ public partial class StationManagerPage : UserControl
             .Where(IsSupportedPlaylistPath)
             .ToArray() ?? [];
 
-        if (files.Length > 0)
-        {
-            var stations = new List<(string Name, string Url)>();
-            foreach (var file in files)
+            if (files.Length > 0)
             {
-                stations.AddRange(await ParsePlaylistFileAsync(file).ConfigureAwait(true));
-            }
+                var stations = new List<(string Name, string Url)>();
+                foreach (var file in files)
+                {
+                    stations.AddRange(await ParsePlaylistFileAsync(file).ConfigureAwait(true));
+                }
 
-            var distinctStations = stations
+                var distinctStations = stations
                 .Where(s => !string.IsNullOrWhiteSpace(s.Url))
                 .DistinctBy(s => s.Url, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
-            if (distinctStations.Length == 0)
-            {
+                if (distinctStations.Length == 0)
+                {
+                    return;
+                }
+
+                if (files.Length == 1 && distinctStations.Length == 1)
+                {
+                    viewModel.PrefillNewStation(distinctStations[0].Name, distinctStations[0].Url);
+                    return;
+                }
+
+                viewModel.AddStationsFromDrop(distinctStations);
                 return;
             }
 
-            if (files.Length == 1 && distinctStations.Length == 1)
+            if (e.DataTransfer.Contains(DataFormat.Text))
             {
-                viewModel.PrefillNewStation(distinctStations[0].Name, distinctStations[0].Url);
-                return;
-            }
+                var text = e.DataTransfer.TryGetText();
+                if (string.IsNullOrWhiteSpace(text))
+                {
+                    return;
+                }
 
-            viewModel.AddStationsFromDrop(distinctStations);
-            return;
-        }
-
-        if (e.DataTransfer.Contains(DataFormat.Text))
-        {
-            var text = e.DataTransfer.TryGetText();
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                return;
-            }
-
-            var links = text
+                var links = text
                 .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
                 .Select(line => line.Trim())
                 .Where(line => Uri.TryCreate(line, UriKind.Absolute, out _))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
-            if (links.Length == 0)
-            {
-                return;
-            }
+                if (links.Length == 0)
+                {
+                    return;
+                }
 
-            if (links.Length == 1)
-            {
-                viewModel.PrefillNewStation("Dropped stream", links[0]);
-                return;
-            }
+                if (links.Length == 1)
+                {
+                    viewModel.PrefillNewStation("Dropped stream", links[0]);
+                    return;
+                }
 
-            viewModel.AddStationsFromDrop(links.Select((url, idx) => ($"Dropped stream {idx + 1}", url)));
+                viewModel.AddStationsFromDrop(links.Select((url, idx) => ($"Dropped stream {idx + 1}", url)));
+            }
+        }
+        catch (Exception ex)
+        {
+            AppErrorHandler.Report(ex, "Station drop import", showDialog: true);
         }
     }
 
@@ -251,7 +259,7 @@ public partial class StationManagerPage : UserControl
             return;
         }
 
-        if (sender is not ListBox { SelectedItem: Models.RadioStation station })
+        if (sender is not ListBox { SelectedItem: StationManagerPageViewModel.StationItem station })
         {
             return;
         }
@@ -266,7 +274,7 @@ public partial class StationManagerPage : UserControl
             return;
         }
 
-        if (sender is not Control { DataContext: Models.RadioStation station })
+        if (sender is not Control { DataContext: StationManagerPageViewModel.StationItem station })
         {
             return;
         }
@@ -281,7 +289,7 @@ public partial class StationManagerPage : UserControl
             return;
         }
 
-        if (sender is not Control { DataContext: Models.RadioStation station })
+        if (sender is not Control { DataContext: StationManagerPageViewModel.StationItem station })
         {
             return;
         }

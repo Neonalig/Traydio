@@ -1,5 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using System.Collections.Generic;
+using System;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -16,11 +17,12 @@ public partial class StationManagerPageViewModel : ViewModelBase
 {
     private readonly IStationRepository _stationRepository;
     private readonly IAppCommandDispatcher _commandDispatcher;
+    private readonly IRadioPlayer _radioPlayer;
 
-    public ObservableCollection<RadioStation> Stations { get; } = [];
+    public ObservableCollection<StationItem> Stations { get; } = [];
 
     [ObservableProperty]
-    private RadioStation? _selectedStation;
+    private StationItem? _selectedStation;
 
     [ObservableProperty]
     private string _newStationName = string.Empty;
@@ -50,11 +52,16 @@ public partial class StationManagerPageViewModel : ViewModelBase
         }
     }
 
-    public StationManagerPageViewModel(IStationRepository stationRepository, IAppCommandDispatcher commandDispatcher)
+    public StationManagerPageViewModel(
+        IStationRepository stationRepository,
+        IAppCommandDispatcher commandDispatcher,
+        IRadioPlayer radioPlayer)
     {
         _stationRepository = stationRepository;
         _commandDispatcher = commandDispatcher;
+        _radioPlayer = radioPlayer;
         _stationRepository.Changed += (_, _) => RefreshStations();
+        _radioPlayer.StateChanged += (_, _) => RefreshStations();
         RefreshStations();
     }
 
@@ -91,28 +98,34 @@ public partial class StationManagerPageViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void RemoveStation(RadioStation? station)
+    private void RemoveStation(StationItem? station)
     {
         if (station is null)
         {
             return;
         }
 
-        _stationRepository.RemoveStation(station.Id);
+        _stationRepository.RemoveStation(station.Station.Id);
     }
 
     [RelayCommand]
-    private void PlayStation(RadioStation? station)
+    private void PlayStation(StationItem? station)
     {
         if (station is null)
         {
+            return;
+        }
+
+        if (station.IsActivePlaying)
+        {
+            _commandDispatcher.Dispatch(new AppCommand { Kind = AppCommandKind.Pause });
             return;
         }
 
         _commandDispatcher.Dispatch(new AppCommand
         {
             Kind = AppCommandKind.PlayStation,
-            StationId = station.Id,
+            StationId = station.Station.Id,
         });
     }
 
@@ -120,10 +133,17 @@ public partial class StationManagerPageViewModel : ViewModelBase
     {
         void Update()
         {
+            var activeStationId = _stationRepository.ActiveStationId;
+            var isPlaying = _radioPlayer.IsPlaying;
+
             Stations.Clear();
             foreach (var station in _stationRepository.GetStations())
             {
-                Stations.Add(station);
+                var isActiveStation = string.Equals(station.Id, activeStationId, StringComparison.Ordinal);
+                Stations.Add(new StationItem(
+                    station,
+                    isActiveStation,
+                    isActiveStation && isPlaying));
             }
         }
 
@@ -134,6 +154,19 @@ public partial class StationManagerPageViewModel : ViewModelBase
         }
 
         Dispatcher.UIThread.Post(Update);
+    }
+
+    public sealed class StationItem(RadioStation station, bool isActiveStation, bool isActivePlaying)
+    {
+        public RadioStation Station { get; } = station;
+
+        public string Name => Station.Name;
+
+        public string StreamUrl => Station.StreamUrl;
+
+        public bool IsActiveStation { get; } = isActiveStation;
+
+        public bool IsActivePlaying { get; } = isActivePlaying;
     }
 }
 

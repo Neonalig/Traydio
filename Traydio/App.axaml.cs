@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Data.Core.Plugins;
+using System;
 using System.Linq;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,6 +19,8 @@ public class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        AppErrorHandler.InstallGlobalHandlers();
+
         if (DataTemplates.OfType<ViewLocator>().FirstOrDefault() is { } viewLocator)
         {
             viewLocator.Services = Program.Services;
@@ -44,8 +47,15 @@ public class App : Application
 
             desktop.Exit += (_, _) =>
             {
-                relayCoordinator.StopPrimaryRelay();
-                pluginManager.Stop();
+                try
+                {
+                    relayCoordinator.StopPrimaryRelay();
+                    pluginManager.Stop();
+                }
+                catch (Exception ex)
+                {
+                    AppErrorHandler.Report(ex, "Desktop exit cleanup", showDialog: false);
+                }
             };
         }
 

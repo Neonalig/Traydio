@@ -26,6 +26,9 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
     private bool _isMetadataSupported = true;
     private bool _hasLoggedMetadataUnavailable;
     private IntPtr _tagsLibraryHandle;
+    private TimeSpan _elapsedBeforeClock;
+    private DateTime _clockAnchorUtc;
+    private bool _isClockRunning;
     private bool _isMuted;
     private int _volume = 100;
 
@@ -134,6 +137,9 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
                     return;
                 }
 
+                ResetPlaybackClock_NoLock();
+                StartPlaybackClock_NoLock();
+
                 UpdateNowPlaying_NoLock();
                 RaiseStateChanged_NoLock();
             }
@@ -153,6 +159,7 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
             if (_streamHandle != 0)
             {
                 Bass.ChannelPause(_streamHandle);
+                PausePlaybackClock_NoLock();
             }
 
             RaiseStateChanged_NoLock();
@@ -174,10 +181,14 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
             if (active == PlaybackState.Playing)
             {
                 Bass.ChannelPause(_streamHandle);
+                PausePlaybackClock_NoLock();
             }
             else
             {
-                Bass.ChannelPlay(_streamHandle);
+                if (Bass.ChannelPlay(_streamHandle))
+                {
+                    StartPlaybackClock_NoLock();
+                }
             }
 
             RaiseStateChanged_NoLock();
@@ -440,6 +451,7 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
         Bass.ChannelStop(_streamHandle);
         Bass.StreamFree(_streamHandle);
         _streamHandle = 0;
+        ResetPlaybackClock_NoLock();
     }
 
     private RadioPlayerState CreateState()
@@ -448,6 +460,17 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
             ? PlaybackState.Stopped
             : Bass.ChannelIsActive(_streamHandle);
 
+        if (playbackState != PlaybackState.Playing)
+        {
+            PausePlaybackClock_NoLock();
+        }
+        else
+        {
+            StartPlaybackClock_NoLock();
+        }
+
+        var position = GetElapsedPlaybackPosition_NoLock(playbackState);
+
         return new RadioPlayerState
         {
             IsPlaying = playbackState == PlaybackState.Playing,
@@ -455,7 +478,7 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
             IsLoading = false,
             IsMuted = _isMuted,
             Volume = _volume,
-            Position = TimeSpan.Zero,
+            Position = position,
             Duration = null,
             CurrentStationName = _currentStationName,
             NowPlaying = _nowPlaying,
@@ -481,6 +504,58 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
 
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     private static extern bool SetDllDirectory(string lpPathName);
+
+    private void ResetPlaybackClock_NoLock()
+    {
+        _elapsedBeforeClock = TimeSpan.Zero;
+        _clockAnchorUtc = DateTime.UtcNow;
+        _isClockRunning = false;
+    }
+
+    private void StartPlaybackClock_NoLock()
+    {
+        if (_isClockRunning)
+        {
+            return;
+        }
+
+        _clockAnchorUtc = DateTime.UtcNow;
+        _isClockRunning = true;
+    }
+
+    private void PausePlaybackClock_NoLock()
+    {
+        if (!_isClockRunning)
+        {
+            return;
+        }
+
+        var delta = DateTime.UtcNow - _clockAnchorUtc;
+        if (delta > TimeSpan.Zero)
+        {
+            _elapsedBeforeClock += delta;
+        }
+
+        _isClockRunning = false;
+    }
+
+    private TimeSpan GetElapsedPlaybackPosition_NoLock(PlaybackState playbackState)
+    {
+        if (_streamHandle == 0 || playbackState == PlaybackState.Stopped)
+        {
+            return TimeSpan.Zero;
+        }
+
+        if (!_isClockRunning || playbackState != PlaybackState.Playing)
+        {
+            return _elapsedBeforeClock;
+        }
+
+        var delta = DateTime.UtcNow - _clockAnchorUtc;
+        return delta > TimeSpan.Zero
+            ? _elapsedBeforeClock + delta
+            : _elapsedBeforeClock;
+    }
 }
 
 

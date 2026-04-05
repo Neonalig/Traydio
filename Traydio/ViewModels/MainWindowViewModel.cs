@@ -12,12 +12,20 @@ namespace Traydio.ViewModels;
 [ViewModelFor(typeof(MainWindow))]
 public partial class MainWindowViewModel : ViewModelBase
 {
+    private const int MediaMarqueeMaxChars = 52;
+    private const int MediaMarqueeHoldTicks = 8;
+
     private readonly INavigationService _navigationService;
     private readonly IAppCommandDispatcher _commandDispatcher;
     private readonly IRadioPlayer _radioPlayer;
     private readonly IWindowManager _windowManager;
 
     private bool _suppressVolumeDispatch;
+    private readonly DispatcherTimer _mediaMarqueeTimer;
+    private string _mediaMarqueeSourceText = "No station";
+    private int _mediaMarqueeOffset;
+    private int _mediaMarqueeHoldCounter;
+    private bool _mediaMarqueeAtEnd;
 
     [ObservableProperty]
     private object? _currentPageViewModel;
@@ -53,6 +61,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private string _mediaCenterText = "No station";
 
     [ObservableProperty]
+    private string _mediaCenterDisplayText = "No station";
+
+    [ObservableProperty]
     private bool _hasMediaError;
 
     [ObservableProperty]
@@ -71,6 +82,8 @@ public partial class MainWindowViewModel : ViewModelBase
         _commandDispatcher = commandDispatcher;
         _radioPlayer = radioPlayer;
         _windowManager = windowManager;
+
+        _mediaMarqueeTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(250), DispatcherPriority.Background, (_, _) => TickMediaMarquee());
 
         _navigationService.Changed += (_, _) => CurrentPageViewModel = _navigationService.CurrentPageViewModel;
         _radioPlayer.StateChanged += (_, state) => UpdateMediaState(state);
@@ -183,6 +196,7 @@ public partial class MainWindowViewModel : ViewModelBase
                 : !string.IsNullOrWhiteSpace(state.NowPlaying)
                     ? state.NowPlaying
                     : CurrentStationText;
+            UpdateMediaMarqueeSource(MediaCenterText);
 
             IsMediaBarVisible = state.IsLoading || !string.IsNullOrWhiteSpace(state.CurrentStationName);
             MediaControlsOpacity = state.IsLoading ? 0.55 : 1.0;
@@ -195,5 +209,89 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         Dispatcher.UIThread.Post(Update);
+    }
+
+    private void UpdateMediaMarqueeSource(string text)
+    {
+        var next = string.IsNullOrWhiteSpace(text) ? "No station" : text.Trim();
+        if (string.Equals(next, _mediaMarqueeSourceText, StringComparison.Ordinal))
+        {
+            if (!_mediaMarqueeTimer.IsEnabled)
+            {
+                MediaCenterDisplayText = next;
+            }
+
+            return;
+        }
+
+        _mediaMarqueeSourceText = next;
+        _mediaMarqueeOffset = 0;
+        _mediaMarqueeHoldCounter = 0;
+        _mediaMarqueeAtEnd = false;
+
+        if (_mediaMarqueeSourceText.Length <= MediaMarqueeMaxChars)
+        {
+            _mediaMarqueeTimer.Stop();
+            MediaCenterDisplayText = _mediaMarqueeSourceText;
+            return;
+        }
+
+        MediaCenterDisplayText = SliceMediaMarqueeWindow(_mediaMarqueeSourceText, 0);
+        _mediaMarqueeTimer.Start();
+    }
+
+    private void TickMediaMarquee()
+    {
+        if (_mediaMarqueeSourceText.Length <= MediaMarqueeMaxChars)
+        {
+            _mediaMarqueeTimer.Stop();
+            MediaCenterDisplayText = _mediaMarqueeSourceText;
+            return;
+        }
+
+        var maxOffset = _mediaMarqueeSourceText.Length - MediaMarqueeMaxChars;
+
+        if (_mediaMarqueeHoldCounter < MediaMarqueeHoldTicks)
+        {
+            _mediaMarqueeHoldCounter++;
+            return;
+        }
+
+        if (_mediaMarqueeAtEnd)
+        {
+            _mediaMarqueeOffset = 0;
+            _mediaMarqueeAtEnd = false;
+            _mediaMarqueeHoldCounter = 0;
+            MediaCenterDisplayText = SliceMediaMarqueeWindow(_mediaMarqueeSourceText, _mediaMarqueeOffset);
+            return;
+        }
+
+        if (_mediaMarqueeOffset < maxOffset)
+        {
+            _mediaMarqueeOffset++;
+            MediaCenterDisplayText = SliceMediaMarqueeWindow(_mediaMarqueeSourceText, _mediaMarqueeOffset);
+
+            if (_mediaMarqueeOffset == maxOffset)
+            {
+                _mediaMarqueeAtEnd = true;
+                _mediaMarqueeHoldCounter = 0;
+            }
+
+            return;
+        }
+
+        _mediaMarqueeAtEnd = true;
+        _mediaMarqueeHoldCounter = 0;
+    }
+
+    private static string SliceMediaMarqueeWindow(string text, int offset)
+    {
+        if (text.Length <= MediaMarqueeMaxChars)
+        {
+            return text;
+        }
+
+        var safeOffset = Math.Clamp(offset, 0, text.Length - MediaMarqueeMaxChars);
+        return text.Substring(safeOffset, MediaMarqueeMaxChars);
     }
 }

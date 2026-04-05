@@ -69,7 +69,7 @@ public sealed class WindowManager(
 
         if (_mainWindow is not null)
         {
-            _ = window.ShowDialog(_mainWindow);
+            window.ShowDialog(_mainWindow).ForgetWithErrorHandling("Show command tester dialog", showDialog: true);
             return;
         }
 
@@ -128,7 +128,7 @@ public sealed class WindowManager(
 
         if (_mainWindow is not null)
         {
-            _ = settingsWindow.ShowDialog(_mainWindow);
+            settingsWindow.ShowDialog(_mainWindow).ForgetWithErrorHandling("Show plugin settings dialog", showDialog: true);
         }
         else
         {

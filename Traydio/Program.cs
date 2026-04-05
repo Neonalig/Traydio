@@ -31,40 +31,48 @@ sealed class Program
     [STAThread]
     public static void Main(string[] args)
     {
-        if (args.Any(arg => string.Equals(arg, "--debugger-launch", StringComparison.OrdinalIgnoreCase)) && !Debugger.IsAttached)
+        try
         {
-            try
+            if (args.Any(arg => string.Equals(arg, "--debugger-launch", StringComparison.OrdinalIgnoreCase)) && !Debugger.IsAttached)
             {
-                Debugger.Launch();
+                try
+                {
+                    Debugger.Launch();
+                }
+                catch
+                {
+                    // Best effort only; restart should continue even if debugger launch fails.
+                }
             }
-            catch
+
+            using var services = ConfigureServices().BuildServiceProvider();
+            _services = services;
+
+            var commandRelayCoordinator = services.GetRequiredService<ICommandRelayCoordinator>();
+            var instanceGate = services.GetRequiredService<IInstanceGate>();
+            var startupCommandBridges = services.GetServices<IStartupCommandBridge>();
+            var startupCommand = ParseStartupCommand(args, startupCommandBridges);
+
+            if (!instanceGate.TryAcquire())
             {
-                // Best effort only; restart should continue even if debugger launch fails.
+                commandRelayCoordinator.TryRelayToPrimary(startupCommand ?? "open");
+                return;
             }
+
+            if (!string.IsNullOrWhiteSpace(startupCommand))
+            {
+                commandRelayCoordinator.DispatchLocal(startupCommand);
+            }
+
+            BuildAvaloniaApp().StartWithClassicDesktopLifetime(
+                args,
+                ShutdownMode.OnExplicitShutdown);
         }
-
-        using var services = ConfigureServices().BuildServiceProvider();
-        _services = services;
-
-        var commandRelayCoordinator = services.GetRequiredService<ICommandRelayCoordinator>();
-        var instanceGate = services.GetRequiredService<IInstanceGate>();
-        var startupCommandBridges = services.GetServices<IStartupCommandBridge>();
-        var startupCommand = ParseStartupCommand(args, startupCommandBridges);
-
-        if (!instanceGate.TryAcquire())
+        catch (Exception ex)
         {
-            commandRelayCoordinator.TryRelayToPrimary(startupCommand ?? "open");
-            return;
+            AppErrorHandler.Report(ex, "Program startup", showDialog: false);
+            throw;
         }
-
-        if (!string.IsNullOrWhiteSpace(startupCommand))
-        {
-            commandRelayCoordinator.DispatchLocal(startupCommand);
-        }
-
-        BuildAvaloniaApp().StartWithClassicDesktopLifetime(
-            args,
-            ShutdownMode.OnExplicitShutdown);
     }
 
     // Avalonia configuration, don't remove; also used by visual designer.
