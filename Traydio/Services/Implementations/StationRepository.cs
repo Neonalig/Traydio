@@ -143,6 +143,34 @@ public sealed class StationRepository : IStationRepository
         return true;
     }
 
+    public bool MoveStation(string stationId, int targetIndex)
+    {
+        if (string.IsNullOrWhiteSpace(stationId) || _settings.Stations.Count <= 1)
+        {
+            return false;
+        }
+
+        var currentIndex = _settings.Stations.FindIndex(s => string.Equals(s.Id, stationId, StringComparison.Ordinal));
+        if (currentIndex < 0)
+        {
+            return false;
+        }
+
+        var clampedTargetIndex = Math.Clamp(targetIndex, 0, _settings.Stations.Count - 1);
+        if (clampedTargetIndex == currentIndex)
+        {
+            return true;
+        }
+
+        var station = _settings.Stations[currentIndex];
+        _settings.Stations.RemoveAt(currentIndex);
+        _settings.Stations.Insert(clampedTargetIndex, station);
+
+        Save();
+        RaiseChanged();
+        return true;
+    }
+
     public string? ActiveStationId
     {
         get => _settings.ActiveStationId;

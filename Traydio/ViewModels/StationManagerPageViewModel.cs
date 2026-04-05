@@ -29,6 +29,8 @@ public partial class StationManagerPageViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(CanEditSelectedStation))]
     [NotifyPropertyChangedFor(nameof(CanSaveOrDiscardSelectedStation))]
     [NotifyPropertyChangedFor(nameof(CanAddStation))]
+    [NotifyPropertyChangedFor(nameof(CanMoveSelectedStationUp))]
+    [NotifyPropertyChangedFor(nameof(CanMoveSelectedStationDown))]
     private StationItem? _selectedStation;
 
     [ObservableProperty]
@@ -55,6 +57,17 @@ public partial class StationManagerPageViewModel : ViewModelBase
     public bool CanSaveOrDiscardSelectedStation => HasSelectedStation && IsEditingSelectedStation;
 
     public bool CanAddStation => !HasSelectedStation;
+
+    public bool CanMoveSelectedStationUp => GetSelectedStationIndex() > 0;
+
+    public bool CanMoveSelectedStationDown
+    {
+        get
+        {
+            var index = GetSelectedStationIndex();
+            return index >= 0 && index < Stations.Count - 1;
+        }
+    }
 
     public void PrefillNewStation(string name, string url)
     {
@@ -90,6 +103,41 @@ public partial class StationManagerPageViewModel : ViewModelBase
     public void SetStationIconPath(StationItem station, string? iconPath)
     {
         _stationRepository.SetStationIconPath(station.Station.Id, iconPath);
+    }
+
+    [RelayCommand]
+    public void MoveStationUp(StationItem? station)
+    {
+        MoveStationByOffset(station, -1);
+    }
+
+    [RelayCommand]
+    public void MoveStationDown(StationItem? station)
+    {
+        MoveStationByOffset(station, 1);
+    }
+
+    [RelayCommand]
+    public void MoveStationToTop(StationItem? station)
+    {
+        if (station is null)
+        {
+            return;
+        }
+
+        _stationRepository.MoveStation(station.Station.Id, 0);
+    }
+
+    [RelayCommand]
+    public void MoveStationToBottom(StationItem? station)
+    {
+        if (station is null)
+        {
+            return;
+        }
+
+        var stations = _stationRepository.GetStations();
+        _stationRepository.MoveStation(station.Station.Id, stations.Count - 1);
     }
 
     public StationManagerPageViewModel(
@@ -234,17 +282,7 @@ public partial class StationManagerPageViewModel : ViewModelBase
             var selectedStationId = SelectedStation?.Station.Id;
 
             Stations.Clear();
-            var orderedStations = _stationRepository.GetStations().ToList();
-            if (isPlaying && !string.IsNullOrWhiteSpace(activeStationId))
-            {
-                var activeIndex = orderedStations.FindIndex(station => string.Equals(station.Id, activeStationId, StringComparison.Ordinal));
-                if (activeIndex > 0)
-                {
-                    var activeStation = orderedStations[activeIndex];
-                    orderedStations.RemoveAt(activeIndex);
-                    orderedStations.Insert(0, activeStation);
-                }
-            }
+            var orderedStations = _stationRepository.GetStations();
 
             foreach (var station in orderedStations)
             {
@@ -268,6 +306,45 @@ public partial class StationManagerPageViewModel : ViewModelBase
         }
 
         Dispatcher.UIThread.Post(Update);
+    }
+
+    private void MoveStationByOffset(StationItem? station, int offset)
+    {
+        if (station is null || offset == 0)
+        {
+            return;
+        }
+
+        var stations = _stationRepository.GetStations();
+        var currentIndex = stations
+            .Select((item, index) => (item, index))
+            .FirstOrDefault(entry => string.Equals(entry.item.Id, station.Station.Id, StringComparison.Ordinal))
+            .index;
+
+        if (currentIndex < 0)
+        {
+            return;
+        }
+
+        _stationRepository.MoveStation(station.Station.Id, currentIndex + offset);
+    }
+
+    private int GetSelectedStationIndex()
+    {
+        if (SelectedStation is null)
+        {
+            return -1;
+        }
+
+        for (var i = 0; i < Stations.Count; i++)
+        {
+            if (string.Equals(Stations[i].Station.Id, SelectedStation.Station.Id, StringComparison.Ordinal))
+            {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     partial void OnSelectedStationChanged(StationItem? value)

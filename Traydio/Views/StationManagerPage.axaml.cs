@@ -342,18 +342,87 @@ public partial class StationManagerPage : UserControl
         }
 
         var exportMenuItem = contextMenu.FindControl<MenuItem>("ExportM3UMenuItem");
-        if (exportMenuItem is null)
+        if (exportMenuItem is not null)
+        {
+            var exportCount = GetStationsForExport(exportMenuItem).Length;
+            exportMenuItem.Header = exportCount > 1
+                ? "Export Stations as M3U Playlist..."
+                : "Export Station as M3U Playlist...";
+        }
+
+        if (DataContext is not StationManagerPageViewModel viewModel)
         {
             return;
         }
 
-        var exportCount = GetStationsForExport(exportMenuItem).Length;
-        exportMenuItem.Header = exportCount > 1
-            ? "Export Stations as M3U Playlist..."
-            : "Export Station as M3U Playlist...";
+        var station = TryGetStationItem(contextMenu);
+        if (station is null)
+        {
+            return;
+        }
+
+        var stations = viewModel.Stations;
+        var index = stations
+            .Select((item, idx) => (item, idx))
+            .FirstOrDefault(entry => string.Equals(entry.item.Station.Id, station.Station.Id, StringComparison.Ordinal))
+            .idx;
+
+        if (index < 0)
+        {
+            return;
+        }
+
+        var canMoveUp = index > 0;
+        var canMoveDown = index < stations.Count - 1;
+
+        var moveToTopMenuItem = contextMenu.FindControl<MenuItem>("MoveToTopMenuItem");
+        if (moveToTopMenuItem is not null)
+        {
+            moveToTopMenuItem.IsEnabled = canMoveUp;
+        }
+
+        var moveUpMenuItem = contextMenu.FindControl<MenuItem>("MoveUpMenuItem");
+        if (moveUpMenuItem is not null)
+        {
+            moveUpMenuItem.IsEnabled = canMoveUp;
+        }
+
+        var moveDownMenuItem = contextMenu.FindControl<MenuItem>("MoveDownMenuItem");
+        if (moveDownMenuItem is not null)
+        {
+            moveDownMenuItem.IsEnabled = canMoveDown;
+        }
+
+        var moveToBottomMenuItem = contextMenu.FindControl<MenuItem>("MoveToBottomMenuItem");
+        if (moveToBottomMenuItem is not null)
+        {
+            moveToBottomMenuItem.IsEnabled = canMoveDown;
+        }
     }
 
-    private void OnPlayFromContextClick(object? sender, RoutedEventArgs e)
+    private void OnMoveStationUpClick(object? sender, RoutedEventArgs e)
+    {
+        MoveStationAndSelect(sender, static (viewModel, station) => viewModel.MoveStationUp(station));
+    }
+
+    private void OnMoveStationDownClick(object? sender, RoutedEventArgs e)
+    {
+        MoveStationAndSelect(sender, static (viewModel, station) => viewModel.MoveStationDown(station));
+    }
+
+    private void OnMoveStationToTopClick(object? sender, RoutedEventArgs e)
+    {
+        MoveStationAndSelect(sender, static (viewModel, station) => viewModel.MoveStationToTop(station));
+    }
+
+    private void OnMoveStationToBottomClick(object? sender, RoutedEventArgs e)
+    {
+        MoveStationAndSelect(sender, static (viewModel, station) => viewModel.MoveStationToBottom(station));
+    }
+
+    private void MoveStationAndSelect(
+        object? sender,
+        Action<StationManagerPageViewModel, StationManagerPageViewModel.StationItem?> moveAction)
     {
         if (DataContext is not StationManagerPageViewModel viewModel)
         {
@@ -361,28 +430,157 @@ public partial class StationManagerPage : UserControl
         }
 
         var station = TryGetStationItem(sender);
-        if (station is null)
+        if (station is not null)
+        {
+            viewModel.SelectedStation = station;
+        }
+
+        moveAction(viewModel, station);
+    }
+
+    private StationManagerPageViewModel.StationItem[] GetStationsForExport(object? sender)
+    {
+        var list = this.FindControl<ListBox>("StationsList");
+        var selectedStations = list?.SelectedItems?
+            .OfType<StationManagerPageViewModel.StationItem>()
+            .ToArray() ?? [];
+
+        var contextStation = TryGetStationItem(sender);
+        if (selectedStations.Length > 1)
+        {
+            if (contextStation is null)
+            {
+                return selectedStations;
+            }
+
+            var isContextStationSelected = selectedStations.Any(item =>
+                ReferenceEquals(item, contextStation)
+                || string.Equals(item.Station.Id, contextStation.Station.Id, StringComparison.OrdinalIgnoreCase));
+
+            if (isContextStationSelected)
+            {
+                return selectedStations;
+            }
+        }
+
+        if (contextStation is not null)
+        {
+            return [contextStation];
+        }
+
+        return selectedStations;
+    }
+
+    private static string BuildSuggestedPlaylistName(StationManagerPageViewModel.StationItem? station, int count)
+    {
+        if (count > 1)
+        {
+            return "stations.m3u";
+        }
+
+        var baseName = station?.Name;
+        if (string.IsNullOrWhiteSpace(baseName))
+        {
+            baseName = "station";
+        }
+
+        foreach (var invalid in Path.GetInvalidFileNameChars())
+        {
+            baseName = baseName.Replace(invalid, '_');
+        }
+
+        return baseName + ".m3u";
+    }
+
+    private static string BuildM3UPlaylist(IEnumerable<StationManagerPageViewModel.StationItem> stations)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("#EXTM3U");
+
+        foreach (var station in stations)
+        {
+            var streamUrl = station.StreamUrl.Trim();
+            if (string.IsNullOrWhiteSpace(streamUrl) || !Uri.TryCreate(streamUrl, UriKind.Absolute, out _))
+            {
+                continue;
+            }
+
+            var displayName = station.Name;
+            if (string.IsNullOrWhiteSpace(displayName))
+            {
+                displayName = station.Station.Id;
+            }
+
+            displayName = displayName.Replace('\r', ' ').Replace('\n', ' ');
+            builder.AppendLine("#EXTINF:-1," + displayName);
+            builder.AppendLine(streamUrl);
+        }
+
+        return builder.ToString();
+    }
+
+    private StationManagerPageViewModel.StationItem? TryGetStationItem(object? sender)
+    {
+        if (sender is Control { DataContext: StationManagerPageViewModel.StationItem station })
+        {
+            return station;
+        }
+
+        if (sender is ContextMenu { PlacementTarget.DataContext: StationManagerPageViewModel.StationItem placementStation })
+        {
+            return placementStation;
+        }
+
+        if (DataContext is StationManagerPageViewModel { SelectedStation: not null } viewModel)
+        {
+            return viewModel.SelectedStation;
+        }
+
+        return null;
+    }
+
+    private async Task CopyToClipboardAsync(string text)
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel?.Clipboard is null || string.IsNullOrWhiteSpace(text))
         {
             return;
         }
 
-        viewModel.PlayStationCommand.Execute(station);
+        await topLevel.Clipboard.SetTextAsync(text).ConfigureAwait(true);
     }
 
-    private void OnDeleteStationClick(object? sender, RoutedEventArgs e)
+    private static void PublishCopyStatus(string message)
+    {
+        RibbonStatusHub.SetTemporaryOverride(
+            id: "station.copy",
+            text: message,
+            priority: 100,
+            duration: TimeSpan.FromSeconds(3));
+    }
+
+    private void DeleteSelectedStations()
     {
         if (DataContext is not StationManagerPageViewModel viewModel)
         {
             return;
         }
 
-        var station = TryGetStationItem(sender);
-        if (station is null)
+        var list = this.FindControl<ListBox>("StationsList");
+        if (list?.SelectedItems is null || list.SelectedItems.Count == 0)
         {
             return;
         }
 
-        viewModel.RemoveStationCommand.Execute(station);
+        var selectedStations = list.SelectedItems
+            .OfType<StationManagerPageViewModel.StationItem>()
+            .ToArray();
+        if (selectedStations.Length == 0)
+        {
+            return;
+        }
+
+        viewModel.RemoveStations(selectedStations);
     }
 
     private void OnSetStationIconClick(object? sender, RoutedEventArgs e)
@@ -558,145 +756,5 @@ public partial class StationManagerPage : UserControl
         await using var writer = new StreamWriter(stream, encoding, leaveOpen: false);
         await writer.WriteAsync(playlistText).ConfigureAwait(true);
         await writer.FlushAsync().ConfigureAwait(true);
-    }
-
-    private StationManagerPageViewModel.StationItem[] GetStationsForExport(object? sender)
-    {
-        var list = this.FindControl<ListBox>("StationsList");
-        var selectedStations = list?.SelectedItems?
-            .OfType<StationManagerPageViewModel.StationItem>()
-            .ToArray() ?? [];
-
-        var contextStation = TryGetStationItem(sender);
-        if (selectedStations.Length > 1)
-        {
-            if (contextStation is null)
-            {
-                return selectedStations;
-            }
-
-            var isContextStationSelected = selectedStations.Any(item =>
-                ReferenceEquals(item, contextStation)
-                || string.Equals(item.Station.Id, contextStation.Station.Id, StringComparison.OrdinalIgnoreCase));
-
-            if (isContextStationSelected)
-            {
-                return selectedStations;
-            }
-        }
-
-        if (contextStation is not null)
-        {
-            return [contextStation];
-        }
-
-        return selectedStations;
-    }
-
-    private static string BuildSuggestedPlaylistName(StationManagerPageViewModel.StationItem? station, int count)
-    {
-        if (count > 1)
-        {
-            return "stations.m3u";
-        }
-
-        var baseName = station?.Name;
-        if (string.IsNullOrWhiteSpace(baseName))
-        {
-            baseName = "station";
-        }
-
-        foreach (var invalid in Path.GetInvalidFileNameChars())
-        {
-            baseName = baseName.Replace(invalid, '_');
-        }
-
-        return baseName + ".m3u";
-    }
-
-    private static string BuildM3UPlaylist(IEnumerable<StationManagerPageViewModel.StationItem> stations)
-    {
-        var builder = new StringBuilder();
-        builder.AppendLine("#EXTM3U");
-
-        foreach (var station in stations)
-        {
-            var streamUrl = station.StreamUrl.Trim();
-            if (string.IsNullOrWhiteSpace(streamUrl) || !Uri.TryCreate(streamUrl, UriKind.Absolute, out _))
-            {
-                continue;
-            }
-
-            var displayName = station.Name;
-            if (string.IsNullOrWhiteSpace(displayName))
-            {
-                displayName = station.Station.Id;
-            }
-
-            displayName = displayName.Replace('\r', ' ').Replace('\n', ' ');
-            builder.AppendLine("#EXTINF:-1," + displayName);
-            builder.AppendLine(streamUrl);
-        }
-
-        return builder.ToString();
-    }
-
-    private StationManagerPageViewModel.StationItem? TryGetStationItem(object? sender)
-    {
-        if (sender is Control { DataContext: StationManagerPageViewModel.StationItem station })
-        {
-            return station;
-        }
-
-        if (DataContext is StationManagerPageViewModel { SelectedStation: not null } viewModel)
-        {
-            return viewModel.SelectedStation;
-        }
-
-        return null;
-    }
-
-    private async Task CopyToClipboardAsync(string text)
-    {
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel?.Clipboard is null || string.IsNullOrWhiteSpace(text))
-        {
-            return;
-        }
-
-        await topLevel.Clipboard.SetTextAsync(text).ConfigureAwait(true);
-    }
-
-    private static void PublishCopyStatus(string message)
-    {
-        RibbonStatusHub.SetTemporaryOverride(
-            id: "station.copy",
-            text: message,
-            priority: 100,
-            duration: TimeSpan.FromSeconds(3));
-    }
-
-    private void DeleteSelectedStations()
-    {
-        if (DataContext is not StationManagerPageViewModel viewModel)
-        {
-            return;
-        }
-
-        var list = this.FindControl<ListBox>("StationsList");
-        if (list?.SelectedItems is null || list.SelectedItems.Count == 0)
-        {
-            return;
-        }
-
-        var selectedStations = list.SelectedItems
-            .OfType<StationManagerPageViewModel.StationItem>()
-            .ToArray();
-        if (selectedStations.Length == 0)
-        {
-            return;
-        }
-
-        viewModel.RemoveStations(selectedStations);
     }
 }

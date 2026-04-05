@@ -247,5 +247,20 @@
         <Setter Property="Foreground" Value="#6E5500"/>
         <Setter Property="FontSize" Value="11"/>
     </Style>
+
+    <Style Selector="Button.reorder-arrow">
+        <Setter Property="Opacity" Value="0"/>
+        <Setter Property="IsHitTestVisible" Value="False"/>
+    </Style>
+
+    <Style Selector="Border.station-entry:pointerover Button.reorder-arrow">
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="IsHitTestVisible" Value="True"/>
+    </Style>
+
+    <Style Selector="ListBoxItem:selected Border.station-entry Button.reorder-arrow">
+        <Setter Property="Opacity" Value="1"/>
+        <Setter Property="IsHitTestVisible" Value="True"/>
+    </Style>
 </Styles>
 

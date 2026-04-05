@@ -55,6 +55,11 @@
                                             <MenuItem Header="Play" Click="OnPlayStationClick"/>
                                             <MenuItem Header="Delete" Click="OnRemoveStationClick"/>
                                             <Separator/>
+                                            <MenuItem x:Name="MoveToTopMenuItem" Header="Move to Top" Click="OnMoveStationToTopClick"/>
+                                            <MenuItem x:Name="MoveUpMenuItem" Header="Move Up" Click="OnMoveStationUpClick"/>
+                                            <MenuItem x:Name="MoveDownMenuItem" Header="Move Down" Click="OnMoveStationDownClick"/>
+                                            <MenuItem x:Name="MoveToBottomMenuItem" Header="Move to Bottom" Click="OnMoveStationToBottomClick"/>
+                                            <Separator/>
                                             <MenuItem Header="Set Icon..." Click="OnSetStationIconClick"/>
                                             <MenuItem Header="Clear Icon" Click="OnClearStationIconClick"/>
                                             <Separator/>
@@ -67,7 +72,7 @@
                                             <MenuItem x:Name="ExportM3UMenuItem" Header="Export Station as M3U Playlist..." Click="OnExportM3UClick"/>
                                         </ContextMenu>
                                     </Border.ContextMenu>
-                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
                                         <Image Source="{Binding IconPath, Converter={StaticResource StationIconConverter}}" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
                                         <StackPanel Grid.Column="1">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
@@ -78,11 +83,21 @@
                                             <TextBlock Text="{Binding Station.Id}" Classes="subtle-text" Opacity="0.6" FontSize="10"/>
                                         </StackPanel>
                                         <Button Grid.Column="2"
+                                                Classes="icon-only reorder-arrow"
+                                                Click="OnMoveStationUpClick">
+                                            <Image Source="/Assets/Icons9x/arrow_up_16.ico" Classes="icon-small"/>
+                                        </Button>
+                                        <Button Grid.Column="3"
+                                                Classes="icon-only reorder-arrow"
+                                                Click="OnMoveStationDownClick">
+                                            <Image Source="/Assets/Icons9x/arrow_down_16.ico" Classes="icon-small"/>
+                                        </Button>
+                                        <Button Grid.Column="4"
                                                 Classes="icon-only"
                                                 Click="OnPlayStationClick">
                                             <Image Source="{Binding IsActivePlaying, Converter={StaticResource PlayPauseGlyphConverter}}" Classes="icon-small"/>
                                         </Button>
-                                        <Button Grid.Column="3"
+                                        <Button Grid.Column="5"
                                                 Classes="icon-only"
                                                 Click="OnRemoveStationClick">
                                             <Image Source="/Assets/Icons9x/remove.ico" Classes="icon-small"/>

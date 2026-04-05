@@ -20,6 +20,8 @@ public interface IStationRepository
 
     bool SetStationIconPath(string stationId, string? iconPath);
 
+    bool MoveStation(string stationId, int targetIndex);
+
     string? ActiveStationId { get; set; }
 
     int Volume { get; set; }
