@@ -10,6 +10,7 @@ public enum AppCommandKind
     VolumeDown,
     SetVolume,
     OpenStationManager,
+    OpenStationSearch,
     Exit,
 }
 

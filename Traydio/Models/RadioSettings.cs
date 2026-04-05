@@ -2,6 +2,13 @@
 
 namespace Traydio.Models;
 
+public sealed class StationDiscoveryPluginSettings
+{
+    public string PluginDirectory { get; set; } = "Plugins";
+
+    public List<string> DisabledPluginIds { get; set; } = new();
+}
+
 public sealed class CommunicationBridgeSettings
 {
     public bool EnableNamedPipeRelay { get; set; } = true;
@@ -26,5 +33,7 @@ public sealed class RadioSettings
     public int Volume { get; set; } = 60;
 
     public CommunicationBridgeSettings Communication { get; set; } = new();
+
+    public StationDiscoveryPluginSettings StationDiscoveryPlugins { get; set; } = new();
 }
 

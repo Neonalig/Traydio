@@ -3,5 +3,7 @@
 public interface IWindowManager
 {
     void ShowStationManager();
+
+    void ShowStationSearch();
 }
 

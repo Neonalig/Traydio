@@ -69,7 +69,16 @@ sealed class Program
         services.AddSingleton<IWindowManager, WindowManager>();
         services.AddSingleton<IAppCommandDispatcher, AppCommandDispatcher>();
         services.AddSingleton<ICommandTextRouter, CommandTextRouter>();
-        services.AddSingleton<IProtocolRegistrationService, WindowsProtocolRegistrationService>();
+        if (OperatingSystem.IsWindows())
+        {
+            services.AddSingleton<IProtocolRegistrationService, WindowsProtocolRegistrationService>();
+        }
+        else
+        {
+            services.AddSingleton<IProtocolRegistrationService, NoOpProtocolRegistrationService>();
+        }
+        services.AddSingleton<IStationDiscoveryPluginManager, StationDiscoveryPluginManager>();
+        services.AddSingleton<IStationDiscoveryService, StationDiscoveryService>();
         services.AddSingleton<IInstanceGate, MutexInstanceGate>();
         services.AddSingleton<ICommandRelayClient, NamedPipeCommandRelayClient>();
         services.AddSingleton<ICommandRelayClient, LoopbackCommandRelayClient>();
@@ -81,7 +90,9 @@ sealed class Program
         services.AddSingleton<ITrayController, TrayController>();
 
         services.AddTransient<MainWindowViewModel>();
+        services.AddTransient<StationSearchWindowViewModel>();
         services.AddTransient<MainWindow>();
+        services.AddTransient<StationSearchWindow>();
 
         return services;
     }

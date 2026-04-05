@@ -48,6 +48,7 @@ public sealed class TrayController : ITrayController
 
         menu.Add(stationsMenu);
         menu.Add(CreateItem("Add Station...", () => Dispatch(AppCommandKind.OpenStationManager)));
+        menu.Add(CreateItem("Find Stations...", () => Dispatch(AppCommandKind.OpenStationSearch)));
         menu.Add(new NativeMenuItemSeparator());
 
         menu.Add(CreateItem("Volume +", () =>

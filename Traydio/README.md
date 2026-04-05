@@ -7,7 +7,20 @@ Traydio now runs as a tray-first internet radio app with DI and LibVLC playback.
 - Starts with no main window.
 - Creates a tray icon with controls for play/pause, station selection, volume, and exit.
 - Opens the station manager window only when requested from tray menu.
+- Includes a dedicated station search window for provider-based discovery.
 - Persists stations/settings to `%LocalAppData%\\Traydio\\settings.json`.
+
+## Station Discovery Plugins
+
+- Built-in provider plugins ship as external class libraries:
+  - `Traydio.Plugin.FmStreamOrg`
+  - `Traydio.Plugin.StreamUrlLink`
+- Providers implement `IRadioStationProviderPlugin` from `Traydio.Common`.
+- Runtime plugin management is supported:
+  - Add plugin by DLL path from the search window.
+  - Remove plugin at runtime (disabled in settings).
+  - Plugin folder changes are detected while the app is running.
+- Search window allows query/filter and adding discovered stations directly to your local station list.
 
 ## Command System
 
@@ -41,5 +54,7 @@ Settings use `System.Text.Json` source generation via `RadioSettingsJsonContext`
 - `LoopbackPort`
 - `EnableProtocolUrlRelay`
 - `ProtocolScheme`
+
+`settings.json` also includes station discovery plugin settings (`StationDiscoveryPlugins`) for plugin directory and disabled provider IDs.
 
 The station manager window includes a Communication Settings section where you can save bridge options and install/uninstall the protocol URL handler for the configured scheme.

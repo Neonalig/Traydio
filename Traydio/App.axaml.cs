@@ -1,6 +1,5 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using System.Linq;
 using Avalonia.Markup.Xaml;
@@ -36,10 +35,17 @@ public partial class App : Application
             var relayCoordinator = Program.Services.GetRequiredService<ICommandRelayCoordinator>();
             relayCoordinator.StartPrimaryRelay();
 
+            var pluginManager = Program.Services.GetRequiredService<IStationDiscoveryPluginManager>();
+            pluginManager.Start();
+
             var trayController = Program.Services.GetRequiredService<ITrayController>();
             trayController.Initialize(desktop);
 
-            desktop.Exit += (_, _) => relayCoordinator.StopPrimaryRelay();
+            desktop.Exit += (_, _) =>
+            {
+                relayCoordinator.StopPrimaryRelay();
+                pluginManager.Stop();
+            };
         }
 
         base.OnFrameworkInitializationCompleted();

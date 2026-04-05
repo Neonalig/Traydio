@@ -22,6 +22,10 @@ public interface IStationRepository
 
     CommunicationBridgeSettings Communication { get; }
 
+    StationDiscoveryPluginSettings StationDiscoveryPlugins { get; }
+
     void SaveCommunicationSettings(CommunicationBridgeSettings settings);
+
+    void SaveStationDiscoveryPluginSettings(StationDiscoveryPluginSettings settings);
 }
 

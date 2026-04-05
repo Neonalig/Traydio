@@ -116,6 +116,12 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void OpenStationSearch()
+    {
+        _commandDispatcher.Dispatch(new AppCommand { Kind = AppCommandKind.OpenStationSearch });
+    }
+
+    [RelayCommand]
     private void ApplyVolume()
     {
         _commandDispatcher.Dispatch(new AppCommand

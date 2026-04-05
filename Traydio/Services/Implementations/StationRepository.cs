@@ -114,6 +114,8 @@ public sealed class StationRepository : IStationRepository
 
     public CommunicationBridgeSettings Communication => _settings.Communication;
 
+    public StationDiscoveryPluginSettings StationDiscoveryPlugins => _settings.StationDiscoveryPlugins;
+
     public void SaveCommunicationSettings(CommunicationBridgeSettings settings)
     {
         _settings.Communication = new CommunicationBridgeSettings
@@ -124,6 +126,22 @@ public sealed class StationRepository : IStationRepository
             LoopbackPort = settings.LoopbackPort <= 0 ? 38473 : settings.LoopbackPort,
             EnableProtocolUrlRelay = settings.EnableProtocolUrlRelay,
             ProtocolScheme = string.IsNullOrWhiteSpace(settings.ProtocolScheme) ? "traydio" : settings.ProtocolScheme.Trim().ToLowerInvariant(),
+        };
+
+        Save();
+        RaiseChanged();
+    }
+
+    public void SaveStationDiscoveryPluginSettings(StationDiscoveryPluginSettings settings)
+    {
+        _settings.StationDiscoveryPlugins = new StationDiscoveryPluginSettings
+        {
+            PluginDirectory = string.IsNullOrWhiteSpace(settings.PluginDirectory) ? "Plugins" : settings.PluginDirectory.Trim(),
+            DisabledPluginIds = settings.DisabledPluginIds
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Select(id => id.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList(),
         };
 
         Save();
@@ -160,6 +178,12 @@ public sealed class StationRepository : IStationRepository
             if (string.IsNullOrWhiteSpace(settings.Communication.ProtocolScheme))
             {
                 settings.Communication.ProtocolScheme = "traydio";
+            }
+
+            settings.StationDiscoveryPlugins ??= new StationDiscoveryPluginSettings();
+            if (string.IsNullOrWhiteSpace(settings.StationDiscoveryPlugins.PluginDirectory))
+            {
+                settings.StationDiscoveryPlugins.PluginDirectory = "Plugins";
             }
 
             return settings;

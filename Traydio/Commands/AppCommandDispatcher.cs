@@ -49,6 +49,9 @@ public sealed class AppCommandDispatcher(
             case AppCommandKind.OpenStationManager:
                 windowManager.ShowStationManager();
                 break;
+            case AppCommandKind.OpenStationSearch:
+                windowManager.ShowStationSearch();
+                break;
             case AppCommandKind.Exit:
                 radioPlayer.Stop();
                 _lifetime?.Shutdown();
