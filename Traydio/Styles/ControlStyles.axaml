@@ -75,6 +75,26 @@
         <Setter Property="VerticalContentAlignment" Value="Center"/>
     </Style>
 
+    <Style Selector="ToggleButton.ribbon-button">
+        <Setter Property="MinWidth" Value="88"/>
+        <Setter Property="Width" Value="88"/>
+        <Setter Property="Height" Value="72"/>
+        <Setter Property="Padding" Value="6,4"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+
+    <Style Selector="ToggleButton.ribbon-tab:checked">
+        <Setter Property="Background" Value="#FFFFFF"/>
+        <Setter Property="BorderBrush" Value="#5A5A5A"/>
+    </Style>
+
+    <Style Selector="Border.ribbon-separator">
+        <Setter Property="Width" Value="1"/>
+        <Setter Property="Margin" Value="2,4"/>
+        <Setter Property="Background" Value="{DynamicResource SurfaceBorderBrush}"/>
+    </Style>
+
     <Style Selector="Button.command-button">
         <Setter Property="MinWidth" Value="104"/>
         <Setter Property="Padding" Value="8,3"/>

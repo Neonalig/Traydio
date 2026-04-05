@@ -462,110 +462,23 @@ public partial class PluginManagementPage : UserControl
 
     private async Task ShowInfoDialogAsync(string title, string message)
     {
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel is not Window owner)
-        {
-            return;
-        }
-
-        var dialog = new Window
-        {
-            Title = title,
-            Width = 520,
-            Height = 220,
-            CanResize = false,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Content = new Grid
-            {
-                Margin = new Avalonia.Thickness(12),
-                RowDefinitions = new RowDefinitions("*,Auto"),
-                RowSpacing = 10,
-                Children =
-                {
-                    new TextBlock
-                    {
-                        Text = message,
-                        TextWrapping = Avalonia.Media.TextWrapping.Wrap,
-                    },
-                    new StackPanel
-                    {
-                        Orientation = Avalonia.Layout.Orientation.Horizontal,
-                        HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
-                        Children =
-                        {
-                            new Button
-                            {
-                                Content = "OK",
-                                MinWidth = 88,
-                                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
-                                [Grid.RowProperty] = 1,
-                            },
-                        },
-                        [Grid.RowProperty] = 1,
-                    },
-                },
-            },
-        };
-
-        if (dialog.Content is Grid grid && grid.Children.OfType<StackPanel>().FirstOrDefault()?.Children.OfType<Button>().FirstOrDefault() is { } okButton)
-        {
-            okButton.Click += (_, _) => dialog.Close();
-        }
-
-        await dialog.ShowDialog(owner);
+        await MessageBox.ShowDialog(TopLevel.GetTopLevel(this) as Window, title, message);
     }
 
     private async Task<UserChoice> ShowYesNoCancelDialogAsync(string title, string message)
     {
-        var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel is not Window owner)
-        {
-            return UserChoice.Cancel;
-        }
+        var result = await MessageBox.ShowDialog(
+            TopLevel.GetTopLevel(this) as Window,
+            title,
+            message,
+            MessageBoxButtons.YesNoCancel);
 
-        var result = UserChoice.Cancel;
-        var dialog = new Window
+        return result switch
         {
-            Title = title,
-            Width = 560,
-            Height = 240,
-            CanResize = false,
-            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            MessageBoxResult.Yes => UserChoice.Yes,
+            MessageBoxResult.No => UserChoice.No,
+            _ => UserChoice.Cancel,
         };
-
-        var yesButton = new Button { Content = "Yes", MinWidth = 90 };
-        var noButton = new Button { Content = "No", MinWidth = 90 };
-        var cancelButton = new Button { Content = "Cancel", MinWidth = 90 };
-
-        yesButton.Click += (_, _) => { result = UserChoice.Yes; dialog.Close(); };
-        noButton.Click += (_, _) => { result = UserChoice.No; dialog.Close(); };
-        cancelButton.Click += (_, _) => { result = UserChoice.Cancel; dialog.Close(); };
-
-        dialog.Content = new Grid
-        {
-            Margin = new Avalonia.Thickness(12),
-            RowDefinitions = new RowDefinitions("*,Auto"),
-            RowSpacing = 10,
-            Children =
-            {
-                new TextBlock
-                {
-                    Text = message,
-                    TextWrapping = Avalonia.Media.TextWrapping.Wrap,
-                },
-                new StackPanel
-                {
-                    Orientation = Avalonia.Layout.Orientation.Horizontal,
-                    Spacing = 8,
-                    HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Right,
-                    Children = { yesButton, noButton, cancelButton },
-                    [Grid.RowProperty] = 1,
-                },
-            },
-        };
-
-        await dialog.ShowDialog(owner);
-        return result;
     }
 
     private enum UserChoice

@@ -14,6 +14,8 @@ public interface IWindowManager
 
     void ShowCommandTester();
 
+    void ShowAboutDialog();
+
     bool ShowPluginSettings(string pluginId, out string? error);
 }
 

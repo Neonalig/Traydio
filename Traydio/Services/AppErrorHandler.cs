@@ -118,6 +118,8 @@ public static class AppErrorHandler
             },
         };
 
+        WindowThemeHelper.ApplyClassicWindowTheme(dialog);
+
         if (dialog.Content is Grid grid && grid.Children[2] is Button closeButton)
         {
             closeButton.Click += (_, _) => dialog.Close();

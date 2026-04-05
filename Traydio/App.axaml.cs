@@ -35,6 +35,9 @@ public class App : Application
             var pluginManager = Program.Services.GetRequiredService<IPluginManager>();
             pluginManager.Start();
 
+            var stationRepository = Program.Services.GetRequiredService<IStationRepository>();
+            ClassicThemeService.Apply(stationRepository.ClassicThemeKey);
+
             var commandDispatcher = Program.Services.GetRequiredService<IAppCommandDispatcher>();
             commandDispatcher.Initialize(desktop);
 

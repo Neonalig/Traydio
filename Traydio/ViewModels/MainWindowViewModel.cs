@@ -75,6 +75,18 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string _ribbonStatusText = "Ready";
 
+    [ObservableProperty]
+    private bool _isStationsTabChecked;
+
+    [ObservableProperty]
+    private bool _isSearchTabChecked;
+
+    [ObservableProperty]
+    private bool _isPluginsTabChecked;
+
+    [ObservableProperty]
+    private bool _isSettingsTabChecked;
+
     public MainWindowViewModel(
         INavigationService navigationService,
         IAppCommandDispatcher commandDispatcher,
@@ -88,12 +100,17 @@ public partial class MainWindowViewModel : ViewModelBase
 
         _mediaMarqueeTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(250), DispatcherPriority.Background, (_, _) => TickMediaMarquee());
 
-        _navigationService.Changed += (_, _) => CurrentPageViewModel = _navigationService.CurrentPageViewModel;
+        _navigationService.Changed += (_, _) =>
+        {
+            CurrentPageViewModel = _navigationService.CurrentPageViewModel;
+            UpdateRibbonTabChecks();
+        };
         _radioPlayer.StateChanged += (_, state) => UpdateMediaState(state);
         RibbonStatusHub.Changed += OnRibbonStatusChanged;
 
         _navigationService.Navigate(AppPage.Stations);
         CurrentPageViewModel = _navigationService.CurrentPageViewModel;
+        UpdateRibbonTabChecks();
         RibbonStatusText = RibbonStatusHub.GetCurrentText("Ready");
         UpdateMediaState(_radioPlayer.State);
     }
@@ -126,6 +143,12 @@ public partial class MainWindowViewModel : ViewModelBase
     private void OpenCommands()
     {
         _windowManager.ShowCommandTester();
+    }
+
+    [RelayCommand]
+    private void OpenAbout()
+    {
+        _windowManager.ShowAboutDialog();
     }
 
     [RelayCommand]
@@ -311,5 +334,13 @@ public partial class MainWindowViewModel : ViewModelBase
         }
 
         Dispatcher.UIThread.Post(() => RibbonStatusText = next);
+    }
+
+    private void UpdateRibbonTabChecks()
+    {
+        IsStationsTabChecked = _navigationService.CurrentPage == AppPage.Stations;
+        IsSearchTabChecked = _navigationService.CurrentPage == AppPage.Search;
+        IsPluginsTabChecked = _navigationService.CurrentPage == AppPage.Plugins;
+        IsSettingsTabChecked = _navigationService.CurrentPage == AppPage.Settings;
     }
 }

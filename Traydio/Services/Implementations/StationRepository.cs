@@ -152,6 +152,26 @@ public sealed class StationRepository : IStationRepository
         }
     }
 
+    public string? ClassicThemeKey
+    {
+        get => _settings.ClassicThemeKey;
+        set
+        {
+            var normalized = string.IsNullOrWhiteSpace(value)
+                ? null
+                : value.Trim();
+
+            if (string.Equals(_settings.ClassicThemeKey, normalized, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            _settings.ClassicThemeKey = normalized;
+            Save();
+            RaiseChanged();
+        }
+    }
+
     public CommunicationBridgeSettings Communication => _settings.Communication;
 
     public StationDiscoveryPluginSettings StationDiscoveryPlugins => _settings.StationDiscoveryPlugins;
@@ -274,6 +294,11 @@ public sealed class StationRepository : IStationRepository
             if (string.IsNullOrWhiteSpace(settings.AudioOutputDeviceId))
             {
                 settings.AudioOutputDeviceId = null;
+            }
+
+            if (string.IsNullOrWhiteSpace(settings.ClassicThemeKey))
+            {
+                settings.ClassicThemeKey = "Default";
             }
 
             settings.PluginSettings ??= [];

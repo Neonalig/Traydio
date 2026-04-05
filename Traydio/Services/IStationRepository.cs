@@ -24,6 +24,8 @@ public interface IStationRepository
 
     string? AudioOutputDeviceId { get; set; }
 
+    string? ClassicThemeKey { get; set; }
+
     CommunicationBridgeSettings Communication { get; }
 
     StationDiscoveryPluginSettings StationDiscoveryPlugins { get; }

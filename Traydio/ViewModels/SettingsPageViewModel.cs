@@ -54,6 +54,12 @@ public partial class SettingsPageViewModel : ViewModelBase
     [ObservableProperty]
     private RadioPlayerEngineOption? _selectedRadioPlayerEngine;
 
+    [ObservableProperty]
+    private IReadOnlyList<ClassicThemeOption> _classicThemes = [];
+
+    [ObservableProperty]
+    private ClassicThemeOption? _selectedClassicTheme;
+
     public SettingsPageViewModel(
         IStationRepository stationRepository,
         IProtocolRegistrationService protocolRegistrationService,
@@ -86,6 +92,8 @@ public partial class SettingsPageViewModel : ViewModelBase
         _radioPlayer.SetAudioOutputDevice(_stationRepository.AudioOutputDeviceId);
 
         _stationRepository.RadioPlayerEngineId = SelectedRadioPlayerEngine?.Id;
+        _stationRepository.ClassicThemeKey = SelectedClassicTheme?.Key;
+        ClassicThemeService.Apply(_stationRepository.ClassicThemeKey);
 
         RefreshProtocolRegistration();
 
@@ -141,6 +149,12 @@ public partial class SettingsPageViewModel : ViewModelBase
         SelectedAudioOutputDevice = AudioOutputDevices.FirstOrDefault(option =>
             string.Equals(option.Id, _stationRepository.AudioOutputDeviceId, StringComparison.Ordinal))
             ?? AudioOutputDevices.FirstOrDefault();
+
+        ClassicThemes = BuildClassicThemeOptions();
+        SelectedClassicTheme = ClassicThemes.FirstOrDefault(option =>
+            string.Equals(option.Key, _stationRepository.ClassicThemeKey, StringComparison.OrdinalIgnoreCase))
+            ?? ClassicThemes.FirstOrDefault();
+
         RefreshProtocolRegistration();
     }
 
@@ -179,9 +193,18 @@ public partial class SettingsPageViewModel : ViewModelBase
             .Select(capability => new RadioPlayerEngineOption(capability.EngineId, capability.DisplayName))
             .ToArray();
     }
+
+    private static IReadOnlyList<ClassicThemeOption> BuildClassicThemeOptions()
+    {
+        return ClassicThemeService.SupportedThemeKeys
+            .Select(key => new ClassicThemeOption(key, key))
+            .ToArray();
+    }
 }
 
 public sealed record AudioOutputDeviceOption(string? Id, string Name);
 
 public sealed record RadioPlayerEngineOption(string Id, string Name);
+
+public sealed record ClassicThemeOption(string Key, string Name);
 

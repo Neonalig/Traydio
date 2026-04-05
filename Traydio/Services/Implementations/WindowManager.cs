@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using Avalonia.Controls;
+using Avalonia.Platform;
+using Avalonia.Media.Imaging;
 using Microsoft.Extensions.DependencyInjection;
 using Traydio.Common;
 using Traydio.Views;
@@ -66,6 +68,7 @@ public sealed class WindowManager(
             Content = page,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
+        WindowThemeHelper.ApplyClassicWindowTheme(window);
 
         if (_mainWindow is not null)
         {
@@ -125,6 +128,7 @@ public sealed class WindowManager(
             Content = control,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
+        WindowThemeHelper.ApplyClassicWindowTheme(settingsWindow);
 
         if (_mainWindow is not null)
         {
@@ -136,6 +140,20 @@ public sealed class WindowManager(
         }
 
         return true;
+    }
+
+    public void ShowAboutDialog()
+    {
+        ShowMainWindow();
+
+        using var iconStream = AssetLoader.Open(new Uri("avares://Traydio/Assets/Icons9x/stations.ico"));
+        var bitmap = new Bitmap(iconStream);
+
+        AboutDialog.ShowDialog(
+            _mainWindow,
+            "Traydio",
+            "Copyright (C) 2026",
+            bitmap).ForgetWithErrorHandling("Show about dialog", showDialog: true);
     }
 
     private static Control CreatePluginSettingsFailureView(string pluginDisplayName, Exception ex)

@@ -38,6 +38,8 @@ public sealed class RadioSettings
 
     public string? AudioOutputDeviceId { get; set; }
 
+    public string? ClassicThemeKey { get; set; }
+
     public CommunicationBridgeSettings Communication { get; set; } = new();
 
     public StationDiscoveryPluginSettings StationDiscoveryPlugins { get; set; } = new();

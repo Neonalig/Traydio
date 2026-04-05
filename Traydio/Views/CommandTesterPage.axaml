@@ -36,10 +36,9 @@
                     <ItemsControl x:Name="SyntaxHintsList" Grid.Row="1">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate>
-                                <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,4">
+                                <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,4" ToolTip.Tip="{ReflectionBinding Tooltip}">
                                     <Image Source="/Assets/Icons9x/info.ico"
-                                           Classes="icon-small"
-                                           ToolTip.Tip="{ReflectionBinding Tooltip}"/>
+                                           Classes="icon-small"/>
                                     <Border Classes="tip-help-box">
                                         <TextBlock Text="{ReflectionBinding Command}"/>
                                     </Border>

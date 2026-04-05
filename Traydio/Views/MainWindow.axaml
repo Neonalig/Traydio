@@ -11,7 +11,8 @@
         Icon="/Assets/Icons9x/stations.ico"
         Width="1100"
         Height="760"
-        Title="Traydio - Internet Radio Control Center">
+        Title="Traydio - Internet Radio Control Center"
+        Theme="{DynamicResource ClassicWindow}">
     <Window.Resources>
         <imaging:Bitmap x:Key="PlayIcon">avares://Traydio/Assets/Icons9x/play.ico</imaging:Bitmap>
         <imaging:Bitmap x:Key="PauseIcon">avares://Traydio/Assets/Icons9x/pause.ico</imaging:Bitmap>
@@ -28,45 +29,56 @@
 
     <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="6">
         <Border Grid.Row="0" Classes="toolbar-frame" Margin="0">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+            <Grid ColumnDefinitions="Auto,Auto,Auto,*" ColumnSpacing="8">
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6">
-                    <Button Classes="ribbon-button" Command="{Binding OpenStationsCommand}">
+                    <ToggleButton Classes="ribbon-button ribbon-tab" IsChecked="{Binding IsStationsTabChecked}" Command="{Binding OpenStationsCommand}">
                         <StackPanel Orientation="Vertical" Spacing="4" HorizontalAlignment="Center">
                             <Image Source="/Assets/Icons9x/stations.ico" Classes="icon-ribbon" HorizontalAlignment="Center"/>
                             <TextBlock Text="Stations" TextAlignment="Center"/>
                         </StackPanel>
-                    </Button>
+                    </ToggleButton>
 
-                    <Button Classes="ribbon-button" Command="{Binding OpenSearchCommand}">
+                    <ToggleButton Classes="ribbon-button ribbon-tab" IsChecked="{Binding IsSearchTabChecked}" Command="{Binding OpenSearchCommand}">
                         <StackPanel Orientation="Vertical" Spacing="4" HorizontalAlignment="Center">
                             <Image Source="/Assets/Icons9x/search.ico" Classes="icon-ribbon" HorizontalAlignment="Center"/>
                             <TextBlock Text="Search" TextAlignment="Center"/>
                         </StackPanel>
-                    </Button>
+                    </ToggleButton>
 
-                    <Button Classes="ribbon-button" Command="{Binding OpenPluginsCommand}">
+                    <ToggleButton Classes="ribbon-button ribbon-tab" IsChecked="{Binding IsPluginsTabChecked}" Command="{Binding OpenPluginsCommand}">
                         <StackPanel Orientation="Vertical" Spacing="4" HorizontalAlignment="Center">
                             <Image Source="/Assets/Icons9x/plugins.ico" Classes="icon-ribbon" HorizontalAlignment="Center"/>
                             <TextBlock Text="Plugins" TextAlignment="Center"/>
                         </StackPanel>
-                    </Button>
+                    </ToggleButton>
 
-                    <Button Classes="ribbon-button" Command="{Binding OpenSettingsCommand}">
+                    <ToggleButton Classes="ribbon-button ribbon-tab" IsChecked="{Binding IsSettingsTabChecked}" Command="{Binding OpenSettingsCommand}">
                         <StackPanel Orientation="Vertical" Spacing="4" HorizontalAlignment="Center">
                             <Image Source="/Assets/Icons9x/settings.ico" Classes="icon-ribbon" HorizontalAlignment="Center"/>
                             <TextBlock Text="Settings" TextAlignment="Center"/>
                         </StackPanel>
-                    </Button>
+                    </ToggleButton>
+                </StackPanel>
 
+                <Border Grid.Column="1" Classes="ribbon-separator"/>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
                     <Button Classes="ribbon-button" Command="{Binding OpenCommandsCommand}">
                         <StackPanel Orientation="Vertical" Spacing="4" HorizontalAlignment="Center">
                             <Image Source="/Assets/Icons9x/info.ico" Classes="icon-ribbon" HorizontalAlignment="Center"/>
                             <TextBlock Text="Commands" TextAlignment="Center"/>
                         </StackPanel>
                     </Button>
+
+                    <Button Classes="ribbon-button" Command="{Binding OpenAboutCommand}">
+                        <StackPanel Orientation="Vertical" Spacing="4" HorizontalAlignment="Center">
+                            <Image Source="/Assets/Icons9x/help.ico" Classes="icon-ribbon" HorizontalAlignment="Center"/>
+                            <TextBlock Text="About" TextAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
 
-                <TextBlock Grid.Column="1"
+                <TextBlock Grid.Column="3"
                            HorizontalAlignment="Right"
                            VerticalAlignment="Center"
                            Text="{Binding RibbonStatusText}"
