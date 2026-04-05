@@ -7,7 +7,7 @@
              DragDrop.DragOver="OnDragOver"
              DragDrop.Drop="OnDrop">
 
-    <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="6" Margin="0">
+    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="6" Margin="0">
         <Border Grid.Row="0" Classes="toolbar-frame" Margin="0">
             <StackPanel Orientation="Horizontal" Spacing="6">
                 <Button x:Name="AddStationButton" Classes="toolbar-button">
@@ -58,26 +58,30 @@
             <TextBlock Text="Tip: drag and drop stations to reorder playback priority. Changes are retained when station operations run." Classes="helper-text"/>
         </Border>
 
-        <TextBlock Grid.Row="2" Text="Saved Stations" Classes="group-title" Margin="10,0,0,-8"/>
-        <Border Grid.Row="3" Classes="group-frame" Margin="0">
-            <Grid RowDefinitions="*,Auto" RowSpacing="8">
-                <ListBox Grid.Row="0" Classes="list-surface" ItemsSource="{Binding Stations}" SelectedItem="{Binding SelectedStation}">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                                <Image Source="/Assets/Icons9x/stations.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
-                                <StackPanel Grid.Column="1">
-                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                                    <TextBlock Text="{Binding StreamUrl}" Classes="subtle-text"/>
-                                </StackPanel>
-                            </Grid>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+        <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="0" Margin="4,0,4,4">
+            <Border Classes="group-caption-chip">
+                <TextBlock Text="Saved Stations" Classes="group-title"/>
+            </Border>
+            <Border Grid.Row="1" Classes="group-frame" Margin="0,-8,0,0">
+                <Grid RowDefinitions="*,Auto" RowSpacing="8">
+                    <ListBox Grid.Row="0" Classes="list-surface" ItemsSource="{Binding Stations}" SelectedItem="{Binding SelectedStation}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                    <Image Source="/Assets/Icons9x/stations.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding StreamUrl}" Classes="subtle-text"/>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
 
-                <TextBlock Grid.Row="1" Text="Select a station, then use toolbar actions to play, pause, or remove it." Classes="helper-text"/>
-            </Grid>
-        </Border>
+                    <TextBlock Grid.Row="1" Text="Select a station, then use toolbar actions to play, pause, or remove it." Classes="helper-text"/>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>
 

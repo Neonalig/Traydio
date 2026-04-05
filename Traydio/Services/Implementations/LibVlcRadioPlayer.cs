@@ -6,6 +6,26 @@ namespace Traydio.Services;
 
 public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
 {
+    private static readonly string[] _libVlcArguments =
+    [
+        "--network-caching=1500",
+        "--live-caching=1500",
+        "--clock-jitter=0",
+        "--clock-synchro=0",
+        "--http-reconnect",
+        "--no-video"
+    ];
+
+    private static readonly string[] _mediaOptions =
+    [
+        ":network-caching=1500",
+        ":live-caching=1500",
+        ":clock-jitter=0",
+        ":clock-synchro=0",
+        ":http-reconnect=true",
+        ":no-video"
+    ];
+
     private readonly LibVLC _libVlc;
     private readonly MediaPlayer _mediaPlayer;
     private Media? _currentMedia;
@@ -24,7 +44,7 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
     public LibVlcRadioPlayer(IStationRepository stationRepository)
     {
         Core.Initialize();
-        _libVlc = new LibVLC();
+        _libVlc = new LibVLC(_libVlcArguments);
         _mediaPlayer = new MediaPlayer(_libVlc);
 
         HookMediaPlayerEvents();
@@ -56,6 +76,7 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
         {
             _currentMedia?.Dispose();
             _currentMedia = new Media(_libVlc, new Uri(station.StreamUrl));
+            ApplyMediaWorkarounds(_currentMedia);
             _currentStationName = station.Name;
             _nowPlaying = null;
             _lastError = null;
@@ -292,5 +313,13 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
     private void PublishState()
     {
         StateChanged?.Invoke(this, State);
+    }
+
+    private static void ApplyMediaWorkarounds(Media media)
+    {
+        foreach (var option in _mediaOptions)
+        {
+            media.AddOption(option);
+        }
     }
 }

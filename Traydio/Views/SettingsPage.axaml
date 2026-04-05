@@ -3,7 +3,7 @@
              xmlns:vm="using:Traydio.ViewModels"
              x:Class="Traydio.Views.SettingsPage"
              x:DataType="vm:SettingsPageViewModel">
-    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="6" Margin="0">
+    <Grid RowDefinitions="Auto,Auto,*,*" RowSpacing="6" Margin="0">
         <Border Grid.Row="0" Classes="toolbar-frame" Margin="0">
             <StackPanel Orientation="Horizontal" Spacing="6">
                 <Button Classes="toolbar-button" Command="{Binding SaveCommand}">
@@ -31,24 +31,30 @@
             <TextBlock Text="These settings control how secondary instances or links communicate with the primary Traydio process." Classes="helper-text"/>
         </Border>
 
-        <TextBlock Grid.Row="2" Text="Communication Endpoints" Classes="group-title" Margin="10,0,0,-8"/>
-        <Border Grid.Row="3" Classes="group-frame" Margin="0">
-            <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*,Auto,Auto" RowSpacing="8" ColumnSpacing="8">
-                <CheckBox Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Content="Enable named pipe relay" IsChecked="{Binding EnableNamedPipeRelay}"/>
-                <CheckBox Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="2" Content="Enable loopback relay" IsChecked="{Binding EnableLoopbackRelay}"/>
+        <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="0" Margin="4,0,4,4">
+            <Border Classes="group-caption-chip">
+                <TextBlock Text="Communication Endpoints" Classes="group-title"/>
+            </Border>
+            <Border Grid.Row="1" Classes="group-frame" Margin="0,-8,0,0">
+                <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*,Auto,Auto" RowSpacing="8" ColumnSpacing="8">
+                    <CheckBox Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Content="Enable named pipe relay" IsChecked="{Binding EnableNamedPipeRelay}"/>
+                    <CheckBox Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="2" Content="Enable loopback relay" IsChecked="{Binding EnableLoopbackRelay}"/>
 
-                <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="Loopback host"/>
-                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding LoopbackHost}"/>
-                <TextBlock Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Text="Port"/>
-                <NumericUpDown Grid.Row="1" Grid.Column="3" Minimum="1" Maximum="65535" Value="{Binding LoopbackPort}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="Loopback host"/>
+                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding LoopbackHost}"/>
+                    <TextBlock Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Text="Port"/>
+                    <NumericUpDown Grid.Row="1" Grid.Column="3" Minimum="1" Maximum="65535" Value="{Binding LoopbackPort}"/>
 
-                <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="4" Text="Use named pipes for local machine reliability; use loopback when you need protocol compatibility over TCP." Classes="helper-text"/>
-            </Grid>
-        </Border>
+                    <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="4" Text="Use named pipes for local machine reliability; use loopback when you need protocol compatibility over TCP." Classes="helper-text"/>
+                </Grid>
+            </Border>
+        </Grid>
 
-        <Grid Grid.Row="4" RowDefinitions="Auto,*" RowSpacing="0">
-            <TextBlock Text="Protocol Bridge" Classes="group-title" Margin="10,0,0,-8"/>
-            <Border Grid.Row="1" Classes="group-frame" Margin="0">
+        <Grid Grid.Row="3" RowDefinitions="Auto,*" RowSpacing="0" Margin="4,0,4,4">
+            <Border Classes="group-caption-chip">
+                <TextBlock Text="Protocol Bridge" Classes="group-title"/>
+            </Border>
+            <Border Grid.Row="1" Classes="group-frame" Margin="0,-8,0,0">
                 <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*,Auto,Auto" RowSpacing="8" ColumnSpacing="8">
                     <CheckBox Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Content="Enable protocol URL bridge" IsChecked="{Binding EnableProtocolUrlRelay}"/>
 
