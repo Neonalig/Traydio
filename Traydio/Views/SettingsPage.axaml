@@ -101,17 +101,38 @@
                 <TextBlock Text="Protocol Bridge" Classes="group-title"/>
             </Border>
             <Border Grid.Row="1" Classes="group-frame" Margin="0,-8,0,0">
-                <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*,Auto,Auto" RowSpacing="8" ColumnSpacing="8">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*,Auto,Auto" RowSpacing="8" ColumnSpacing="8">
                     <CheckBox Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" Content="Enable protocol URL bridge" IsChecked="{Binding EnableProtocolUrlRelay}"/>
 
                     <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="Protocol scheme"/>
-                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding ProtocolScheme}"/>
+                    <TextBox Grid.Row="1" Grid.Column="1" Classes="input-standard" Text="{Binding ProtocolScheme}"/>
                     <TextBlock Grid.Row="1" Grid.Column="2" VerticalAlignment="Center" Text="Registered"/>
                     <CheckBox Grid.Row="1" Grid.Column="3" IsEnabled="False" IsChecked="{Binding IsProtocolRegistered}"/>
 
-                    <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="4" Orientation="Horizontal" Spacing="4">
+                    <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Text="Extended functionality"/>
+                    <Button Grid.Row="2"
+                            Grid.Column="1"
+                            Classes="command-button"
+                            HorizontalAlignment="Left"
+                            Command="{Binding InstallWmicExtendedFunctionalityCommand}"
+                            IsEnabled="{Binding IsWmicSupported}"
+                            IsVisible="{Binding !IsWmicInstalled}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Image Source="/Assets/Icons9x/add.ico" Classes="icon-small"/>
+                            <TextBlock Text="Install WMIC Utility" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <TextBlock Grid.Row="2" Grid.Column="2" VerticalAlignment="Center" Text="Installed"/>
+                    <CheckBox Grid.Row="2" Grid.Column="3" IsEnabled="False" IsChecked="{Binding IsWmicInstalled}"/>
+
+                    <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="4" Orientation="Horizontal" Spacing="4">
                         <TextBlock Text="Status:" FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding Status}" Classes="accent-text"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="4" Orientation="Horizontal" Spacing="4">
+                        <TextBlock Text="WMIC:" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding WmicStatus}" Classes="helper-text"/>
                     </StackPanel>
                 </Grid>
             </Border>

@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Traydio.Models;
 using Traydio.Services;
 using Traydio.Common;
@@ -17,6 +18,7 @@ public partial class SettingsPageViewModel : ViewModelBase
     private readonly IProtocolRegistrationService _protocolRegistrationService;
     private readonly IRadioPlayer _radioPlayer;
     private readonly IPluginManager _pluginManager;
+    private readonly IWmicExtendedFunctionalityService _wmicExtendedFunctionalityService;
 
     [ObservableProperty]
     private bool _enableNamedPipeRelay;
@@ -60,16 +62,30 @@ public partial class SettingsPageViewModel : ViewModelBase
     [ObservableProperty]
     private ClassicThemeOption? _selectedClassicTheme;
 
+    [ObservableProperty]
+    private bool _isWmicSupported;
+
+    [ObservableProperty]
+    private bool _isWmicInstalled;
+
+    [ObservableProperty]
+    private bool _isInstallingWmic;
+
+    [ObservableProperty]
+    private string _wmicStatus = string.Empty;
+
     public SettingsPageViewModel(
         IStationRepository stationRepository,
         IProtocolRegistrationService protocolRegistrationService,
         IRadioPlayer radioPlayer,
-        IPluginManager pluginManager)
+        IPluginManager pluginManager,
+        IWmicExtendedFunctionalityService wmicExtendedFunctionalityService)
     {
         _stationRepository = stationRepository;
         _protocolRegistrationService = protocolRegistrationService;
         _radioPlayer = radioPlayer;
         _pluginManager = pluginManager;
+        _wmicExtendedFunctionalityService = wmicExtendedFunctionalityService;
         Refresh();
     }
 
@@ -131,6 +147,59 @@ public partial class SettingsPageViewModel : ViewModelBase
         Status = "Unregistration failed: " + (error ?? "Unknown error.");
     }
 
+    [RelayCommand]
+    private async Task InstallWmicExtendedFunctionalityAsync()
+    {
+        if (IsInstallingWmic)
+        {
+            return;
+        }
+
+        if (!IsWmicSupported)
+        {
+            WmicStatus = "WMIC extended functionality is only available on Windows.";
+            return;
+        }
+
+        if (IsWmicInstalled)
+        {
+            WmicStatus = "WMIC is already installed.";
+            return;
+        }
+
+        IsInstallingWmic = true;
+        WmicStatus = "Starting WMIC capability install...";
+
+        try
+        {
+            var result = await _wmicExtendedFunctionalityService.InstallAsync().ConfigureAwait(true);
+            IsWmicInstalled = _wmicExtendedFunctionalityService.IsInstalled();
+            WmicStatus = result.Message;
+
+            if (result.RequiresRestart)
+            {
+                Status = "WMIC installed. Restart Windows to finish activation.";
+            }
+            else if (result.Success)
+            {
+                Status = "WMIC extended functionality installed.";
+            }
+            else
+            {
+                Status = "WMIC installation failed.";
+            }
+        }
+        catch (Exception ex)
+        {
+            WmicStatus = "WMIC installation failed: " + ex.Message;
+            Status = WmicStatus;
+        }
+        finally
+        {
+            IsInstallingWmic = false;
+        }
+    }
+
     private void Refresh()
     {
         EnableNamedPipeRelay = _stationRepository.Communication.EnableNamedPipeRelay;
@@ -156,11 +225,28 @@ public partial class SettingsPageViewModel : ViewModelBase
             ?? ClassicThemes.FirstOrDefault();
 
         RefreshProtocolRegistration();
+        RefreshWmicStatus();
     }
 
     private void RefreshProtocolRegistration()
     {
         IsProtocolRegistered = _protocolRegistrationService.IsRegistered(ProtocolScheme.Trim().ToLowerInvariant());
+    }
+
+    private void RefreshWmicStatus()
+    {
+        IsWmicSupported = _wmicExtendedFunctionalityService.IsSupported;
+        IsWmicInstalled = _wmicExtendedFunctionalityService.IsInstalled();
+
+        if (!IsWmicSupported)
+        {
+            WmicStatus = "WMIC extended functionality is only available on Windows.";
+            return;
+        }
+
+        WmicStatus = IsWmicInstalled
+            ? "WMIC is installed and available."
+            : "WMIC is not installed. Install to enable extended functionality.";
     }
 
     private IReadOnlyList<AudioOutputDeviceOption> BuildAudioOutputOptions()

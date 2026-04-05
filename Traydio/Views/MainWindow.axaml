@@ -10,9 +10,9 @@
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/Icons9x/stations.ico"
         MinWidth="700"
-        MinHeight="760"
+        MinHeight="780"
         Width="1100"
-        Height="760"
+        Height="780"
         Title="Traydio - Internet Radio Control Center"
         Theme="{DynamicResource ClassicWindow}">
     <Window.Resources>

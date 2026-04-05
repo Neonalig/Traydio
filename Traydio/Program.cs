@@ -97,10 +97,12 @@ sealed class Program
         if (OperatingSystem.IsWindows())
         {
             services.AddSingleton<IProtocolRegistrationService, WindowsProtocolRegistrationService>();
+            services.AddSingleton<IWmicExtendedFunctionalityService, WindowsWmicExtendedFunctionalityService>();
         }
         else
         {
             services.AddSingleton<IProtocolRegistrationService, NoOpProtocolRegistrationService>();
+            services.AddSingleton<IWmicExtendedFunctionalityService, NoOpWmicExtendedFunctionalityService>();
         }
         services.AddSingleton<IPluginManager, PluginManager>();
         services.AddSingleton<IStationDiscoveryService, StationDiscoveryService>();
