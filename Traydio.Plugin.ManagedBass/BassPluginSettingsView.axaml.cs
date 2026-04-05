@@ -6,6 +6,7 @@ using System.Net.Http;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
+using Avalonia.Media;
 using Avalonia.Platform.Storage;
 using ManagedBass;
 using Traydio.Common;
@@ -20,6 +21,7 @@ public partial class BassPluginSettingsView : UserControl
     private readonly TextBox _folderPathBox;
     private readonly ComboBox _outputDeviceComboBox;
     private readonly TextBlock _statusText;
+    private readonly IBrush? _statusNormalForeground;
 
     public BassPluginSettingsView(IPluginSettingsAccessor settingsAccessor)
     {
@@ -27,6 +29,7 @@ public partial class BassPluginSettingsView : UserControl
         _folderPathBox = new TextBox();
         _outputDeviceComboBox = new ComboBox();
         _statusText = new TextBlock();
+        _statusNormalForeground = null;
 
         try
         {
@@ -38,6 +41,7 @@ public partial class BassPluginSettingsView : UserControl
                 ?? throw new InvalidOperationException("ManagedBass settings view is missing OutputDeviceComboBox.");
             _statusText = this.FindControl<TextBlock>("StatusText")
                 ?? throw new InvalidOperationException("ManagedBass settings view is missing StatusText.");
+            _statusNormalForeground = _statusText.Foreground;
 
             _folderPathBox.Text = Path.Combine(AppContext.BaseDirectory, "BASS");
 
@@ -51,7 +55,8 @@ public partial class BassPluginSettingsView : UserControl
             }
             catch (Exception ex)
             {
-                _statusText.Text = "Failed to load saved path: " + ex.Message;
+                SetErrorStatus("Failed to load saved path: " + ex.Message);
+                LogError($"[Traydio][ManagedBassSettings] Failed to load saved path: {ex}");
             }
 
             LoadOutputDeviceOptions();
@@ -67,16 +72,17 @@ public partial class BassPluginSettingsView : UserControl
                     new TextBlock
                     {
                         Text = "ManagedBass settings could not be loaded.",
-                        FontWeight = Avalonia.Media.FontWeight.SemiBold,
+                        FontWeight = FontWeight.SemiBold,
                     },
                     new TextBlock
                     {
                         Text = ex.GetType().Name + ": " + ex.Message,
-                        TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+                        TextWrapping = TextWrapping.Wrap,
                     },
                 },
             };
-            _statusText.Text = "Initialization failed.";
+            SetErrorStatus("Initialization failed.");
+            LogError($"[Traydio][ManagedBassSettings] Initialization failed: {ex}");
         }
     }
 
@@ -102,19 +108,19 @@ public partial class BassPluginSettingsView : UserControl
 
         _folderPathBox.Text = selected.TryGetLocalPath() ?? selected.Name;
         SaveFolderPath();
-        _statusText.Text = "Saved native folder path.";
+        SetStatus("Saved native folder path.");
     }
 
     private void OnSavePathClick(object? sender, RoutedEventArgs e)
     {
         SaveFolderPath();
-        _statusText.Text = "Saved native folder path.";
+        SetStatus("Saved native folder path.");
     }
 
     private void OnSaveOutputDeviceClick(object? sender, RoutedEventArgs e)
     {
         SaveOutputDeviceIndex();
-        _statusText.Text = "Saved output device setting.";
+        SetStatus("Saved output device setting.");
     }
 
     private async void OnDownloadClick(object? sender, RoutedEventArgs e)
@@ -138,7 +144,7 @@ public partial class BassPluginSettingsView : UserControl
         var folderPath = _folderPathBox.Text?.Trim();
         if (string.IsNullOrWhiteSpace(folderPath))
         {
-            _statusText.Text = "Choose a folder first.";
+            SetErrorStatus("Choose a folder first.");
             return;
         }
 
@@ -148,19 +154,27 @@ public partial class BassPluginSettingsView : UserControl
             SaveFolderPath();
             SaveOutputDeviceIndex();
 
-            _statusText.Text = downloadingMessage;
+            SetStatus(downloadingMessage);
             var zipBytes = await _http.GetByteArrayAsync(archiveUrl).ConfigureAwait(true);
 
             using var archiveStream = new MemoryStream(zipBytes);
             using var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read);
 
             var architectureFolder = Environment.Is64BitProcess ? "x64" : "x86";
+            var expectedEntryPath = $"{architectureFolder}/{dllName}";
             var entry = archive.Entries.FirstOrDefault(item =>
-                item.FullName.Replace('\\', '/').EndsWith($"/{architectureFolder}/{dllName}", StringComparison.OrdinalIgnoreCase));
+                NormalizeArchivePath(item.FullName).EndsWith(expectedEntryPath, StringComparison.OrdinalIgnoreCase));
 
             if (entry is null)
             {
-                _statusText.Text = $"Downloaded archive did not contain {architectureFolder}/{dllName}.";
+                var relevantEntries = string.Join(", ", archive.Entries
+                    .Select(item => NormalizeArchivePath(item.FullName))
+                    .Where(path => path.Contains(architectureFolder, StringComparison.OrdinalIgnoreCase)
+                                   || path.EndsWith(dllName, StringComparison.OrdinalIgnoreCase))
+                    .Take(20));
+
+                LogError($"[Traydio][ManagedBassSettings] Missing native entry. url={archiveUrl} expected={expectedEntryPath} entries={archive.Entries.Count} relevant=[{relevantEntries}]");
+                SetErrorStatus($"Downloaded archive did not contain {architectureFolder}/{dllName}.");
                 return;
             }
 
@@ -169,12 +183,18 @@ public partial class BassPluginSettingsView : UserControl
             await using var outputStream = File.Create(outputPath);
             await entryStream.CopyToAsync(outputStream).ConfigureAwait(true);
 
-            _statusText.Text = $"Downloaded {dllName} to {outputPath}";
+            SetStatus($"Downloaded {dllName} to {outputPath}");
         }
         catch (Exception ex)
         {
-            _statusText.Text = "Download failed: " + ex.Message;
+            SetErrorStatus("Download failed: " + ex.Message);
+            LogError($"[Traydio][ManagedBassSettings] Download failed. url={archiveUrl} dll={dllName}: {ex}");
         }
+    }
+
+    private static string NormalizeArchivePath(string path)
+    {
+        return path.Replace('\\', '/').TrimStart('/');
     }
 
     private void SaveFolderPath()
@@ -206,11 +226,12 @@ public partial class BassPluginSettingsView : UserControl
             var configuredValue = _settingsAccessor.GetValue(BassPluginSettings.OutputDeviceIndexKey);
             configuredIndex = int.TryParse(configuredValue, out var parsedIndex)
                 ? parsedIndex
-                : (int?)null;
+                : null;
         }
         catch (Exception ex)
         {
-            _statusText.Text = "Failed to load saved output device: " + ex.Message;
+            SetErrorStatus("Failed to load saved output device: " + ex.Message);
+            LogError($"[Traydio][ManagedBassSettings] Failed to load output device setting: {ex}");
         }
 
         var options = new System.Collections.Generic.List<OutputDeviceOption>
@@ -235,7 +256,8 @@ public partial class BassPluginSettingsView : UserControl
         }
         catch (Exception ex)
         {
-            _statusText.Text = "Failed to list output devices: " + ex.Message;
+            SetErrorStatus("Failed to list output devices: " + ex.Message);
+            LogError($"[Traydio][ManagedBassSettings] Failed to enumerate output devices: {ex}");
         }
 
         _outputDeviceComboBox.ItemsSource = options;
@@ -246,6 +268,24 @@ public partial class BassPluginSettingsView : UserControl
     private sealed record OutputDeviceOption(int? DeviceIndex, string DisplayName)
     {
         public override string ToString() => DisplayName;
+    }
+
+    private void SetStatus(string message)
+    {
+        _statusText.Foreground = _statusNormalForeground;
+        _statusText.Text = message;
+    }
+
+    private void SetErrorStatus(string message)
+    {
+        _statusText.Foreground = Brushes.IndianRed;
+        _statusText.Text = message;
+    }
+
+    private static void LogError(string message)
+    {
+        Console.Error.WriteLine(message);
+        System.Diagnostics.Trace.WriteLine(message);
     }
 }
 
