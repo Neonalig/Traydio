@@ -1,8 +1,9 @@
 ﻿using System;
-using System.Linq;
 using System.ComponentModel;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
+using Classic.CommonControls.Dialogs;
 using Traydio.Common;
 using Traydio.Services;
 using Traydio.ViewModels;
@@ -70,7 +71,7 @@ public partial class StationSearchPage : UserControl
             .ForgetWithErrorHandling("Station search status dialog", showDialog: true);
     }
 
-    private async System.Threading.Tasks.Task OnViewModelPropertyChangedAsync(object? sender, PropertyChangedEventArgs e)
+    private async Task OnViewModelPropertyChangedAsync(object? sender, PropertyChangedEventArgs e)
     {
         if (!string.Equals(e.PropertyName, nameof(StationSearchWindowViewModel.Status), StringComparison.Ordinal))
         {
@@ -102,10 +103,10 @@ public partial class StationSearchPage : UserControl
         await ShowInfoDialogAsync("Station search", status);
     }
 
-    private async System.Threading.Tasks.Task ShowInfoDialogAsync(string title, string message)
+    private async Task ShowInfoDialogAsync(string title, string message)
     {
         var topLevel = TopLevel.GetTopLevel(this);
-        await MessageBox.ShowDialog(topLevel as Window, title, message);
+        await MessageBox.ShowDialog((topLevel as Window)!, title, message, MessageBoxButtons.Ok, MessageBoxIcon.Information);
     }
 
 }

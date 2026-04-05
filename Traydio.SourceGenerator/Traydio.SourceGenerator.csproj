@@ -11,6 +11,8 @@
 
         <RootNamespace>Traydio.SourceGenerator</RootNamespace>
         <PackageId>Traydio.SourceGenerator</PackageId>
+        
+        <NoWarn>RS2007</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>

@@ -9,6 +9,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
+using Classic.CommonControls.Dialogs;
 using Traydio.Common;
 using Traydio.Services;
 using Traydio.ViewModels;
@@ -229,11 +230,16 @@ public partial class PluginManagementPage : UserControl
 
     private async Task ConfirmAndRemovePluginAsync(PluginManagementWindowViewModel viewModel, PluginManagementWindowViewModel.InstalledPluginItem pluginItem)
     {
-        var choice = await ShowYesNoCancelDialogAsync(
+        var topLevel = TopLevel.GetTopLevel(this);
+        var choice = await MessageBox.ShowDialog(
+            (topLevel as Window)!,
             "Confirm uninstall",
-            $"Uninstall plugin '{pluginItem.DisplayName}'?\n\nIf the file is currently locked, it will be marked for delete on restart and disabled now.");
+            $"Uninstall plugin '{pluginItem.DisplayName}'?\n\nIf the file is currently locked, it will be marked for delete on restart and disabled now.",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Question
+        );
 
-        if (choice != UserChoice.Yes)
+        if (choice != MessageBoxResult.Yes)
         {
             return;
         }
@@ -249,10 +255,15 @@ public partial class PluginManagementPage : UserControl
 
     private async Task OnRestartAppClickAsync()
     {
-        var choice = await ShowYesNoCancelDialogAsync(
+        var topLevel = TopLevel.GetTopLevel(this);
+        var choice = await MessageBox.ShowDialog(
+            (topLevel as Window)!,
             "Restart app",
-            "Restart Traydio now?\n\nUse this after changing native plugin dependency paths so new DLLs are loaded.");
-        if (choice != UserChoice.Yes)
+            "Restart Traydio now?\n\nUse this after changing native plugin dependency paths so new DLLs are loaded.",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Question
+        );
+        if (choice != MessageBoxResult.Yes)
         {
             return;
         }
@@ -406,17 +417,19 @@ public partial class PluginManagementPage : UserControl
 
         var migrate = false;
         if (hasExistingPlugins)
-        {
-            var choice = await ShowYesNoCancelDialogAsync(
+        {var choice = await MessageBox.ShowDialog(
+                (topLevel as Window)!,
                 "Move existing plugins?",
-                "Migrate existing plugin DLLs to the new folder?\n\nYes = copy existing plugins\nNo = keep existing plugins in current folder\nCancel = abort");
-
-            if (choice == UserChoice.Cancel)
+                "Migrate existing plugin DLLs to the new folder?\n\nYes = copy existing plugins\nNo = keep existing plugins in current folder\nCancel = abort",
+                MessageBoxButtons.YesNoCancel,
+                MessageBoxIcon.Question
+            );
+            if (choice == MessageBoxResult.Cancel)
             {
                 return;
             }
 
-            migrate = choice == UserChoice.Yes;
+            migrate = choice == MessageBoxResult.Yes;
         }
 
         if (viewModel.ChangePluginDirectory(nextPath, migrate, out var error))
@@ -462,30 +475,8 @@ public partial class PluginManagementPage : UserControl
 
     private async Task ShowInfoDialogAsync(string title, string message)
     {
-        await MessageBox.ShowDialog(TopLevel.GetTopLevel(this) as Window, title, message);
-    }
-
-    private async Task<UserChoice> ShowYesNoCancelDialogAsync(string title, string message)
-    {
-        var result = await MessageBox.ShowDialog(
-            TopLevel.GetTopLevel(this) as Window,
-            title,
-            message,
-            MessageBoxButtons.YesNoCancel);
-
-        return result switch
-        {
-            MessageBoxResult.Yes => UserChoice.Yes,
-            MessageBoxResult.No => UserChoice.No,
-            _ => UserChoice.Cancel,
-        };
-    }
-
-    private enum UserChoice
-    {
-        Yes,
-        No,
-        Cancel,
+        var topLevel = TopLevel.GetTopLevel(this);
+        await MessageBox.ShowDialog((topLevel as Window)!, title, message, MessageBoxButtons.Ok, MessageBoxIcon.Information);
     }
 }
 

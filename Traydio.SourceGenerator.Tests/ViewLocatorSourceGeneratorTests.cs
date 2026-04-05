@@ -118,6 +118,9 @@ public partial class MainViewModel
         var locatorText = locatorTree.GetText().ToString();
 
         Assert.Contains("#nullable enable", locatorText);
+        Assert.Contains("BuildDateUtcIso8601", locatorText);
+        Assert.Contains("BuildDateUtc =>", locatorText);
+        Assert.Contains("BuildYear =>", locatorText);
         Assert.DoesNotContain(".FullName:", locatorText);
 
         var compilationDiagnostics = updatedCompilation.GetDiagnostics();

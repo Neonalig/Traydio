@@ -345,18 +345,18 @@ public partial class StationManagerPage : UserControl
         PublishCopyStatus("Copied: " + copiedText);
     }
 
-    private async Task OpenStationLinkAsync(object? sender)
+    private Task OpenStationLinkAsync(object? sender)
     {
         var station = TryGetStationItem(sender);
         if (station is null)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         var url = station.StreamUrl;
         if (!Uri.TryCreate(url, UriKind.Absolute, out _))
         {
-            return;
+            return Task.CompletedTask;
         }
 
         Process.Start(new ProcessStartInfo
@@ -364,6 +364,8 @@ public partial class StationManagerPage : UserControl
             FileName = url,
             UseShellExecute = true,
         });
+
+        return Task.CompletedTask;
     }
 
     private StationManagerPageViewModel.StationItem? TryGetStationItem(object? sender)

@@ -4,6 +4,7 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Platform;
 using Avalonia.Media.Imaging;
+using Classic.CommonControls.Dialogs;
 using Microsoft.Extensions.DependencyInjection;
 using Traydio.Common;
 using Traydio.Views;
@@ -148,12 +149,21 @@ public sealed class WindowManager(
 
         using var iconStream = AssetLoader.Open(new Uri("avares://Traydio/Assets/Icons9x/stations.ico"));
         var bitmap = new Bitmap(iconStream);
+        const int INITIAL_COPYRIGHT_YEAR = 2026;
+        var buildYear = ViewLocator.BuildYear;
+        var copyright = buildYear <= INITIAL_COPYRIGHT_YEAR
+            ? $"Copyright (C) {INITIAL_COPYRIGHT_YEAR}"
+            : $"Copyright (C) {INITIAL_COPYRIGHT_YEAR} - {buildYear}";
 
         AboutDialog.ShowDialog(
-            _mainWindow,
-            "Traydio",
-            "Copyright (C) 2026",
-            bitmap).ForgetWithErrorHandling("Show about dialog", showDialog: true);
+            _mainWindow!,
+            new AboutDialogOptions
+            {
+                Title = "Traydio",
+                Copyright = copyright,
+                Icon = bitmap
+            }
+        ).ForgetWithErrorHandling("Show about dialog", showDialog: true);
     }
 
     private static Control CreatePluginSettingsFailureView(string pluginDisplayName, Exception ex)
