@@ -46,15 +46,17 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
         Core.Initialize();
 
         _libVlc = vlcOptions is { Length: > 0 }
-            ? new LibVLC(vlcOptions)
+            ? new LibVLC(enableDebugLogs: true, vlcOptions)
             : new LibVLC(
+                enableDebugLogs: true,
                 "--no-video",
                 "--input-repeat=0",
-                "--network-caching=1000",
-                "--file-caching=1000",
-                "--live-caching=1000",
                 "--no-snapshot-preview",
-                "--verbose=2"
+                "--http-reconnect",
+                "--network-caching=1500",
+                "--live-caching=1500",
+                "--file-caching=1000",
+                "--no-audio-time-stretch"
             );
 
         _mediaPlayer = new MediaPlayer(_libVlc);
@@ -88,6 +90,10 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
             }
 
             var media = new Media(_libVlc, new Uri(station.StreamUrl));
+            media.AddOption(":http-reconnect=true");
+            media.AddOption(":network-caching=1500");
+            media.AddOption(":live-caching=1500");
+            media.AddOption(":no-audio-time-stretch");
             AttachMediaEvents(media);
             _currentMedia = media;
 
