@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
@@ -59,6 +60,7 @@ public partial class BassPluginSettingsView : UserControl
                 LogError($"[Traydio][ManagedBassSettings] Failed to load saved path: {ex}");
             }
 
+            ConfigureNativeLibraryPath();
             LoadOutputDeviceOptions();
         }
         catch (Exception ex)
@@ -108,12 +110,14 @@ public partial class BassPluginSettingsView : UserControl
 
         _folderPathBox.Text = selected.TryGetLocalPath() ?? selected.Name;
         SaveFolderPath();
+        ConfigureNativeLibraryPath();
         SetStatus("Saved native folder path.");
     }
 
     private void OnSavePathClick(object? sender, RoutedEventArgs e)
     {
         SaveFolderPath();
+        ConfigureNativeLibraryPath();
         SetStatus("Saved native folder path.");
     }
 
@@ -270,6 +274,7 @@ public partial class BassPluginSettingsView : UserControl
 
         try
         {
+            ConfigureNativeLibraryPath();
             for (var index = 0; index < Bass.DeviceCount; index++)
             {
                 if (!Bass.GetDeviceInfo(index, out var info) || !info.IsEnabled)
@@ -316,6 +321,36 @@ public partial class BassPluginSettingsView : UserControl
         Console.Error.WriteLine(message);
         System.Diagnostics.Trace.WriteLine(message);
     }
+
+    private void ConfigureNativeLibraryPath()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        var folderPath = _folderPathBox.Text?.Trim();
+        if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+        {
+            return;
+        }
+
+        var bassPath = Path.Combine(folderPath, "bass.dll");
+        if (!File.Exists(bassPath))
+        {
+            LogError($"[Traydio][ManagedBassSettings] bass.dll not found at configured path: {bassPath}");
+            return;
+        }
+
+        if (!SetDllDirectory(folderPath))
+        {
+            var errorCode = Marshal.GetLastWin32Error();
+            LogError($"[Traydio][ManagedBassSettings] SetDllDirectory failed for path={folderPath} win32={errorCode}");
+        }
+    }
+
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern bool SetDllDirectory(string lpPathName);
 }
 
 
