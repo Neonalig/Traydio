@@ -17,7 +17,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly IAppCommandDispatcher _commandDispatcher;
     private readonly IProtocolRegistrationService _protocolRegistrationService;
 
-    public ObservableCollection<RadioStation> Stations { get; } = new();
+    public ObservableCollection<RadioStation> Stations { get; } = [];
 
     [ObservableProperty]
     private string _stationName = string.Empty;

@@ -9,23 +9,14 @@ using Traydio.Commands;
 
 namespace Traydio.Services.Implementations;
 
-public sealed class LoopbackCommandRelayServer : ICommandRelayServer, IDisposable
+public sealed class LoopbackCommandRelayServer(IStationRepository stationRepository, ICommandTextRouter commandTextRouter) : ICommandRelayServer, IDisposable
 {
-    private readonly IStationRepository _stationRepository;
-    private readonly ICommandTextRouter _commandTextRouter;
-
     private CancellationTokenSource? _cts;
     private Task? _listenerTask;
 
-    public LoopbackCommandRelayServer(IStationRepository stationRepository, ICommandTextRouter commandTextRouter)
-    {
-        _stationRepository = stationRepository;
-        _commandTextRouter = commandTextRouter;
-    }
-
     public void Start()
     {
-        if (_listenerTask is not null || !_stationRepository.Communication.EnableLoopbackRelay)
+        if (_listenerTask is not null || !stationRepository.Communication.EnableLoopbackRelay)
         {
             return;
         }
@@ -59,8 +50,8 @@ public sealed class LoopbackCommandRelayServer : ICommandRelayServer, IDisposabl
 
     private async Task ListenLoopAsync(CancellationToken cancellationToken)
     {
-        var address = ResolveAddress(_stationRepository.Communication.LoopbackHost);
-        var port = _stationRepository.Communication.LoopbackPort;
+        var address = ResolveAddress(stationRepository.Communication.LoopbackHost);
+        var port = stationRepository.Communication.LoopbackPort;
 
         try
         {
@@ -73,12 +64,12 @@ public sealed class LoopbackCommandRelayServer : ICommandRelayServer, IDisposabl
                 try
                 {
                     client = await listener.AcceptTcpClientAsync(cancellationToken).ConfigureAwait(false);
-                    using var stream = client.GetStream();
+                    await using var stream = client.GetStream();
                     using var reader = new StreamReader(stream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 1024, leaveOpen: false);
                     var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
                     if (!string.IsNullOrWhiteSpace(line))
                     {
-                        _commandTextRouter.TryDispatch(line);
+                        commandTextRouter.TryDispatch(line);
                     }
                 }
                 catch (OperationCanceledException)

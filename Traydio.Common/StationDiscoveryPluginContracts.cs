@@ -1,8 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace Traydio.Common;
+﻿namespace Traydio.Common;
 
 public interface IPluginCapability
 {
@@ -15,7 +11,7 @@ public interface IStationDiscoveryCapability : IPluginCapability
 
     string DisplayName { get; }
 
-    Task<IReadOnlyList<DiscoveredStation>> SearchAsync(StationSearchRequest request, CancellationToken cancellationToken);
+    IAsyncEnumerable<DiscoveredStation> SearchAsync(StationSearchRequest request, CancellationToken cancellationToken);
 }
 
 public interface ITraydioPlugin
@@ -57,6 +53,6 @@ public interface IRadioStationProviderPlugin
 
     string DisplayName { get; }
 
-    Task<IReadOnlyList<DiscoveredStation>> SearchAsync(StationSearchRequest request, CancellationToken cancellationToken);
+    IAsyncEnumerable<DiscoveredStation> SearchAsync(StationSearchRequest request, CancellationToken cancellationToken);
 }
 

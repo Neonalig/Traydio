@@ -1,65 +1,65 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Traydio.Common;
 
 namespace Traydio.Services.Implementations;
 
-public sealed class StationDiscoveryService : IStationDiscoveryService
+public sealed class StationDiscoveryService(IPluginManager pluginManager) : IStationDiscoveryService
 {
-    private readonly IPluginManager _pluginManager;
-
-    public StationDiscoveryService(IPluginManager pluginManager)
-    {
-        _pluginManager = pluginManager;
-    }
-
     public IReadOnlyList<IRadioStationProviderPlugin> GetProviders()
     {
-        return _pluginManager.GetPlugins()
+        return pluginManager.GetPlugins()
             .SelectMany(p => p.Capabilities.OfType<IStationDiscoveryCapability>())
-            .Select(c => (IRadioStationProviderPlugin)new CapabilityBackedProvider(c))
+            .Select(IRadioStationProviderPlugin (c) => new CapabilityBackedProvider(c))
             .ToArray();
     }
 
-    public async Task<IReadOnlyList<DiscoveredStation>> SearchAsync(
+    public async IAsyncEnumerable<DiscoveredStation> SearchAsync(
         string providerId,
         StationSearchRequest request,
-        CancellationToken cancellationToken)
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var provider = GetProviders()
             .FirstOrDefault(p => string.Equals(p.Id, providerId, StringComparison.OrdinalIgnoreCase));
 
         if (provider is null)
         {
-            return [];
+            yield break;
         }
 
-        var results = await provider.SearchAsync(request, cancellationToken).ConfigureAwait(false);
-        return results
-            .Where(r => !string.IsNullOrWhiteSpace(r.Name) && !string.IsNullOrWhiteSpace(r.StreamUrl))
-            .Take(Math.Max(1, request.Limit))
-            .ToArray();
+        var maxCount = Math.Max(1, request.Limit);
+        var yielded = 0;
+
+        await foreach (var result in provider.SearchAsync(request, cancellationToken).ConfigureAwait(false))
+        {
+            if (string.IsNullOrWhiteSpace(result.Name) || string.IsNullOrWhiteSpace(result.StreamUrl))
+            {
+                continue;
+            }
+
+            yield return result;
+            yielded++;
+
+            if (yielded >= maxCount)
+            {
+                yield break;
+            }
+        }
     }
 
-    private sealed class CapabilityBackedProvider : IRadioStationProviderPlugin
+    private sealed class CapabilityBackedProvider(IStationDiscoveryCapability capability) : IRadioStationProviderPlugin
     {
-        private readonly IStationDiscoveryCapability _capability;
+        public string Id => capability.ProviderId;
 
-        public CapabilityBackedProvider(IStationDiscoveryCapability capability)
+        public string DisplayName => capability.DisplayName;
+
+        public IAsyncEnumerable<DiscoveredStation> SearchAsync(StationSearchRequest request, CancellationToken cancellationToken)
         {
-            _capability = capability;
-        }
-
-        public string Id => _capability.ProviderId;
-
-        public string DisplayName => _capability.DisplayName;
-
-        public Task<IReadOnlyList<DiscoveredStation>> SearchAsync(StationSearchRequest request, CancellationToken cancellationToken)
-        {
-            return _capability.SearchAsync(request, cancellationToken);
+            return capability.SearchAsync(request, cancellationToken);
         }
     }
 }

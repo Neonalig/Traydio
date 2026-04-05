@@ -35,11 +35,12 @@ public sealed class TrayController : ITrayController
 
     private NativeMenu BuildMenu()
     {
-        var menu = new NativeMenu();
-
-        menu.Add(CreateItem("Play / Resume", () => Dispatch(AppCommandKind.Play)));
-        menu.Add(CreateItem("Pause", () => Dispatch(AppCommandKind.Pause)));
-        menu.Add(new NativeMenuItemSeparator());
+        var menu = new NativeMenu
+        {
+            CreateItem("Play / Resume", () => Dispatch(AppCommandKind.Play)),
+            CreateItem("Pause", () => Dispatch(AppCommandKind.Pause)),
+            new NativeMenuItemSeparator()
+        };
 
         var stationsMenu = new NativeMenuItem("Stations")
         {

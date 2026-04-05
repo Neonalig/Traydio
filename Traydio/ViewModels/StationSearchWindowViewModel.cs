@@ -21,10 +21,11 @@ public partial class StationSearchWindowViewModel : ViewModelBase
     private readonly IStationRepository _stationRepository;
 
     private CancellationTokenSource? _searchCancellation;
+    private readonly List<DiscoveredStation> _lastSearchResults = [];
 
-    public ObservableCollection<ProviderOption> Providers { get; } = new();
+    public ObservableCollection<ProviderOption> Providers { get; } = [];
 
-    public ObservableCollection<DiscoveredStation> Results { get; } = new();
+    public ObservableCollection<DiscoveredStation> Results { get; } = [];
 
     [ObservableProperty]
     private ProviderOption? _selectedProvider;
@@ -69,7 +70,8 @@ public partial class StationSearchWindowViewModel : ViewModelBase
             return;
         }
 
-        _searchCancellation?.Cancel();
+        if (_searchCancellation is not null)
+            await _searchCancellation.CancelAsync();
         _searchCancellation = new CancellationTokenSource();
 
         IsBusy = true;
@@ -82,21 +84,29 @@ public partial class StationSearchWindowViewModel : ViewModelBase
                 Limit = 200,
             };
 
-            var results = await _stationDiscoveryService
-                .SearchAsync(SelectedProvider.Id, request, _searchCancellation.Token)
-                .ConfigureAwait(false);
-
-            var filtered = ApplyFilter(results, FilterText);
+            _lastSearchResults.Clear();
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
                 Results.Clear();
-                foreach (var station in filtered)
+                Status = "Searching...";
+            });
+
+            var shown = 0;
+            await foreach (var station in _stationDiscoveryService
+                .SearchAsync(SelectedProvider.Id, request, _searchCancellation.Token)
+                               .ConfigureAwait(false))
+            {
+                _lastSearchResults.Add(station);
+                if (!MatchesFilter(station, FilterText))
                 {
-                    Results.Add(station);
+                    continue;
                 }
 
-                Status = $"Found {Results.Count} station(s).";
-            });
+                shown++;
+                await Dispatcher.UIThread.InvokeAsync(() => Results.Add(station));
+            }
+
+            Status = $"Found {_lastSearchResults.Count} station(s), showing {shown}.";
         }
         catch (OperationCanceledException)
         {
@@ -167,22 +177,10 @@ public partial class StationSearchWindowViewModel : ViewModelBase
     [RelayCommand]
     private async Task ApplyFilterAsync()
     {
-        if (SelectedProvider is null)
-        {
-            return;
-        }
+        var filtered = _lastSearchResults
+            .Where(station => MatchesFilter(station, FilterText))
+            .ToArray();
 
-        var request = new StationSearchRequest
-        {
-            Query = Query,
-            Limit = 200,
-        };
-
-        var results = await _stationDiscoveryService
-            .SearchAsync(SelectedProvider.Id, request, CancellationToken.None)
-            .ConfigureAwait(false);
-
-        var filtered = ApplyFilter(results, FilterText);
         await Dispatcher.UIThread.InvokeAsync(() =>
         {
             Results.Clear();
@@ -191,23 +189,21 @@ public partial class StationSearchWindowViewModel : ViewModelBase
                 Results.Add(station);
             }
 
-            Status = $"Showing {Results.Count} filtered station(s).";
+            Status = $"Showing {Results.Count} filtered station(s) from {_lastSearchResults.Count}.";
         });
     }
 
-    private static DiscoveredStation[] ApplyFilter(IReadOnlyList<DiscoveredStation> results, string filter)
+    private static bool MatchesFilter(DiscoveredStation station, string filter)
     {
         if (string.IsNullOrWhiteSpace(filter))
         {
-            return results.ToArray();
+            return true;
         }
 
-        return results.Where(r =>
-                r.Name.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
-                (r.Description?.Contains(filter, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (r.Genre?.Contains(filter, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (r.Country?.Contains(filter, StringComparison.OrdinalIgnoreCase) ?? false))
-            .ToArray();
+        return station.Name.Contains(filter, StringComparison.OrdinalIgnoreCase) ||
+               (station.Description?.Contains(filter, StringComparison.OrdinalIgnoreCase) ?? false) ||
+               (station.Genre?.Contains(filter, StringComparison.OrdinalIgnoreCase) ?? false) ||
+               (station.Country?.Contains(filter, StringComparison.OrdinalIgnoreCase) ?? false);
     }
 
     private void RefreshProviders()
@@ -239,20 +235,13 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         Dispatcher.UIThread.Post(Update);
     }
 
-    public sealed class ProviderOption
+    public sealed class ProviderOption(string pluginId, string id, string displayName)
     {
-        public ProviderOption(string pluginId, string id, string displayName)
-        {
-            PluginId = pluginId;
-            Id = id;
-            DisplayName = displayName;
-        }
+        public string PluginId { get; } = pluginId;
 
-        public string PluginId { get; }
+        public string Id { get; } = id;
 
-        public string Id { get; }
-
-        public string DisplayName { get; }
+        public string DisplayName { get; } = displayName;
     }
 }
 

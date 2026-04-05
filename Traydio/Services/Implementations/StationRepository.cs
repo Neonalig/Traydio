@@ -164,7 +164,6 @@ public sealed class StationRepository : IStationRepository
                 return new RadioSettings();
             }
 
-            settings.Communication ??= new CommunicationBridgeSettings();
             if (string.IsNullOrWhiteSpace(settings.Communication.LoopbackHost))
             {
                 settings.Communication.LoopbackHost = "127.0.0.1";
@@ -180,7 +179,6 @@ public sealed class StationRepository : IStationRepository
                 settings.Communication.ProtocolScheme = "traydio";
             }
 
-            settings.StationDiscoveryPlugins ??= new StationDiscoveryPluginSettings();
             if (string.IsNullOrWhiteSpace(settings.StationDiscoveryPlugins.PluginDirectory))
             {
                 settings.StationDiscoveryPlugins.PluginDirectory = "Plugins";

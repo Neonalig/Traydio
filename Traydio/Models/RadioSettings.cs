@@ -6,7 +6,7 @@ public sealed class StationDiscoveryPluginSettings
 {
     public string PluginDirectory { get; set; } = "Plugins";
 
-    public List<string> DisabledPluginIds { get; set; } = new();
+    public List<string> DisabledPluginIds { get; set; } = [];
 }
 
 public sealed class CommunicationBridgeSettings
@@ -26,7 +26,7 @@ public sealed class CommunicationBridgeSettings
 
 public sealed class RadioSettings
 {
-    public List<RadioStation> Stations { get; set; } = new();
+    public List<RadioStation> Stations { get; set; } = [];
 
     public string? ActiveStationId { get; set; }
 

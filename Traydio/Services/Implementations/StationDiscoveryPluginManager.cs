@@ -4,27 +4,20 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
-using System.Threading.Tasks;
 using Avalonia.Threading;
 using Traydio.Common;
 
 namespace Traydio.Services.Implementations;
 
-public sealed class PluginManager : IPluginManager
+public sealed class PluginManager(IStationRepository stationRepository) : IPluginManager
 {
-    private readonly IStationRepository _stationRepository;
-    private readonly List<ITraydioPlugin> _plugins = new();
+    private readonly List<ITraydioPlugin> _plugins = [];
     private readonly Dictionary<string, LoadedPlugin> _loadedPlugins = new(StringComparer.OrdinalIgnoreCase);
 
     private FileSystemWatcher? _watcher;
     private string? _pluginDirectory;
 
     public event EventHandler? PluginsChanged;
-
-    public PluginManager(IStationRepository stationRepository)
-    {
-        _stationRepository = stationRepository;
-    }
 
     public IReadOnlyList<ITraydioPlugin> GetPlugins()
     {
@@ -50,14 +43,14 @@ public sealed class PluginManager : IPluginManager
     public bool RemovePlugin(string pluginId, out string? error)
     {
         error = null;
-        var settings = _stationRepository.StationDiscoveryPlugins;
+        var settings = stationRepository.StationDiscoveryPlugins;
 
         if (_plugins.Any(p => string.Equals(p.Id, pluginId, StringComparison.OrdinalIgnoreCase)))
         {
             if (!settings.DisabledPluginIds.Contains(pluginId, StringComparer.OrdinalIgnoreCase))
             {
                 settings.DisabledPluginIds.Add(pluginId);
-                _stationRepository.SaveStationDiscoveryPluginSettings(settings);
+                stationRepository.SaveStationDiscoveryPluginSettings(settings);
             }
 
             ReloadPlugins();
@@ -123,7 +116,7 @@ public sealed class PluginManager : IPluginManager
         LoadPluginsFromReferencedAssemblies();
         LoadPluginsFromBaseDirectory();
 
-        var disabled = _stationRepository.StationDiscoveryPlugins.DisabledPluginIds;
+        var disabled = stationRepository.StationDiscoveryPlugins.DisabledPluginIds;
         _plugins.RemoveAll(plugin => disabled.Contains(plugin.Id, StringComparer.OrdinalIgnoreCase));
 
         PluginsChanged?.Invoke(this, EventArgs.Empty);
@@ -131,7 +124,7 @@ public sealed class PluginManager : IPluginManager
 
     private void EnsurePluginDirectory()
     {
-        var settingsDirectory = _stationRepository.StationDiscoveryPlugins.PluginDirectory;
+        var settingsDirectory = stationRepository.StationDiscoveryPlugins.PluginDirectory;
         _pluginDirectory = Path.IsPathRooted(settingsDirectory)
             ? settingsDirectory
             : Path.Combine(AppContext.BaseDirectory, settingsDirectory);
@@ -236,54 +229,33 @@ public sealed class PluginManager : IPluginManager
         _plugins.Add(plugin);
     }
 
-    private sealed class LoadedPlugin
+    private sealed class LoadedPlugin(PluginLoadContext context, IReadOnlyList<ITraydioPlugin> plugins)
     {
-        public LoadedPlugin(PluginLoadContext context, IReadOnlyList<ITraydioPlugin> plugins)
-        {
-            Context = context;
-            Plugins = plugins;
-        }
+        public PluginLoadContext Context { get; } = context;
 
-        public PluginLoadContext Context { get; }
-
-        public IReadOnlyList<ITraydioPlugin> Plugins { get; }
+        public IReadOnlyList<ITraydioPlugin> Plugins { get; } = plugins;
     }
 
-    private sealed class LegacyStationProviderPluginAdapter : ITraydioPlugin
+    private sealed class LegacyStationProviderPluginAdapter(IRadioStationProviderPlugin provider) : ITraydioPlugin
     {
-        private readonly IRadioStationProviderPlugin _provider;
+        public string Id => "legacy." + provider.Id;
 
-        public LegacyStationProviderPluginAdapter(IRadioStationProviderPlugin provider)
-        {
-            _provider = provider;
-            Capabilities = [new LegacyStationDiscoveryCapability(provider)];
-        }
+        public string DisplayName => provider.DisplayName;
 
-        public string Id => "legacy." + _provider.Id;
-
-        public string DisplayName => _provider.DisplayName;
-
-        public IReadOnlyList<IPluginCapability> Capabilities { get; }
+        public IReadOnlyList<IPluginCapability> Capabilities { get; } = [new LegacyStationDiscoveryCapability(provider)];
     }
 
-    private sealed class LegacyStationDiscoveryCapability : IStationDiscoveryCapability
+    private sealed class LegacyStationDiscoveryCapability(IRadioStationProviderPlugin provider) : IStationDiscoveryCapability
     {
-        private readonly IRadioStationProviderPlugin _provider;
-
-        public LegacyStationDiscoveryCapability(IRadioStationProviderPlugin provider)
-        {
-            _provider = provider;
-        }
-
         public string CapabilityId => "station-discovery";
 
-        public string ProviderId => _provider.Id;
+        public string ProviderId => provider.Id;
 
-        public string DisplayName => _provider.DisplayName;
+        public string DisplayName => provider.DisplayName;
 
-        public Task<IReadOnlyList<DiscoveredStation>> SearchAsync(StationSearchRequest request, CancellationToken cancellationToken)
+        public IAsyncEnumerable<DiscoveredStation> SearchAsync(StationSearchRequest request, CancellationToken cancellationToken)
         {
-            return _provider.SearchAsync(request, cancellationToken);
+            return provider.SearchAsync(request, cancellationToken);
         }
     }
 }

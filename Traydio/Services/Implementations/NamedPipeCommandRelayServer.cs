@@ -8,25 +8,16 @@ using Traydio.Commands;
 
 namespace Traydio.Services.Implementations;
 
-public sealed class NamedPipeCommandRelayServer : ICommandRelayServer, IDisposable
+public sealed class NamedPipeCommandRelayServer(IStationRepository stationRepository, ICommandTextRouter commandTextRouter) : ICommandRelayServer, IDisposable
 {
     private const string _PIPE_NAME = "Traydio.CommandRelay.v1";
-
-    private readonly IStationRepository _stationRepository;
-    private readonly ICommandTextRouter _commandTextRouter;
 
     private CancellationTokenSource? _cts;
     private Task? _listenerTask;
 
-    public NamedPipeCommandRelayServer(IStationRepository stationRepository, ICommandTextRouter commandTextRouter)
-    {
-        _stationRepository = stationRepository;
-        _commandTextRouter = commandTextRouter;
-    }
-
     public void Start()
     {
-        if (_listenerTask is not null || !_stationRepository.Communication.EnableNamedPipeRelay)
+        if (_listenerTask is not null || !stationRepository.Communication.EnableNamedPipeRelay)
         {
             return;
         }
@@ -64,7 +55,7 @@ public sealed class NamedPipeCommandRelayServer : ICommandRelayServer, IDisposab
         {
             try
             {
-                using var server = new NamedPipeServerStream(
+                await using var server = new NamedPipeServerStream(
                     _PIPE_NAME,
                     PipeDirection.In,
                     1,
@@ -77,7 +68,7 @@ public sealed class NamedPipeCommandRelayServer : ICommandRelayServer, IDisposab
                 var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
                 if (!string.IsNullOrWhiteSpace(line))
                 {
-                    _commandTextRouter.TryDispatch(line);
+                    commandTextRouter.TryDispatch(line);
                 }
             }
             catch (OperationCanceledException)

@@ -3,20 +3,13 @@ using System.Linq;
 
 namespace Traydio.Services.Implementations;
 
-public sealed class ProtocolUrlStartupCommandBridge : IStartupCommandBridge
+public sealed class ProtocolUrlStartupCommandBridge(IStationRepository stationRepository) : IStartupCommandBridge
 {
-    private readonly IStationRepository _stationRepository;
-
-    public ProtocolUrlStartupCommandBridge(IStationRepository stationRepository)
-    {
-        _stationRepository = stationRepository;
-    }
-
     public bool TryGetCommand(string[] args, out string? commandText)
     {
         commandText = null;
 
-        if (args.Length == 0 || !_stationRepository.Communication.EnableProtocolUrlRelay)
+        if (args.Length == 0 || !stationRepository.Communication.EnableProtocolUrlRelay)
         {
             return false;
         }
@@ -28,7 +21,7 @@ public sealed class ProtocolUrlStartupCommandBridge : IStartupCommandBridge
             return false;
         }
 
-        if (!string.Equals(uri.Scheme, _stationRepository.Communication.ProtocolScheme, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(uri.Scheme, stationRepository.Communication.ProtocolScheme, StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }

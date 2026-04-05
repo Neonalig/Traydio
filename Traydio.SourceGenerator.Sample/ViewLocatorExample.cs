@@ -7,11 +7,11 @@ public class ViewLocatorExample
 {
     public static Type[] GetLinkedTypes()
     {
-        return new[]
-        {
+        return
+        [
             SampleView.GetLinkedViewModelType(),
-            SampleViewModel.GetLinkedViewType(),
-        };
+            SampleViewModel.GetLinkedViewType()
+        ];
     }
 
     public static SampleView? CreateViewFor(SampleViewModel viewModel)

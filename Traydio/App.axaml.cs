@@ -9,7 +9,7 @@ using Traydio.Services;
 
 namespace Traydio;
 
-public partial class App : Application
+public class App : Application
 {
     public override void Initialize()
     {

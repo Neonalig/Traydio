@@ -1,15 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Tasks;
+using System.Runtime.CompilerServices;
+using JetBrains.Annotations;
 using Traydio.Common;
 
 namespace Traydio.Plugin.StreamUrlLink;
 
-public sealed class StreamUrlLinkPlugin : ITraydioPlugin
+[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+public sealed partial class StreamUrlLinkPlugin : ITraydioPlugin
 {
     private static readonly HttpClient _httpClient = new();
 
@@ -26,24 +29,25 @@ public sealed class StreamUrlLinkPlugin : ITraydioPlugin
 
     private static string _providerId => "streamurl.link";
 
-    private static async Task<IReadOnlyList<DiscoveredStation>> SearchStationsAsync(StationSearchRequest request, CancellationToken cancellationToken)
+    private static async IAsyncEnumerable<DiscoveredStation> SearchStationsAsync(
+        StationSearchRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var query = Uri.EscapeDataString(request.Query);
         var url = $"https://streamurl.link/search?q={query}";
 
+        DiscoveredStation[] stations;
         try
         {
             var html = await _httpClient.GetStringAsync(url, cancellationToken).ConfigureAwait(false);
 
-            var linkPattern = new Regex(
-                "<a[^>]+href=[\"'](?<href>https?://[^\"']+)[\"'][^>]*>(?<title>[^<]+)</a>",
-                RegexOptions.Compiled | RegexOptions.IgnoreCase);
+            var linkPattern = LinkPattern();
 
             var results = new List<DiscoveredStation>();
             foreach (Match match in linkPattern.Matches(html))
             {
                 var href = match.Groups["href"].Value;
-                var title = System.Net.WebUtility.HtmlDecode(match.Groups["title"].Value.Trim());
+                var title = WebUtility.HtmlDecode(match.Groups["title"].Value.Trim());
 
                 if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(href))
                 {
@@ -65,7 +69,7 @@ public sealed class StreamUrlLinkPlugin : ITraydioPlugin
                 });
             }
 
-            return results
+            stations = results
                 .GroupBy(r => r.StreamUrl, StringComparer.OrdinalIgnoreCase)
                 .Select(g => g.First())
                 .Take(Math.Max(1, request.Limit))
@@ -73,29 +77,30 @@ public sealed class StreamUrlLinkPlugin : ITraydioPlugin
         }
         catch
         {
-            return [];
+            yield break;
+        }
+
+        foreach (var station in stations)
+        {
+            yield return station;
         }
     }
 
-    private sealed class StationDiscoveryCapability : IStationDiscoveryCapability
+    private sealed class StationDiscoveryCapability(StreamUrlLinkPlugin plugin) : IStationDiscoveryCapability
     {
-        private readonly StreamUrlLinkPlugin _plugin;
-
-        public StationDiscoveryCapability(StreamUrlLinkPlugin plugin)
-        {
-            _plugin = plugin;
-        }
-
         public string CapabilityId => "station-discovery";
 
         public string ProviderId => _providerId;
 
-        public string DisplayName => _plugin.DisplayName;
+        public string DisplayName => plugin.DisplayName;
 
-        public Task<IReadOnlyList<DiscoveredStation>> SearchAsync(StationSearchRequest request, CancellationToken cancellationToken)
+        public IAsyncEnumerable<DiscoveredStation> SearchAsync(StationSearchRequest request, CancellationToken cancellationToken)
         {
             return SearchStationsAsync(request, cancellationToken);
         }
     }
+
+    [GeneratedRegex("<a[^>]+href=[\"'](?<href>https?://[^\"']+)[\"'][^>]*>(?<title>[^<]+)</a>", RegexOptions.IgnoreCase)]
+    private static partial Regex LinkPattern();
 }
 

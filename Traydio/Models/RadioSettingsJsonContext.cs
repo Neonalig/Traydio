@@ -6,7 +6,5 @@ namespace Traydio.Models;
 [JsonSerializable(typeof(RadioSettings))]
 [JsonSerializable(typeof(CommunicationBridgeSettings))]
 [JsonSerializable(typeof(StationDiscoveryPluginSettings))]
-internal partial class RadioSettingsJsonContext : JsonSerializerContext
-{
-}
+internal partial class RadioSettingsJsonContext : JsonSerializerContext;
 

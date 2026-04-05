@@ -5,15 +5,9 @@ using System.Runtime.Loader;
 
 namespace Traydio.Services.Implementations;
 
-public sealed class PluginLoadContext : AssemblyLoadContext
+public sealed class PluginLoadContext(string pluginPath) : AssemblyLoadContext($"plugin::{Path.GetFileNameWithoutExtension(pluginPath)}::{Guid.NewGuid():N}", isCollectible: true)
 {
-    private readonly string _pluginDirectory;
-
-    public PluginLoadContext(string pluginPath)
-        : base($"plugin::{Path.GetFileNameWithoutExtension(pluginPath)}::{Guid.NewGuid():N}", isCollectible: true)
-    {
-        _pluginDirectory = Path.GetDirectoryName(pluginPath) ?? AppContext.BaseDirectory;
-    }
+    private readonly string _pluginDirectory = Path.GetDirectoryName(pluginPath) ?? AppContext.BaseDirectory;
 
     protected override Assembly? Load(AssemblyName assemblyName)
     {

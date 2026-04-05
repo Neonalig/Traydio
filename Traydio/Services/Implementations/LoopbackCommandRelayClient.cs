@@ -4,20 +4,13 @@ using System.Text;
 
 namespace Traydio.Services.Implementations;
 
-public sealed class LoopbackCommandRelayClient : ICommandRelayClient
+public sealed class LoopbackCommandRelayClient(IStationRepository stationRepository) : ICommandRelayClient
 {
-    private readonly IStationRepository _stationRepository;
-
-    public LoopbackCommandRelayClient(IStationRepository stationRepository)
-    {
-        _stationRepository = stationRepository;
-    }
-
     public string Name => "loopback";
 
     public bool TrySend(string commandText)
     {
-        if (string.IsNullOrWhiteSpace(commandText) || !_stationRepository.Communication.EnableLoopbackRelay)
+        if (string.IsNullOrWhiteSpace(commandText) || !stationRepository.Communication.EnableLoopbackRelay)
         {
             return false;
         }
@@ -25,7 +18,7 @@ public sealed class LoopbackCommandRelayClient : ICommandRelayClient
         try
         {
             using var client = new TcpClient();
-            client.Connect(_stationRepository.Communication.LoopbackHost, _stationRepository.Communication.LoopbackPort);
+            client.Connect(stationRepository.Communication.LoopbackHost, stationRepository.Communication.LoopbackPort);
 
             using var writer = new StreamWriter(client.GetStream(), new UTF8Encoding(false), 1024, leaveOpen: false);
             writer.WriteLine(commandText);

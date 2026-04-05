@@ -4,21 +4,15 @@ using System.Text;
 
 namespace Traydio.Services.Implementations;
 
-public sealed class NamedPipeCommandRelayClient : ICommandRelayClient
+public sealed class NamedPipeCommandRelayClient(IStationRepository stationRepository) : ICommandRelayClient
 {
     private const string _PIPE_NAME = "Traydio.CommandRelay.v1";
-    private readonly IStationRepository _stationRepository;
-
-    public NamedPipeCommandRelayClient(IStationRepository stationRepository)
-    {
-        _stationRepository = stationRepository;
-    }
 
     public string Name => "named-pipe";
 
     public bool TrySend(string commandText)
     {
-        if (string.IsNullOrWhiteSpace(commandText) || !_stationRepository.Communication.EnableNamedPipeRelay)
+        if (string.IsNullOrWhiteSpace(commandText) || !stationRepository.Communication.EnableNamedPipeRelay)
         {
             return false;
         }
