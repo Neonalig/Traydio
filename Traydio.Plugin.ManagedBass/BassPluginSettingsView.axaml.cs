@@ -155,7 +155,7 @@ public partial class BassPluginSettingsView : UserControl
             SaveOutputDeviceIndex();
 
             SetStatus(downloadingMessage);
-            var zipBytes = await _http.GetByteArrayAsync(archiveUrl).ConfigureAwait(true);
+            var zipBytes = await DownloadArchiveBytesWithFallbackAsync(archiveUrl).ConfigureAwait(true);
 
             using var archiveStream = new MemoryStream(zipBytes);
             using var archive = new ZipArchive(archiveStream, ZipArchiveMode.Read);
@@ -195,6 +195,35 @@ public partial class BassPluginSettingsView : UserControl
     private static string NormalizeArchivePath(string path)
     {
         return path.Replace('\\', '/').TrimStart('/');
+    }
+
+    private static async System.Threading.Tasks.Task<byte[]> DownloadArchiveBytesWithFallbackAsync(string archiveUrl)
+    {
+        var candidates = new System.Collections.Generic.List<string> { archiveUrl };
+        if (archiveUrl.Contains("/files/z/0/", StringComparison.OrdinalIgnoreCase))
+        {
+            candidates.Add(archiveUrl.Replace("/files/z/0/", "/files/", StringComparison.OrdinalIgnoreCase));
+        }
+        else if (archiveUrl.Contains("/files/", StringComparison.OrdinalIgnoreCase))
+        {
+            candidates.Add(archiveUrl.Replace("/files/", "/files/z/0/", StringComparison.OrdinalIgnoreCase));
+        }
+
+        Exception? lastError = null;
+        foreach (var candidate in candidates.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            try
+            {
+                return await _http.GetByteArrayAsync(candidate).ConfigureAwait(true);
+            }
+            catch (Exception ex)
+            {
+                lastError = ex;
+                LogError($"[Traydio][ManagedBassSettings] Archive download failed url={candidate}: {ex.Message}");
+            }
+        }
+
+        throw lastError ?? new InvalidOperationException("Failed to download archive.");
     }
 
     private void SaveFolderPath()

@@ -37,7 +37,10 @@
                                 Classes="command-button"
                                 IsVisible="{Binding HasPendingDeletes}"
                                 Click="OnRestartAppClick">
-                            <TextBlock Text="Restart App" VerticalAlignment="Center"/>
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Image Source="/Assets/Icons9x/refresh.ico" Classes="icon-small"/>
+                                <TextBlock Text="Restart App" VerticalAlignment="Center"/>
+                            </StackPanel>
                         </Button>
                     </Grid>
 

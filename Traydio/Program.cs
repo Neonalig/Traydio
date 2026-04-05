@@ -3,6 +3,8 @@ using Avalonia.Controls;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using JetBrains.Annotations;
 using Traydio.Commands;
 using Traydio.Common;
@@ -29,6 +31,18 @@ sealed class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        if (args.Any(arg => string.Equals(arg, "--debugger-launch", StringComparison.OrdinalIgnoreCase)) && !Debugger.IsAttached)
+        {
+            try
+            {
+                Debugger.Launch();
+            }
+            catch
+            {
+                // Best effort only; restart should continue even if debugger launch fails.
+            }
+        }
+
         using var services = ConfigureServices().BuildServiceProvider();
         _services = services;
 

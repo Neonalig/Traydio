@@ -218,11 +218,34 @@ public partial class PluginManagementPage : UserControl
             return;
         }
 
-        Process.Start(new ProcessStartInfo
+        var restartArguments = "--cmd plugins";
+        if (Debugger.IsAttached)
         {
-            FileName = processPath,
-            UseShellExecute = true,
-        });
+            // Best effort: the relaunched app can request debugger attach on startup.
+            restartArguments += " --debugger-launch";
+        }
+
+        if (OperatingSystem.IsWindows())
+        {
+            var escapedPath = processPath.Replace("\"", "\"\"");
+            var delayedCommand = $"/c timeout /t 1 /nobreak >nul && start \"\" \"{escapedPath}\" {restartArguments}";
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = delayedCommand,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            });
+        }
+        else
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = processPath,
+                Arguments = restartArguments,
+                UseShellExecute = true,
+            });
+        }
 
         if (Avalonia.Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime lifetime)
         {
