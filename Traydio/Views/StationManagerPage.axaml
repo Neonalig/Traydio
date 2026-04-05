@@ -7,16 +7,15 @@
              DragDrop.DragOver="OnDragOver"
              DragDrop.Drop="OnDrop">
 
-    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10" Margin="0">
-        <TextBlock Grid.Row="0" Text="Station Library" Classes="section-title"/>
-
-        <Border Grid.Row="1" Classes="surface-card" Margin="0">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button x:Name="AddStationButton" Classes="command-button" Content="Add Station" MinWidth="120">
+    <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="6" Margin="0">
+        <Border Grid.Row="0" Classes="toolbar-frame" Margin="0">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button x:Name="AddStationButton" Classes="toolbar-button">
                     <Button.Flyout>
                         <Flyout Placement="Bottom" IsOpen="{Binding IsAddFlyoutOpen, Mode=TwoWay}">
-                            <StackPanel Width="360" Spacing="8" Margin="8">
+                            <StackPanel Width="380" Spacing="8" Margin="8">
                                 <TextBlock Text="Add Station" FontWeight="SemiBold"/>
+                                <TextBlock Text="Enter a readable station name and a direct stream URL." Classes="helper-text"/>
                                 <TextBox Watermark="Station name" Text="{Binding NewStationName}"/>
                                 <TextBox Watermark="Stream URL" Text="{Binding NewStationUrl}"/>
                                 <StackPanel Orientation="Horizontal" Spacing="8">
@@ -26,29 +25,59 @@
                             </StackPanel>
                         </Flyout>
                     </Button.Flyout>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Image Source="/Assets/Icons9x/add.ico" Classes="icon-small"/>
+                        <TextBlock Text="Add Station" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Classes="toolbar-button" Command="{Binding PlaySelectedStationCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Image Source="/Assets/Icons9x/play.ico" Classes="icon-small"/>
+                        <TextBlock Text="Play Selected" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Classes="toolbar-button" Command="{Binding PauseCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Image Source="/Assets/Icons9x/pause.ico" Classes="icon-small"/>
+                        <TextBlock Text="Pause" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+
+                <Button Classes="toolbar-button" Command="{Binding RemoveSelectedStationCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Image Source="/Assets/Icons9x/remove.ico" Classes="icon-small"/>
+                        <TextBlock Text="Remove Selected" VerticalAlignment="Center"/>
+                    </StackPanel>
                 </Button>
             </StackPanel>
         </Border>
 
-        <Grid Grid.Row="2" RowDefinitions="*,Auto" RowSpacing="8">
-            <ListBox Grid.Row="0" Classes="list-surface" ItemsSource="{Binding Stations}" SelectedItem="{Binding SelectedStation}">
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <StackPanel>
-                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                            <TextBlock Text="{Binding StreamUrl}" Classes="subtle-text"/>
-                        </StackPanel>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
+        <Border Grid.Row="1" Classes="status-strip" Margin="0">
+            <TextBlock Text="Tip: drag and drop stations to reorder playback priority. Changes are retained when station operations run." Classes="helper-text"/>
+        </Border>
 
-            <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
-                <Button Classes="command-button" Content="Play Selected" Command="{Binding PlaySelectedStationCommand}"/>
-                <Button Classes="command-button" Content="Pause" Command="{Binding PauseCommand}"/>
-                <Button Classes="command-button" Content="Remove Selected" Command="{Binding RemoveSelectedStationCommand}"/>
-            </StackPanel>
-        </Grid>
+        <TextBlock Grid.Row="2" Text="Saved Stations" Classes="group-title" Margin="10,0,0,-8"/>
+        <Border Grid.Row="3" Classes="group-frame" Margin="0">
+            <Grid RowDefinitions="*,Auto" RowSpacing="8">
+                <ListBox Grid.Row="0" Classes="list-surface" ItemsSource="{Binding Stations}" SelectedItem="{Binding SelectedStation}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                <Image Source="/Assets/Icons9x/stations.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding StreamUrl}" Classes="subtle-text"/>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
 
+                <TextBlock Grid.Row="1" Text="Select a station, then use toolbar actions to play, pause, or remove it." Classes="helper-text"/>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>
 

@@ -6,54 +6,86 @@
              mc:Ignorable="d"
              x:Class="Traydio.Views.PluginManagementPage"
              x:DataType="vm:PluginManagementWindowViewModel">
-
-    <Grid Margin="0" RowDefinitions="Auto,Auto,*,*,Auto" RowSpacing="8">
-        <TextBlock Grid.Row="0" Text="Plugin Management" Classes="section-title"/>
-
-        <Border Grid.Row="1" Classes="surface-card" Margin="0">
-            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-                <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Plugin directory"/>
-                <TextBox Grid.Column="1" Text="{Binding PluginDirectory}"/>
-                <Button Grid.Column="2" Classes="command-button" Content="Save Directory" Command="{Binding SavePluginDirectoryCommand}"/>
-            </Grid>
+    <Grid Margin="0" RowDefinitions="Auto,Auto,Auto,*,Auto" RowSpacing="6">
+        <Border Grid.Row="0" Classes="toolbar-frame" Margin="0">
+            <StackPanel Orientation="Horizontal" Spacing="6">
+                <Button Classes="toolbar-button" Command="{Binding RefreshCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Image Source="/Assets/Icons9x/refresh.ico" Classes="icon-small"/>
+                        <TextBlock Text="Refresh Inventory" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <Button Classes="toolbar-button" Command="{Binding DisableSelectedPluginCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Image Source="/Assets/Icons9x/remove.ico" Classes="icon-small"/>
+                        <TextBlock Text="Disable Installed" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+                <Button Classes="toolbar-button" Command="{Binding InstallSelectedCandidateCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Image Source="/Assets/Icons9x/add.ico" Classes="icon-small"/>
+                        <TextBlock Text="Install Candidate" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
         </Border>
 
-        <Border Grid.Row="2" Classes="surface-card" Margin="0">
-            <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8">
-                <TextBlock Grid.Row="0" Text="Installed Plugins" FontWeight="SemiBold"/>
-                <ListBox Grid.Row="1" Classes="list-surface" ItemsSource="{Binding InstalledPlugins}" SelectedItem="{Binding SelectedInstalledPlugin}" DisplayMemberBinding="{Binding DisplayName}"/>
-                <Button Grid.Row="2" Classes="command-button" Content="Disable Selected" Command="{Binding DisableSelectedPluginCommand}" HorizontalAlignment="Left"/>
-            </Grid>
+        <Border Grid.Row="1" Classes="status-strip" Margin="0">
+            <TextBlock Text="Choose a plugin folder, refresh candidates, then install verified DLLs. Disable installed entries to roll back quickly." Classes="helper-text"/>
         </Border>
 
-        <Border Grid.Row="3" Classes="surface-card" Margin="0">
-            <Grid RowDefinitions="Auto,*,Auto,Auto" RowSpacing="8">
-                <TextBlock Grid.Row="0" Text="Discovered Eligible Plugin DLLs" FontWeight="SemiBold"/>
-                <ListBox Grid.Row="1" Classes="list-surface" ItemsSource="{Binding PluginCandidates}" SelectedItem="{Binding SelectedPluginCandidate}">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel>
-                                <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"/>
-                                <TextBlock Text="{Binding Path}" Classes="subtle-text" TextWrapping="Wrap"/>
+        <TextBlock Grid.Row="2" Text="Plugin Source and Inventory" Classes="group-title" Margin="10,0,0,-8"/>
+        <Border Grid.Row="3" Classes="group-frame" Margin="0">
+            <Grid RowDefinitions="Auto,*,*" RowSpacing="10">
+                <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                    <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Plugin directory"/>
+                    <TextBox Grid.Column="1" Text="{Binding PluginDirectory}"/>
+                    <Button Grid.Column="2" Classes="command-button" Command="{Binding SavePluginDirectoryCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Image Source="/Assets/Icons9x/folder.ico" Classes="icon-small"/>
+                            <TextBlock Text="Save Directory" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="6">
+                    <TextBlock Grid.Row="0" Text="Installed Plugins" FontWeight="SemiBold"/>
+                    <ListBox Grid.Row="1" Classes="list-surface" ItemsSource="{Binding InstalledPlugins}" SelectedItem="{Binding SelectedInstalledPlugin}" DisplayMemberBinding="{Binding DisplayName}"/>
+                </Grid>
+
+                <Grid Grid.Row="2" RowDefinitions="Auto,*,Auto" RowSpacing="6">
+                    <TextBlock Grid.Row="0" Text="Discovered Eligible Plugin DLLs" FontWeight="SemiBold"/>
+                    <ListBox Grid.Row="1" Classes="list-surface" ItemsSource="{Binding PluginCandidates}" SelectedItem="{Binding SelectedPluginCandidate}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                    <Image Source="/Assets/Icons9x/plugins.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"/>
+                                        <TextBlock Text="{Binding Path}" Classes="subtle-text" TextWrapping="Wrap"/>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                        <TextBox Grid.Column="0" Watermark="Browse or paste plugin DLL path" Text="{Binding PluginDllPath}"/>
+                        <Button Grid.Column="1" Classes="command-button" Click="OnBrowsePluginClick">Browse...</Button>
+                        <Button Grid.Column="2" Classes="command-button" Command="{Binding InstallFromPathCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Image Source="/Assets/Icons9x/add.ico" Classes="icon-small"/>
+                                <TextBlock Text="Install From Path" VerticalAlignment="Center"/>
                             </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-
-                <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8">
-                    <Button Classes="command-button" Content="Install Selected Candidate" Command="{Binding InstallSelectedCandidateCommand}"/>
-                    <Button Classes="command-button" Content="Refresh" Command="{Binding RefreshCommand}"/>
-                </StackPanel>
-
-                <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                    <TextBox Grid.Column="0" Watermark="Browse or paste plugin DLL path" Text="{Binding PluginDllPath}"/>
-                    <Button Grid.Column="1" Classes="command-button" Content="Browse..." Click="OnBrowsePluginClick"/>
-                    <Button Grid.Column="2" Classes="command-button" Content="Install From Path" Command="{Binding InstallFromPathCommand}"/>
+                        </Button>
+                    </Grid>
                 </Grid>
             </Grid>
         </Border>
 
-        <TextBlock Grid.Row="4" Text="{Binding Status}" Classes="accent-text"/>
+        <Border Grid.Row="4" Classes="status-strip" Margin="0">
+            <TextBlock Text="{Binding Status}" Classes="accent-text"/>
+        </Border>
     </Grid>
 </UserControl>
 

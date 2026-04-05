@@ -10,100 +10,92 @@
         Width="1100"
         Height="760"
         Title="Traydio">
-    <Window.Resources>
-        <StreamGeometry x:Key="StationsIcon">M2,2 L14,2 L14,14 L2,14 Z M4,5 L12,5 M4,8 L12,8 M4,11 L9,11</StreamGeometry>
-        <StreamGeometry x:Key="SearchIcon">M6,2 A4,4 0 1 1 5.9,2 M9.6,9.6 L14,14</StreamGeometry>
-        <StreamGeometry x:Key="PluginsIcon">M3,2 L7,2 L7,5 L10,5 L10,2 L14,2 L14,6 L11,6 L11,10 L14,10 L14,14 L10,14 L10,11 L7,11 L7,14 L3,14 L3,10 L6,10 L6,6 L3,6 Z</StreamGeometry>
-        <StreamGeometry x:Key="SettingsIcon">M8,2 L9,3.7 L11,3.7 L11.7,5.7 L13.4,6.8 L12.6,8.6 L13.4,10.4 L11.7,11.5 L11,13.5 L9,13.5 L8,15 L7,13.5 L5,13.5 L4.3,11.5 L2.6,10.4 L3.4,8.6 L2.6,6.8 L4.3,5.7 L5,3.7 L7,3.7 Z M8,6 A2.2,2.2 0 1 1 7.9,6</StreamGeometry>
-    </Window.Resources>
+    <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="6">
+        <Border Grid.Row="0" Classes="toolbar-frame" Margin="0">
+            <Grid RowDefinitions="Auto,Auto" RowSpacing="6">
+                <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <TextBlock Text="Traydio - Internet Radio Control Center" Classes="section-title"/>
+                    <TextBlock Grid.Column="1" Text="Ready" VerticalAlignment="Center" Classes="accent-text"/>
+                </Grid>
 
-    <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
-        <Border Grid.Row="0" Classes="surface-card" Margin="0">
-            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                <StackPanel Spacing="2">
-                    <TextBlock Text="Traydio" Classes="section-title"/>
-                    <TextBlock Text="Classic radio shell, modern workflow." Classes="subtle-text"/>
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="6">
+                    <Button Classes="toolbar-button" Command="{Binding OpenStationsCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Image Source="/Assets/Icons9x/stations.ico" Classes="icon-small"/>
+                            <TextBlock Text="Station Manager" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Classes="toolbar-button" Command="{Binding OpenSearchCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Image Source="/Assets/Icons9x/search.ico" Classes="icon-small"/>
+                            <TextBlock Text="Search Catalog" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Classes="toolbar-button" Command="{Binding OpenPluginsCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Image Source="/Assets/Icons9x/plugins.ico" Classes="icon-small"/>
+                            <TextBlock Text="Plugin Manager" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Classes="toolbar-button" Command="{Binding OpenSettingsCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Image Source="/Assets/Icons9x/settings.ico" Classes="icon-small"/>
+                            <TextBlock Text="Settings" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
                 </StackPanel>
-                <TextBlock Grid.Column="1"
-                           VerticalAlignment="Center"
-                           HorizontalAlignment="Right"
-                           Text="Ready"
-                           Classes="accent-text"/>
             </Grid>
         </Border>
 
-        <WrapPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" ItemWidth="256" ItemHeight="104">
-            <Button Classes="nav-tile"
-                    Command="{Binding OpenStationsCommand}">
-                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                    <PathIcon Width="20" Height="20" Data="{StaticResource StationsIcon}"/>
-                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                        <TextBlock Text="Stations" FontWeight="SemiBold"/>
-                        <TextBlock Text="Manage saved stations and playback queue" Classes="subtle-text" TextWrapping="Wrap"/>
-                    </StackPanel>
-                </Grid>
-            </Button>
-
-            <Button Classes="nav-tile"
-                    Command="{Binding OpenSearchCommand}">
-                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                    <PathIcon Width="20" Height="20" Data="{StaticResource SearchIcon}"/>
-                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                        <TextBlock Text="Search" FontWeight="SemiBold"/>
-                        <TextBlock Text="Discover and add new radio stations" Classes="subtle-text" TextWrapping="Wrap"/>
-                    </StackPanel>
-                </Grid>
-            </Button>
-
-            <Button Classes="nav-tile"
-                    Command="{Binding OpenPluginsCommand}">
-                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                    <PathIcon Width="20" Height="20" Data="{StaticResource PluginsIcon}"/>
-                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                        <TextBlock Text="Plugins" FontWeight="SemiBold"/>
-                        <TextBlock Text="Enable providers and extend discovery" Classes="subtle-text" TextWrapping="Wrap"/>
-                    </StackPanel>
-                </Grid>
-            </Button>
-
-            <Button Classes="nav-tile"
-                    Command="{Binding OpenSettingsCommand}">
-                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                    <PathIcon Width="20" Height="20" Data="{StaticResource SettingsIcon}"/>
-                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                        <TextBlock Text="Settings" FontWeight="SemiBold"/>
-                        <TextBlock Text="Control relay, protocol, and app behavior" Classes="subtle-text" TextWrapping="Wrap"/>
-                    </StackPanel>
-                </Grid>
-            </Button>
-        </WrapPanel>
-
-        <Border Grid.Row="2" Classes="surface-card" Margin="0">
-            <ContentControl Content="{Binding CurrentPageViewModel}"/>
+        <Border Grid.Row="1" Classes="status-strip" Margin="0">
+            <TextBlock Text="Choose a command from the toolbar. Each page explains what to do next and which action commits your changes." Classes="helper-text"/>
         </Border>
 
-        <Border Grid.Row="3"
-                Classes="surface-card"
-                Margin="0"
-                IsVisible="{Binding IsMediaBarVisible}">
-            <Grid RowDefinitions="Auto,Auto" RowSpacing="8" Opacity="{Binding MediaControlsOpacity}">
-                <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="10">
-                    <Button Grid.Column="0" Classes="command-button" Content="{Binding PlayPauseIcon}" Command="{Binding TogglePlayPauseCommand}"/>
-                    <Button Grid.Column="1" Classes="command-button" Content="Mute" Command="{Binding ToggleMuteCommand}" MinWidth="86"/>
-                    <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="{Binding PlaybackTimeText}" Classes="subtle-text"/>
-                    <TextBlock Grid.Column="3" VerticalAlignment="Center" Text="{Binding CurrentStationText}" FontWeight="SemiBold"/>
-                    <ProgressBar Grid.Column="4" Width="130" IsIndeterminate="True" IsVisible="{Binding IsMediaLoading}"/>
-                </Grid>
+        <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="0">
+            <TextBlock Text="Workspace" Classes="group-title" Margin="10,0,0,-8"/>
+            <Border Grid.Row="1" Classes="group-frame" Margin="0">
+                <ContentControl Content="{Binding CurrentPageViewModel}"/>
+            </Border>
+        </Grid>
 
-                <Grid Grid.Row="1" ColumnDefinitions="Auto,*,*" ColumnSpacing="8">
-                    <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Volume"/>
-                    <Slider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding FooterVolume}"/>
-                    <StackPanel Grid.Column="2" Spacing="2">
-                        <TextBlock Text="{Binding NowPlayingText}" Classes="subtle-text" TextWrapping="Wrap"/>
-                        <TextBlock Text="{Binding MediaErrorText}" Classes="error-text" TextWrapping="Wrap"/>
-                    </StackPanel>
+        <Grid Grid.Row="3" RowDefinitions="Auto,*" RowSpacing="0" IsVisible="{Binding IsMediaBarVisible}">
+            <TextBlock Text="Playback Console" Classes="group-title" Margin="10,0,0,-8"/>
+            <Border Grid.Row="1" Classes="group-frame" Margin="0">
+                <Grid RowDefinitions="Auto,Auto" RowSpacing="8" Opacity="{Binding MediaControlsOpacity}">
+                    <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="8">
+                        <Button Grid.Column="0" Classes="command-button" Command="{Binding TogglePlayPauseCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Image Source="/Assets/Icons9x/play.ico" Classes="icon-small"/>
+                                <TextBlock Text="{Binding PlayPauseIcon}" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="1" Classes="command-button" Command="{Binding ToggleMuteCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Image Source="/Assets/Icons9x/mute.ico" Classes="icon-small"/>
+                                <TextBlock Text="Mute" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="{Binding PlaybackTimeText}" Classes="subtle-text"/>
+                        <TextBlock Grid.Column="3" VerticalAlignment="Center" Text="{Binding CurrentStationText}" FontWeight="SemiBold"/>
+                        <ProgressBar Grid.Column="4" Width="130" IsIndeterminate="True" IsVisible="{Binding IsMediaLoading}"/>
+                    </Grid>
+
+                    <Grid Grid.Row="1" ColumnDefinitions="Auto,*,*" ColumnSpacing="8">
+                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                            <Image Source="/Assets/Icons9x/volume.ico" Classes="icon-small"/>
+                            <TextBlock Text="Volume"/>
+                        </StackPanel>
+                        <Slider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding FooterVolume}"/>
+                        <StackPanel Grid.Column="2" Spacing="2">
+                            <TextBlock Text="{Binding NowPlayingText}" Classes="helper-text"/>
+                            <TextBlock Text="{Binding MediaErrorText}" Classes="error-text" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Grid>
                 </Grid>
-            </Grid>
-        </Border>
+            </Border>
+        </Grid>
     </Grid>
 </Window>

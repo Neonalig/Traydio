@@ -11,41 +11,57 @@
         <KeyBinding Gesture="Enter" Command="{Binding SearchCommand}" />
     </UserControl.KeyBindings>
 
-    <Grid Margin="0" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="8">
-        <TextBlock Grid.Row="0" Text="Station Search" Classes="section-title"/>
-
-        <Border Grid.Row="1" Classes="surface-card" Margin="0">
+    <Grid Margin="0" RowDefinitions="Auto,Auto,Auto,*" RowSpacing="6">
+        <Border Grid.Row="0" Classes="toolbar-frame" Margin="0">
             <Grid ColumnDefinitions="2*,2*,Auto,Auto,Auto" ColumnSpacing="8">
                 <ComboBox Grid.Column="0"
                           ItemsSource="{Binding Providers}"
                           SelectedItem="{Binding SelectedProvider}"
                           DisplayMemberBinding="{Binding DisplayName}"/>
-                <TextBox Grid.Column="1" Classes="search-input" Watermark="Search query" Text="{Binding Query}"/>
-                <Button Grid.Column="2" Classes="command-button" Content="Search" Command="{Binding SearchCommand}"/>
+                <TextBox Grid.Column="1" Watermark="Search query" Text="{Binding Query}"/>
+                <Button Grid.Column="2" Classes="command-button" Command="{Binding SearchCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Image Source="/Assets/Icons9x/search.ico" Classes="icon-small"/>
+                        <TextBlock Text="Search" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
                 <TextBox Grid.Column="3" Width="180" Watermark="Filter results" Text="{Binding FilterText}"/>
-                <Button Grid.Column="4" Classes="command-button" Content="Apply Filter" Command="{Binding ApplyFilterCommand}"/>
+                <Button Grid.Column="4" Classes="command-button" Command="{Binding ApplyFilterCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Image Source="/Assets/Icons9x/refresh.ico" Classes="icon-small"/>
+                        <TextBlock Text="Apply Filter" VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Button>
             </Grid>
         </Border>
 
-        <Border Grid.Row="2" Classes="surface-card" Margin="0">
+        <Border Grid.Row="1" Classes="status-strip" Margin="0">
+            <TextBlock Text="Search by name or genre, then narrow with the filter box. Select a result and choose Add Selected Station." Classes="helper-text"/>
+        </Border>
+
+        <TextBlock Grid.Row="2" Text="Search Results" Classes="group-title" Margin="10,0,0,-8"/>
+        <Border Grid.Row="3" Classes="group-frame" Margin="0">
             <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8">
                 <Grid Grid.Row="0" ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                    <Button Grid.Column="0" Classes="command-button" Content="Open Plugin Manager" Command="{Binding OpenPluginManagerWindowCommand}"/>
-                    <TextBlock Grid.Column="1"
-                               VerticalAlignment="Center"
-                               Text="Manage plugin install and enable/disable state from the dedicated plugin window."
-                               Classes="subtle-text"/>
+                    <Button Grid.Column="0" Classes="command-button" Command="{Binding OpenPluginManagerWindowCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Image Source="/Assets/Icons9x/plugins.ico" Classes="icon-small"/>
+                            <TextBlock Text="Open Plugin Manager" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <TextBlock Grid.Column="1" Text="Use plugin management if your preferred provider is missing or disabled." Classes="helper-text" VerticalAlignment="Center"/>
                 </Grid>
 
                 <ListBox Grid.Row="1" Classes="list-surface" ItemsSource="{Binding Results}" SelectedItem="{Binding SelectedResult}">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Grid ColumnDefinitions="3*,5*" ColumnSpacing="8">
-                                <StackPanel>
+                            <Grid ColumnDefinitions="Auto,3*,5*" ColumnSpacing="8">
+                                <Image Source="/Assets/Icons9x/stations.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
+                                <StackPanel Grid.Column="1">
                                     <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
                                     <TextBlock Text="{Binding Country}" Classes="subtle-text"/>
                                 </StackPanel>
-                                <StackPanel Grid.Column="1">
+                                <StackPanel Grid.Column="2">
                                     <TextBlock Text="{Binding StreamUrl}" TextWrapping="Wrap"/>
                                     <TextBlock Text="{Binding Description}" Classes="subtle-text" TextWrapping="Wrap"/>
                                 </StackPanel>
@@ -55,7 +71,12 @@
                 </ListBox>
 
                 <Grid Grid.Row="2" ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                    <Button Grid.Column="0" Classes="command-button" Content="Add Selected Station" Command="{Binding AddSelectedStationCommand}"/>
+                    <Button Grid.Column="0" Classes="command-button" Command="{Binding AddSelectedStationCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Image Source="/Assets/Icons9x/add.ico" Classes="icon-small"/>
+                            <TextBlock Text="Add Selected Station" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
                     <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{Binding Status}" Classes="accent-text"/>
                 </Grid>
             </Grid>

@@ -2,7 +2,13 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <Style Selector="Window">
         <Setter Property="Padding" Value="{DynamicResource AppWindowPadding}"/>
-        <Setter Property="FontSize" Value="13"/>
+        <Setter Property="FontFamily" Value="Tahoma"/>
+        <Setter Property="FontSize" Value="12"/>
+    </Style>
+
+    <Style Selector="UserControl">
+        <Setter Property="FontFamily" Value="Tahoma"/>
+        <Setter Property="FontSize" Value="12"/>
     </Style>
 
     <Style Selector="TextBlock.section-title">
@@ -12,6 +18,11 @@
 
     <Style Selector="TextBlock.subtle-text">
         <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}"/>
+    </Style>
+
+    <Style Selector="TextBlock.helper-text">
+        <Setter Property="Foreground" Value="{DynamicResource MutedForegroundBrush}"/>
+        <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
 
     <Style Selector="TextBlock.error-text">
@@ -29,24 +40,59 @@
         <Setter Property="Margin" Value="{DynamicResource SurfaceMargin}"/>
     </Style>
 
-    <Style Selector="Button.nav-tile">
-        <Setter Property="Width" Value="248"/>
-        <Setter Property="Height" Value="100"/>
-        <Setter Property="Padding" Value="10,8"/>
-        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    <Style Selector="Border.toolbar-frame">
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
+        <Setter Property="Padding" Value="{DynamicResource SurfacePadding}"/>
+        <Setter Property="Margin" Value="{DynamicResource SurfaceMargin}"/>
+        <Setter Property="Background" Value="{DynamicResource ToolbarBackgroundBrush}"/>
+    </Style>
+
+    <Style Selector="Button.toolbar-button">
+        <Setter Property="MinWidth" Value="130"/>
+        <Setter Property="Padding" Value="6,3"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
     </Style>
 
     <Style Selector="Button.command-button">
-        <Setter Property="MinWidth" Value="116"/>
-        <Setter Property="Padding" Value="10,4"/>
+        <Setter Property="MinWidth" Value="104"/>
+        <Setter Property="Padding" Value="8,3"/>
     </Style>
 
-    <Style Selector="TextBox.search-input">
-        <Setter Property="MinWidth" Value="180"/>
+    <Style Selector="Border.group-frame">
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
+        <Setter Property="Margin" Value="{DynamicResource SurfaceMargin}"/>
+        <Setter Property="Padding" Value="{DynamicResource GroupPadding}"/>
+    </Style>
+
+    <Style Selector="TextBlock.group-title">
+        <Setter Property="Margin" Value="6,0,0,-8"/>
+        <Setter Property="Background" Value="{DynamicResource GroupCaptionBackgroundBrush}"/>
+        <Setter Property="Padding" Value="4,0"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="Image.icon-small">
+        <Setter Property="Width" Value="16"/>
+        <Setter Property="Height" Value="16"/>
+    </Style>
+
+    <Style Selector="Image.icon-large">
+        <Setter Property="Width" Value="24"/>
+        <Setter Property="Height" Value="24"/>
     </Style>
 
     <Style Selector="ListBox.list-surface">
-        <Setter Property="MinHeight" Value="220"/>
+        <Setter Property="MinHeight" Value="210"/>
+    </Style>
+
+    <Style Selector="Border.status-strip">
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
+        <Setter Property="Padding" Value="{DynamicResource SurfacePadding}"/>
+        <Setter Property="Margin" Value="{DynamicResource SurfaceMargin}"/>
+        <Setter Property="Background" Value="{DynamicResource StatusBackgroundBrush}"/>
     </Style>
 </Styles>
 
