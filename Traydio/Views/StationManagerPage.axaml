@@ -47,12 +47,16 @@
                             <DataTemplate>
                                 <Border Classes="station-entry"
                                         Classes.playing-station="{Binding IsActivePlaying}"
+                                        Classes.failed-station="{Binding IsRecentFailure}"
                                         HorizontalAlignment="Stretch"
                                         Background="Transparent">
                                     <Border.ContextMenu>
                                         <ContextMenu>
                                             <MenuItem Header="Play" Click="OnPlayStationClick"/>
                                             <MenuItem Header="Delete" Click="OnRemoveStationClick"/>
+                                            <Separator/>
+                                            <MenuItem Header="Set Icon..." Click="OnSetStationIconClick"/>
+                                            <MenuItem Header="Clear Icon" Click="OnClearStationIconClick"/>
                                             <Separator/>
                                             <MenuItem Header="Copy Name" Click="OnCopyStationNameClick"/>
                                             <MenuItem Header="Copy Stream Link" Click="OnCopyStationLinkClick"/>
@@ -67,7 +71,7 @@
                                         <StackPanel Grid.Column="1">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                                                <TextBlock Text="Now Playing" Classes="accent-text" IsVisible="{Binding IsActivePlaying}"/>
+                                                <TextBlock Text="Now Playing" Classes="accent-text now-playing-badge" IsVisible="{Binding IsActivePlaying}"/>
                                             </StackPanel>
                                             <TextBlock Text="{Binding StreamUrl}" Classes="subtle-text"/>
                                             <TextBlock Text="{Binding Station.Id}" Classes="subtle-text" Opacity="0.6" FontSize="10"/>

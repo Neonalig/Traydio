@@ -85,6 +85,8 @@ public sealed class DeferredPluginRadioPlayer(
     {
         lock (_gate)
         {
+            _playRequestVersion++;
+            _isLoading = false;
             _inner?.Pause();
         }
 
@@ -95,6 +97,8 @@ public sealed class DeferredPluginRadioPlayer(
     {
         lock (_gate)
         {
+            _playRequestVersion++;
+            _isLoading = false;
             _inner?.TogglePause();
         }
 
@@ -105,6 +109,8 @@ public sealed class DeferredPluginRadioPlayer(
     {
         lock (_gate)
         {
+            _playRequestVersion++;
+            _isLoading = false;
             _inner?.Stop();
         }
 

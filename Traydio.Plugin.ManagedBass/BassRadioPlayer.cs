@@ -26,6 +26,7 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
     private bool _isMetadataSupported = true;
     private bool _hasLoggedMetadataUnavailable;
     private IntPtr _tagsLibraryHandle;
+    private Timer? _stateTickTimer;
     private TimeSpan _elapsedBeforeClock;
     private DateTime _clockAnchorUtc;
     private bool _isClockRunning;
@@ -139,6 +140,7 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
 
                 ResetPlaybackClock_NoLock();
                 StartPlaybackClock_NoLock();
+                StartStateTicker_NoLock();
 
                 UpdateNowPlaying_NoLock();
                 RaiseStateChanged_NoLock();
@@ -258,6 +260,9 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
                 NativeLibrary.Free(_tagsLibraryHandle);
                 _tagsLibraryHandle = IntPtr.Zero;
             }
+
+            _stateTickTimer?.Dispose();
+            _stateTickTimer = null;
         }
     }
 
@@ -371,7 +376,13 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
         try
         {
             var tag = BassTags.Read(_streamHandle, "%IFV1(%ARTI - )%TITL");
-            _nowPlaying = string.IsNullOrWhiteSpace(tag) ? null : tag;
+            if (string.IsNullOrWhiteSpace(tag) || IsMalformedNowPlaying(tag))
+            {
+                _nowPlaying = null;
+                return;
+            }
+
+            _nowPlaying = tag.Trim();
         }
         catch (Exception ex) when (IsTagsLoadFailure(ex))
         {
@@ -452,6 +463,7 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
         Bass.StreamFree(_streamHandle);
         _streamHandle = 0;
         ResetPlaybackClock_NoLock();
+        StopStateTicker_NoLock();
     }
 
     private RadioPlayerState CreateState()
@@ -555,6 +567,50 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
         return delta > TimeSpan.Zero
             ? _elapsedBeforeClock + delta
             : _elapsedBeforeClock;
+    }
+
+    private void StartStateTicker_NoLock()
+    {
+        if (_stateTickTimer is null)
+        {
+            _stateTickTimer = new Timer(OnStateTick, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+            return;
+        }
+
+        _stateTickTimer.Change(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
+    }
+
+    private void StopStateTicker_NoLock()
+    {
+        _stateTickTimer?.Change(Timeout.Infinite, Timeout.Infinite);
+    }
+
+    private void OnStateTick(object? state)
+    {
+        lock (_gate)
+        {
+            if (_streamHandle == 0)
+            {
+                return;
+            }
+
+            var playbackState = Bass.ChannelIsActive(_streamHandle);
+            if (playbackState != PlaybackState.Playing && playbackState != PlaybackState.Paused)
+            {
+                return;
+            }
+
+            UpdateNowPlaying_NoLock();
+            RaiseStateChanged_NoLock();
+        }
+    }
+
+    private static bool IsMalformedNowPlaying(string value)
+    {
+        var trimmed = value.Trim();
+        return trimmed.Contains("expected", StringComparison.OrdinalIgnoreCase)
+               && trimmed.Contains('<')
+               && trimmed.Contains('>');
     }
 }
 

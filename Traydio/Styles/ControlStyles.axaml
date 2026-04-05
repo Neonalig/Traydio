@@ -171,6 +171,30 @@
         <Setter Property="BorderBrush" Value="#2D7A2D"/>
     </Style>
 
+    <Style Selector="Border.station-entry.failed-station">
+        <Setter Property="Background" Value="#FBE5E5"/>
+        <Setter Property="BorderBrush" Value="#9A2020"/>
+    </Style>
+
+    <Style Selector="ListBoxItem:selected Border.station-entry">
+        <Setter Property="Background" Value="#1E3E74"/>
+        <Setter Property="BorderBrush" Value="#112A4E"/>
+    </Style>
+
+    <Style Selector="ListBoxItem:selected Border.station-entry TextBlock">
+        <Setter Property="Foreground" Value="#F6F8FF"/>
+    </Style>
+
+    <Style Selector="TextBlock.now-playing-badge">
+        <Setter Property="Foreground" Value="#1E7E34"/>
+        <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style Selector="ListBoxItem:selected TextBlock.now-playing-badge">
+        <Setter Property="Foreground" Value="#9FF2A6"/>
+        <Setter Property="FontWeight" Value="Bold"/>
+    </Style>
+
     <Style Selector="Border.status-strip">
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>

@@ -40,6 +40,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _isMediaPlaying;
 
     [ObservableProperty]
+    private bool _isMediaPaused;
+
+    [ObservableProperty]
     private bool _isMediaMuted;
 
     [ObservableProperty]
@@ -154,9 +157,15 @@ public partial class MainWindowViewModel : ViewModelBase
     [RelayCommand]
     private void TogglePlayPause()
     {
-        if (IsMediaPlaying)
+        if (IsMediaLoading)
         {
             _commandDispatcher.Dispatch(new AppCommand { Kind = AppCommandKind.Pause });
+            return;
+        }
+
+        if (IsMediaPlaying || IsMediaPaused)
+        {
+            _commandDispatcher.Dispatch(new AppCommand { Kind = AppCommandKind.TogglePause });
             return;
         }
 
@@ -187,6 +196,7 @@ public partial class MainWindowViewModel : ViewModelBase
         {
             IsMediaLoading = state.IsLoading;
             IsMediaPlaying = state.IsPlaying;
+            IsMediaPaused = state.IsPaused;
             IsMediaMuted = state.IsMuted;
 
             _suppressVolumeDispatch = true;
@@ -204,9 +214,8 @@ public partial class MainWindowViewModel : ViewModelBase
                 ? "No station"
                 : state.CurrentStationName;
 
-            NowPlayingText = string.IsNullOrWhiteSpace(state.NowPlaying)
-                ? string.Empty
-                : state.NowPlaying;
+            var normalizedNowPlaying = NormalizeNowPlaying(state.NowPlaying);
+            NowPlayingText = normalizedNowPlaying ?? string.Empty;
 
             MediaErrorText = string.IsNullOrWhiteSpace(state.LastError)
                 ? string.Empty
@@ -221,8 +230,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
             MediaCenterText = HasMediaError
                 ? MediaErrorText
-                : !string.IsNullOrWhiteSpace(state.NowPlaying)
-                    ? state.NowPlaying
+                : !string.IsNullOrWhiteSpace(normalizedNowPlaying)
+                    ? normalizedNowPlaying
                     : CurrentStationText;
             UpdateMediaMarqueeSource(MediaCenterText);
 
@@ -321,6 +330,29 @@ public partial class MainWindowViewModel : ViewModelBase
 
         var safeOffset = Math.Clamp(offset, 0, text.Length - MediaMarqueeMaxChars);
         return text.Substring(safeOffset, MediaMarqueeMaxChars);
+    }
+
+    private static string? NormalizeNowPlaying(string? nowPlaying)
+    {
+        if (string.IsNullOrWhiteSpace(nowPlaying))
+        {
+            return null;
+        }
+
+        var trimmed = nowPlaying.Trim();
+        if (trimmed.Length == 0)
+        {
+            return null;
+        }
+
+        if (trimmed.Contains("expected", StringComparison.OrdinalIgnoreCase)
+            && trimmed.Contains('<')
+            && trimmed.Contains('>'))
+        {
+            return null;
+        }
+
+        return trimmed;
     }
 
     private void OnRibbonStatusChanged(object? sender, EventArgs e)

@@ -19,6 +19,7 @@ public partial class StationManagerPageViewModel : ViewModelBase
     private readonly IStationRepository _stationRepository;
     private readonly IAppCommandDispatcher _commandDispatcher;
     private readonly IRadioPlayer _radioPlayer;
+    private RadioPlayerState _latestRadioState;
 
     public ObservableCollection<StationItem> Stations { get; } = [];
 
@@ -56,7 +57,6 @@ public partial class StationManagerPageViewModel : ViewModelBase
     public void RemoveStations(IEnumerable<StationItem> stations)
     {
         foreach (var station in stations
-                     .Where(static s => s is not null)
                      .DistinctBy(static s => s.Station.Id, StringComparer.Ordinal)
                      .ToArray())
         {
@@ -77,8 +77,13 @@ public partial class StationManagerPageViewModel : ViewModelBase
         _stationRepository = stationRepository;
         _commandDispatcher = commandDispatcher;
         _radioPlayer = radioPlayer;
+        _latestRadioState = _radioPlayer.State;
         _stationRepository.Changed += (_, _) => RefreshStations();
-        _radioPlayer.StateChanged += (_, _) => RefreshStations();
+        _radioPlayer.StateChanged += (_, state) =>
+        {
+            _latestRadioState = state;
+            RefreshStations();
+        };
         RefreshStations();
     }
 
@@ -152,15 +157,29 @@ public partial class StationManagerPageViewModel : ViewModelBase
         {
             var activeStationId = _stationRepository.ActiveStationId;
             var isPlaying = _radioPlayer.IsPlaying;
+            var hasPlaybackError = !string.IsNullOrWhiteSpace(_latestRadioState.LastError);
 
             Stations.Clear();
-            foreach (var station in _stationRepository.GetStations())
+            var orderedStations = _stationRepository.GetStations().ToList();
+            if (isPlaying && !string.IsNullOrWhiteSpace(activeStationId))
+            {
+                var activeIndex = orderedStations.FindIndex(station => string.Equals(station.Id, activeStationId, StringComparison.Ordinal));
+                if (activeIndex > 0)
+                {
+                    var activeStation = orderedStations[activeIndex];
+                    orderedStations.RemoveAt(activeIndex);
+                    orderedStations.Insert(0, activeStation);
+                }
+            }
+
+            foreach (var station in orderedStations)
             {
                 var isActiveStation = string.Equals(station.Id, activeStationId, StringComparison.Ordinal);
                 Stations.Add(new StationItem(
                     station,
                     isActiveStation,
-                    isActiveStation && isPlaying));
+                    isActiveStation && isPlaying,
+                    isActiveStation && hasPlaybackError));
             }
         }
 
@@ -173,7 +192,7 @@ public partial class StationManagerPageViewModel : ViewModelBase
         Dispatcher.UIThread.Post(Update);
     }
 
-    public sealed class StationItem(RadioStation station, bool isActiveStation, bool isActivePlaying)
+    public sealed class StationItem(RadioStation station, bool isActiveStation, bool isActivePlaying, bool isRecentFailure)
     {
         public RadioStation Station { get; } = station;
 
@@ -186,6 +205,8 @@ public partial class StationManagerPageViewModel : ViewModelBase
         public bool IsActiveStation { get; } = isActiveStation;
 
         public bool IsActivePlaying { get; } = isActivePlaying;
+
+        public bool IsRecentFailure { get; } = isRecentFailure;
     }
 }
 
