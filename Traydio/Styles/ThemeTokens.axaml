@@ -14,6 +14,8 @@
         <SolidColorBrush x:Key="ToolbarBackgroundBrush">#D4D0C8</SolidColorBrush>
         <SolidColorBrush x:Key="GroupCaptionBackgroundBrush">#D4D0C8</SolidColorBrush>
         <SolidColorBrush x:Key="StatusBackgroundBrush">#D4D0C8</SolidColorBrush>
+        <SolidColorBrush x:Key="TipBoxBackgroundBrush">#FFFFE1</SolidColorBrush>
+        <SolidColorBrush x:Key="TipBoxBorderBrush">#8A8A57</SolidColorBrush>
         <SolidColorBrush x:Key="MutedForegroundBrush">#353535</SolidColorBrush>
         <SolidColorBrush x:Key="StatusErrorBrush">#9A2020</SolidColorBrush>
         <SolidColorBrush x:Key="StatusAccentBrush">#003C74</SolidColorBrush>

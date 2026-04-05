@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Classic.CommonControls;
 using JetBrains.Annotations;
 using Traydio.Commands;
 using Traydio.Common;
@@ -79,6 +80,7 @@ sealed class Program
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()
             .UsePlatformDetect()
+            .UseMessageBoxSounds()
             .LogToTrace();
 
     private static IServiceCollection ConfigureServices()

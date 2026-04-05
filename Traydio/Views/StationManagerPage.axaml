@@ -20,7 +20,7 @@
 
     <Grid RowDefinitions="Auto,*" RowSpacing="6" Margin="0">
         <Border Grid.Row="0" Classes="status-strip" Margin="0">
-            <TextBlock Text="Tip: drag and drop stations to reorder playback priority. Changes are retained when station operations run." Classes="helper-text"/>
+            <TextBlock Text="Tip: press Ctrl+C on a selected station to copy its ID. Right-click a station for copy/open/link command actions." Classes="helper-text"/>
         </Border>
 
         <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="0" Margin="4,0,4,4">
@@ -34,10 +34,20 @@
                              Classes="list-surface"
                              ItemsSource="{Binding Stations}"
                              SelectedItem="{Binding SelectedStation}"
+                             KeyDown="OnStationsListKeyDown"
                              DoubleTapped="OnStationsListDoubleTapped">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Border Classes="station-entry" Classes.playing-station="{Binding IsActivePlaying}">
+                                    <Border.ContextMenu>
+                                        <ContextMenu>
+                                            <MenuItem Header="Copy Name" Click="OnCopyStationNameClick"/>
+                                            <MenuItem Header="Copy Stream Link" Click="OnCopyStationLinkClick"/>
+                                            <MenuItem Header="Copy Station Id" Click="OnCopyStationIdClick"/>
+                                            <MenuItem Header="Copy Play Command" Click="OnCopyPlayCommandClick"/>
+                                            <MenuItem Header="Open Stream Link" Click="OnOpenStationLinkClick"/>
+                                        </ContextMenu>
+                                    </Border.ContextMenu>
                                     <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
                                         <Image Source="/Assets/Icons9x/stations.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
                                         <StackPanel Grid.Column="1">

@@ -102,20 +102,35 @@ public partial class BassPluginSettingsView : UserControl
         }
     }
 
-    private async void OnBrowseBassClick(object? sender, RoutedEventArgs e)
+    private void OnBrowseBassClick(object? sender, RoutedEventArgs e)
+    {
+        RunSafelyAsync(OnBrowseBassClickAsync(), "Browse bass.dll");
+    }
+
+    private async System.Threading.Tasks.Task OnBrowseBassClickAsync()
     {
         await PickDependencyPathAsync(_bassPathBox, BassPluginSettings.BassDllPathKey, "bass.dll");
         ConfigureNativeLibraryPath();
         RefreshDependencyStatuses();
     }
 
-    private async void OnBrowseBassOpusClick(object? sender, RoutedEventArgs e)
+    private void OnBrowseBassOpusClick(object? sender, RoutedEventArgs e)
+    {
+        RunSafelyAsync(OnBrowseBassOpusClickAsync(), "Browse bassopus.dll");
+    }
+
+    private async System.Threading.Tasks.Task OnBrowseBassOpusClickAsync()
     {
         await PickDependencyPathAsync(_bassOpusPathBox, BassPluginSettings.BassOpusDllPathKey, "bassopus.dll");
         RefreshDependencyStatuses();
     }
 
-    private async void OnBrowseTagsClick(object? sender, RoutedEventArgs e)
+    private void OnBrowseTagsClick(object? sender, RoutedEventArgs e)
+    {
+        RunSafelyAsync(OnBrowseTagsClickAsync(), "Browse tags.dll");
+    }
+
+    private async System.Threading.Tasks.Task OnBrowseTagsClickAsync()
     {
         await PickDependencyPathAsync(_tagsPathBox, BassPluginSettings.TagsDllPathKey, "tags.dll");
         RefreshDependencyStatuses();
@@ -127,7 +142,12 @@ public partial class BassPluginSettingsView : UserControl
         SetStatus("Saved output device setting.");
     }
 
-    private async void OnDownloadBassClick(object? sender, RoutedEventArgs e)
+    private void OnDownloadBassClick(object? sender, RoutedEventArgs e)
+    {
+        RunSafelyAsync(OnDownloadBassClickAsync(), "Download bass.dll");
+    }
+
+    private async System.Threading.Tasks.Task OnDownloadBassClickAsync()
     {
         await DownloadDependencyAsync(
             BassPluginSettings.BassDownloadUrl,
@@ -139,7 +159,12 @@ public partial class BassPluginSettingsView : UserControl
         RefreshDependencyStatuses();
     }
 
-    private async void OnDownloadBassOpusClick(object? sender, RoutedEventArgs e)
+    private void OnDownloadBassOpusClick(object? sender, RoutedEventArgs e)
+    {
+        RunSafelyAsync(OnDownloadBassOpusClickAsync(), "Download bassopus.dll");
+    }
+
+    private async System.Threading.Tasks.Task OnDownloadBassOpusClickAsync()
     {
         await DownloadDependencyAsync(
             BassPluginSettings.BassOpusDownloadUrl,
@@ -150,7 +175,12 @@ public partial class BassPluginSettingsView : UserControl
         RefreshDependencyStatuses();
     }
 
-    private async void OnDownloadTagsClick(object? sender, RoutedEventArgs e)
+    private void OnDownloadTagsClick(object? sender, RoutedEventArgs e)
+    {
+        RunSafelyAsync(OnDownloadTagsClickAsync(), "Download tags.dll");
+    }
+
+    private async System.Threading.Tasks.Task OnDownloadTagsClickAsync()
     {
         await DownloadDependencyAsync(
             BassPluginSettings.BassTagsDownloadUrl,
@@ -159,6 +189,24 @@ public partial class BassPluginSettingsView : UserControl
             BassPluginSettings.TagsDllPathKey,
             "Downloading basstags.zip...");
         RefreshDependencyStatuses();
+    }
+
+    private void RunSafelyAsync(System.Threading.Tasks.Task task, string context)
+    {
+        _ = RunSafelyCoreAsync(task, context);
+    }
+
+    private async System.Threading.Tasks.Task RunSafelyCoreAsync(System.Threading.Tasks.Task task, string context)
+    {
+        try
+        {
+            await task.ConfigureAwait(true);
+        }
+        catch (Exception ex)
+        {
+            SetErrorStatus(context + " failed: " + ex.Message);
+            LogError($"[Traydio][ManagedBassSettings] {context} failed: {ex}");
+        }
     }
 
     private async System.Threading.Tasks.Task PickDependencyPathAsync(TextBox targetBox, string settingsKey, string expectedDllName)

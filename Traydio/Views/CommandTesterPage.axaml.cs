@@ -8,19 +8,19 @@ namespace Traydio.Views;
 
 public partial class CommandTesterPage : UserControl
 {
-    private static readonly string[] _syntaxHints =
+    private static readonly CommandTipItem[] _syntaxHints =
     [
-        "play",
-        "pause",
-        "toggle",
-        "open",
-        "search",
-        "plugins",
-        "settings",
-        "volup",
-        "voldown",
-        "volume <0-100>",
-        "station <station-id>",
+        new("play", "Dispatches Play for the active station."),
+        new("pause", "Dispatches Pause for current playback."),
+        new("toggle", "Toggles play/pause state."),
+        new("open", "Opens Station Manager page."),
+        new("search", "Opens station catalog search page."),
+        new("plugins", "Opens Plugin Manager page."),
+        new("settings", "Opens Settings page."),
+        new("volup", "Increases volume by the default increment."),
+        new("voldown", "Decreases volume by the default increment."),
+        new("volume <0-100>", "Sets absolute output volume."),
+        new("station <station-id>", "Plays a specific station by ID."),
     ];
 
     private readonly ICommandTextRouter _commandTextRouter;

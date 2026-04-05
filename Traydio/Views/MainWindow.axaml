@@ -69,7 +69,7 @@
                 <TextBlock Grid.Column="1"
                            HorizontalAlignment="Right"
                            VerticalAlignment="Center"
-                           Text="Ready"
+                           Text="{Binding RibbonStatusText}"
                            Classes="accent-text"/>
             </Grid>
         </Border>

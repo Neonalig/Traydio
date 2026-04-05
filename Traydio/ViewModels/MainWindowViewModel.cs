@@ -72,6 +72,9 @@ public partial class MainWindowViewModel : ViewModelBase
     [ObservableProperty]
     private double _mediaControlsOpacity = 1.0;
 
+    [ObservableProperty]
+    private string _ribbonStatusText = "Ready";
+
     public MainWindowViewModel(
         INavigationService navigationService,
         IAppCommandDispatcher commandDispatcher,
@@ -87,9 +90,11 @@ public partial class MainWindowViewModel : ViewModelBase
 
         _navigationService.Changed += (_, _) => CurrentPageViewModel = _navigationService.CurrentPageViewModel;
         _radioPlayer.StateChanged += (_, state) => UpdateMediaState(state);
+        RibbonStatusHub.Changed += OnRibbonStatusChanged;
 
         _navigationService.Navigate(AppPage.Stations);
         CurrentPageViewModel = _navigationService.CurrentPageViewModel;
+        RibbonStatusText = RibbonStatusHub.GetCurrentText("Ready");
         UpdateMediaState(_radioPlayer.State);
     }
 
@@ -293,5 +298,18 @@ public partial class MainWindowViewModel : ViewModelBase
 
         var safeOffset = Math.Clamp(offset, 0, text.Length - MediaMarqueeMaxChars);
         return text.Substring(safeOffset, MediaMarqueeMaxChars);
+    }
+
+    private void OnRibbonStatusChanged(object? sender, EventArgs e)
+    {
+        var next = RibbonStatusHub.GetCurrentText("Ready");
+
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            RibbonStatusText = next;
+            return;
+        }
+
+        Dispatcher.UIThread.Post(() => RibbonStatusText = next);
     }
 }

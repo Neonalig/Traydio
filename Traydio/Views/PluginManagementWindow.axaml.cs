@@ -10,6 +10,7 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using Traydio.Common;
+using Traydio.Services;
 using Traydio.ViewModels;
 
 namespace Traydio.Views;
@@ -28,7 +29,12 @@ public partial class PluginManagementPage : UserControl
         DataContext = viewModel;
     }
 
-    private async void OnBrowsePluginClick(object? sender, RoutedEventArgs e)
+    private void OnBrowsePluginClick(object? sender, RoutedEventArgs e)
+    {
+        OnBrowsePluginClickAsync().ForgetWithErrorHandling("Plugin browse", showDialog: true);
+    }
+
+    private async Task OnBrowsePluginClickAsync()
     {
         if (DataContext is not PluginManagementWindowViewModel viewModel)
         {
@@ -65,7 +71,12 @@ public partial class PluginManagementPage : UserControl
         await ShowViewModelStatusDialogAsync(viewModel, "Plugin install");
     }
 
-    private async void OnPluginSettingsClick(object? sender, RoutedEventArgs e)
+    private void OnPluginSettingsClick(object? sender, RoutedEventArgs e)
+    {
+        OnPluginSettingsClickAsync(sender).ForgetWithErrorHandling("Plugin settings", showDialog: true);
+    }
+
+    private async Task OnPluginSettingsClickAsync(object? sender)
     {
         if (DataContext is not PluginManagementWindowViewModel viewModel)
         {
@@ -85,7 +96,12 @@ public partial class PluginManagementPage : UserControl
         await ShowInfoDialogAsync("Plugin settings error", error ?? "Unknown error.");
     }
 
-    private async void OnUpgradeCandidateClick(object? sender, RoutedEventArgs e)
+    private void OnUpgradeCandidateClick(object? sender, RoutedEventArgs e)
+    {
+        OnUpgradeCandidateClickAsync(sender).ForgetWithErrorHandling("Plugin upgrade", showDialog: true);
+    }
+
+    private async Task OnUpgradeCandidateClickAsync(object? sender)
     {
         if (DataContext is not PluginManagementWindowViewModel viewModel)
         {
@@ -101,7 +117,12 @@ public partial class PluginManagementPage : UserControl
         await ShowViewModelStatusDialogAsync(viewModel, "Plugin upgrade");
     }
 
-    private async void OnInstallCandidateClick(object? sender, RoutedEventArgs e)
+    private void OnInstallCandidateClick(object? sender, RoutedEventArgs e)
+    {
+        OnInstallCandidateClickAsync(sender).ForgetWithErrorHandling("Plugin install candidate", showDialog: true);
+    }
+
+    private async Task OnInstallCandidateClickAsync(object? sender)
     {
         if (DataContext is not PluginManagementWindowViewModel viewModel)
         {
@@ -117,7 +138,12 @@ public partial class PluginManagementPage : UserControl
         await ShowViewModelStatusDialogAsync(viewModel, "Plugin install");
     }
 
-    private async void OnInstalledCheckboxClick(object? sender, RoutedEventArgs e)
+    private void OnInstalledCheckboxClick(object? sender, RoutedEventArgs e)
+    {
+        OnInstalledCheckboxClickAsync(sender).ForgetWithErrorHandling("Plugin state toggle", showDialog: true);
+    }
+
+    private async Task OnInstalledCheckboxClickAsync(object? sender)
     {
         if (DataContext is not PluginManagementWindowViewModel viewModel)
         {
@@ -133,7 +159,12 @@ public partial class PluginManagementPage : UserControl
         await ShowViewModelStatusDialogAsync(viewModel, "Plugin state");
     }
 
-    private async void OnInstalledListDoubleTapped(object? sender, TappedEventArgs e)
+    private void OnInstalledListDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        OnInstalledListDoubleTappedAsync(sender).ForgetWithErrorHandling("Installed plugin double tap", showDialog: true);
+    }
+
+    private async Task OnInstalledListDoubleTappedAsync(object? sender)
     {
         if (DataContext is not PluginManagementWindowViewModel viewModel)
         {
@@ -149,7 +180,12 @@ public partial class PluginManagementPage : UserControl
         await ShowViewModelStatusDialogAsync(viewModel, "Plugin state");
     }
 
-    private async void OnInstalledListKeyDown(object? sender, KeyEventArgs e)
+    private void OnInstalledListKeyDown(object? sender, KeyEventArgs e)
+    {
+        OnInstalledListKeyDownAsync(e).ForgetWithErrorHandling("Installed plugin key action", showDialog: true);
+    }
+
+    private async Task OnInstalledListKeyDownAsync(KeyEventArgs e)
     {
         if (e.Key != Key.Delete)
         {
@@ -171,7 +207,12 @@ public partial class PluginManagementPage : UserControl
         e.Handled = true;
     }
 
-    private async void OnUninstallPluginClick(object? sender, RoutedEventArgs e)
+    private void OnUninstallPluginClick(object? sender, RoutedEventArgs e)
+    {
+        OnUninstallPluginClickAsync(sender).ForgetWithErrorHandling("Plugin uninstall", showDialog: true);
+    }
+
+    private async Task OnUninstallPluginClickAsync(object? sender)
     {
         if (DataContext is not PluginManagementWindowViewModel viewModel)
         {
@@ -201,7 +242,12 @@ public partial class PluginManagementPage : UserControl
         await ShowViewModelStatusDialogAsync(viewModel, "Plugin remove");
     }
 
-    private async void OnRestartAppClick(object? sender, RoutedEventArgs e)
+    private void OnRestartAppClick(object? sender, RoutedEventArgs e)
+    {
+        OnRestartAppClickAsync().ForgetWithErrorHandling("Restart app", showDialog: true);
+    }
+
+    private async Task OnRestartAppClickAsync()
     {
         var choice = await ShowYesNoCancelDialogAsync(
             "Restart app",
@@ -253,7 +299,12 @@ public partial class PluginManagementPage : UserControl
         }
     }
 
-    private async void OnCandidateListDoubleTapped(object? sender, TappedEventArgs e)
+    private void OnCandidateListDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        OnCandidateListDoubleTappedAsync(sender).ForgetWithErrorHandling("Candidate double tap install", showDialog: true);
+    }
+
+    private async Task OnCandidateListDoubleTappedAsync(object? sender)
     {
         if (DataContext is not PluginManagementWindowViewModel viewModel)
         {
@@ -278,14 +329,14 @@ public partial class PluginManagementPage : UserControl
         e.DragEffects = hasFiles ? DragDropEffects.Copy : DragDropEffects.None;
     }
 
-    private async void OnInstalledListDrop(object? sender, DragEventArgs e)
+    private void OnInstalledListDrop(object? sender, DragEventArgs e)
     {
-        await InstallDroppedPluginFilesAsync(e);
+        InstallDroppedPluginFilesAsync(e).ForgetWithErrorHandling("Installed list drop install", showDialog: true);
     }
 
-    private async void OnCandidateListDrop(object? sender, DragEventArgs e)
+    private void OnCandidateListDrop(object? sender, DragEventArgs e)
     {
-        await InstallDroppedPluginFilesAsync(e);
+        InstallDroppedPluginFilesAsync(e).ForgetWithErrorHandling("Candidate list drop install", showDialog: true);
     }
 
     private async Task InstallDroppedPluginFilesAsync(DragEventArgs e)
@@ -312,7 +363,12 @@ public partial class PluginManagementPage : UserControl
         await ShowViewModelStatusDialogAsync(viewModel, "Plugin install");
     }
 
-    private async void OnChangePluginDirectoryClick(object? sender, RoutedEventArgs e)
+    private void OnChangePluginDirectoryClick(object? sender, RoutedEventArgs e)
+    {
+        OnChangePluginDirectoryClickAsync().ForgetWithErrorHandling("Change plugin directory", showDialog: true);
+    }
+
+    private async Task OnChangePluginDirectoryClickAsync()
     {
         if (DataContext is not PluginManagementWindowViewModel viewModel)
         {
@@ -372,7 +428,12 @@ public partial class PluginManagementPage : UserControl
         await ShowInfoDialogAsync("Plugin folder", "Could not change plugin folder: " + (error ?? "Unknown error."));
     }
 
-    private async void OnInstallFromPathClick(object? sender, RoutedEventArgs e)
+    private void OnInstallFromPathClick(object? sender, RoutedEventArgs e)
+    {
+        OnInstallFromPathClickAsync().ForgetWithErrorHandling("Install plugin from path", showDialog: true);
+    }
+
+    private async Task OnInstallFromPathClickAsync()
     {
         if (DataContext is not PluginManagementWindowViewModel viewModel)
         {

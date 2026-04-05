@@ -4,6 +4,7 @@ using System.ComponentModel;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using Traydio.Common;
+using Traydio.Services;
 using Traydio.ViewModels;
 
 namespace Traydio.Views;
@@ -63,43 +64,42 @@ public partial class StationSearchPage : UserControl
         _observedViewModel = null;
     }
 
-    private async void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        try
+        OnViewModelPropertyChangedAsync(sender, e)
+            .ForgetWithErrorHandling("Station search status dialog", showDialog: true);
+    }
+
+    private async System.Threading.Tasks.Task OnViewModelPropertyChangedAsync(object? sender, PropertyChangedEventArgs e)
+    {
+        if (!string.Equals(e.PropertyName, nameof(StationSearchWindowViewModel.Status), StringComparison.Ordinal))
         {
-            if (!string.Equals(e.PropertyName, nameof(StationSearchWindowViewModel.Status), StringComparison.Ordinal))
-            {
-                return;
-            }
-
-            if (sender is not StationSearchWindowViewModel viewModel)
-            {
-                return;
-            }
-
-            var status = viewModel.Status.Trim();
-            if (string.IsNullOrWhiteSpace(status))
-            {
-                return;
-            }
-
-            if (string.Equals(status, "Searching...", StringComparison.Ordinal))
-            {
-                return;
-            }
-
-            if (string.Equals(status, _lastStatusShown, StringComparison.Ordinal))
-            {
-                return;
-            }
-
-            _lastStatusShown = status;
-            await ShowInfoDialogAsync("Station search", status);
+            return;
         }
-        catch (Exception ex)
+
+        if (sender is not StationSearchWindowViewModel viewModel)
         {
-            Services.AppErrorHandler.Report(ex, "Station search status dialog", showDialog: true);
+            return;
         }
+
+        var status = viewModel.Status.Trim();
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            return;
+        }
+
+        if (string.Equals(status, "Searching...", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        if (string.Equals(status, _lastStatusShown, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _lastStatusShown = status;
+        await ShowInfoDialogAsync("Station search", status);
     }
 
     private async System.Threading.Tasks.Task ShowInfoDialogAsync(string title, string message)

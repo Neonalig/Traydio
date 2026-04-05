@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -35,16 +36,19 @@ public partial class StationManagerPage : UserControl
         e.DragEffects = HasSupportedDrop(e) ? DragDropEffects.Copy : DragDropEffects.None;
     }
 
-    private async void OnDrop(object? sender, DragEventArgs e)
+    private void OnDrop(object? sender, DragEventArgs e)
     {
-        try
-        {
-            if (DataContext is not StationManagerPageViewModel viewModel)
-            {
-                return;
-            }
+        OnDropAsync(e).ForgetWithErrorHandling("Station drop import", showDialog: true);
+    }
 
-            var files = e.DataTransfer.TryGetFiles()
+    private async Task OnDropAsync(DragEventArgs e)
+    {
+        if (DataContext is not StationManagerPageViewModel viewModel)
+        {
+            return;
+        }
+
+        var files = e.DataTransfer.TryGetFiles()
             ?.OfType<IStorageFile>()
             .Select(f => f.TryGetLocalPath())
             .Where(p => !string.IsNullOrWhiteSpace(p) && File.Exists(p))
@@ -52,66 +56,70 @@ public partial class StationManagerPage : UserControl
             .Where(IsSupportedPlaylistPath)
             .ToArray() ?? [];
 
-            if (files.Length > 0)
+        if (files.Length > 0)
+        {
+            var stations = new List<(string Name, string Url)>();
+            foreach (var file in files)
             {
-                var stations = new List<(string Name, string Url)>();
-                foreach (var file in files)
-                {
-                    stations.AddRange(await ParsePlaylistFileAsync(file).ConfigureAwait(true));
-                }
+                stations.AddRange(await ParsePlaylistFileAsync(file).ConfigureAwait(true));
+            }
 
-                var distinctStations = stations
+            var distinctStations = stations
                 .Where(s => !string.IsNullOrWhiteSpace(s.Url))
                 .DistinctBy(s => s.Url, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
-                if (distinctStations.Length == 0)
-                {
-                    return;
-                }
-
-                if (files.Length == 1 && distinctStations.Length == 1)
-                {
-                    viewModel.PrefillNewStation(distinctStations[0].Name, distinctStations[0].Url);
-                    return;
-                }
-
-                viewModel.AddStationsFromDrop(distinctStations);
+            if (distinctStations.Length == 0)
+            {
                 return;
             }
 
-            if (e.DataTransfer.Contains(DataFormat.Text))
+            if (files.Length == 1 && distinctStations.Length == 1)
             {
-                var text = e.DataTransfer.TryGetText();
-                if (string.IsNullOrWhiteSpace(text))
-                {
-                    return;
-                }
+                viewModel.PrefillNewStation(distinctStations[0].Name, distinctStations[0].Url);
+                return;
+            }
 
-                var links = text
+            viewModel.AddStationsFromDrop(distinctStations);
+            return;
+        }
+
+        if (e.DataTransfer.Contains(DataFormat.Text))
+        {
+            var text = e.DataTransfer.TryGetText();
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return;
+            }
+
+            var links = text
                 .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries)
                 .Select(line => line.Trim())
                 .Where(line => Uri.TryCreate(line, UriKind.Absolute, out _))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
-                if (links.Length == 0)
-                {
-                    return;
-                }
-
-                if (links.Length == 1)
-                {
-                    viewModel.PrefillNewStation("Dropped stream", links[0]);
-                    return;
-                }
-
-                viewModel.AddStationsFromDrop(links.Select((url, idx) => ($"Dropped stream {idx + 1}", url)));
+            if (links.Length == 0)
+            {
+                return;
             }
+
+            if (links.Length == 1)
+            {
+                viewModel.PrefillNewStation("Dropped stream", links[0]);
+                return;
+            }
+
+            viewModel.AddStationsFromDrop(links.Select((url, idx) => ($"Dropped stream {idx + 1}", url)));
         }
-        catch (Exception ex)
+    }
+
+    private void OnStationsListKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.C && e.KeyModifiers.HasFlag(KeyModifiers.Control))
         {
-            AppErrorHandler.Report(ex, "Station drop import", showDialog: true);
+            CopySelectedStationIdAsync().ForgetWithErrorHandling("Copy selected station id", showDialog: true);
+            e.Handled = true;
         }
     }
 
@@ -295,5 +303,96 @@ public partial class StationManagerPage : UserControl
         }
 
         viewModel.RemoveStationCommand.Execute(station);
+    }
+
+    private void OnCopyStationNameClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        => CopyStationFieldAsync(sender, station => station.Name).ForgetWithErrorHandling("Copy station name", showDialog: true);
+
+    private void OnCopyStationLinkClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        => CopyStationFieldAsync(sender, station => station.StreamUrl).ForgetWithErrorHandling("Copy station link", showDialog: true);
+
+    private void OnCopyStationIdClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        => CopyStationFieldAsync(sender, station => station.Station.Id).ForgetWithErrorHandling("Copy station id", showDialog: true);
+
+    private void OnCopyPlayCommandClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        => CopyStationFieldAsync(sender, station => "station " + station.Station.Id).ForgetWithErrorHandling("Copy station play command", showDialog: true);
+
+    private void OnOpenStationLinkClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        => OpenStationLinkAsync(sender).ForgetWithErrorHandling("Open station link", showDialog: true);
+
+    private async Task CopySelectedStationIdAsync()
+    {
+        if (DataContext is not StationManagerPageViewModel viewModel || viewModel.SelectedStation is null)
+        {
+            return;
+        }
+
+        var stationId = viewModel.SelectedStation.Station.Id;
+        await CopyToClipboardAsync(stationId).ConfigureAwait(true);
+        PublishCopyStatus("Copied station id: " + stationId);
+    }
+
+    private async Task CopyStationFieldAsync(object? sender, Func<StationManagerPageViewModel.StationItem, string> selector)
+    {
+        var station = TryGetStationItem(sender);
+        if (station is null)
+        {
+            return;
+        }
+
+        var copiedText = selector(station);
+        await CopyToClipboardAsync(copiedText).ConfigureAwait(true);
+        PublishCopyStatus("Copied: " + copiedText);
+    }
+
+    private async Task OpenStationLinkAsync(object? sender)
+    {
+        var station = TryGetStationItem(sender);
+        if (station is null)
+        {
+            return;
+        }
+
+        var url = station.StreamUrl;
+        if (!Uri.TryCreate(url, UriKind.Absolute, out _))
+        {
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = url,
+            UseShellExecute = true,
+        });
+    }
+
+    private StationManagerPageViewModel.StationItem? TryGetStationItem(object? sender)
+    {
+        if (sender is Control { DataContext: StationManagerPageViewModel.StationItem station })
+        {
+            return station;
+        }
+
+        return null;
+    }
+
+    private async Task CopyToClipboardAsync(string text)
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel?.Clipboard is null || string.IsNullOrWhiteSpace(text))
+        {
+            return;
+        }
+
+        await topLevel.Clipboard.SetTextAsync(text).ConfigureAwait(true);
+    }
+
+    private static void PublishCopyStatus(string message)
+    {
+        RibbonStatusHub.SetTemporaryOverride(
+            id: "station.copy",
+            text: message,
+            priority: 100,
+            duration: TimeSpan.FromSeconds(3));
     }
 }

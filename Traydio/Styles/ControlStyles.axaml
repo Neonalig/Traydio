@@ -147,5 +147,13 @@
         <Setter Property="Margin" Value="{DynamicResource SurfaceMargin}"/>
         <Setter Property="Background" Value="{DynamicResource StatusBackgroundBrush}"/>
     </Style>
+
+    <Style Selector="Border.tip-help-box">
+        <Setter Property="Background" Value="{DynamicResource TipBoxBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource TipBoxBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="4,2"/>
+        <Setter Property="MinHeight" Value="22"/>
+    </Style>
 </Styles>
 
