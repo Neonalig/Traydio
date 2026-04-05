@@ -120,6 +120,13 @@ public partial class StationManagerPage : UserControl
         {
             CopySelectedStationIdAsync().ForgetWithErrorHandling("Copy selected station id", showDialog: true);
             e.Handled = true;
+            return;
+        }
+
+        if (e.Key == Key.Delete)
+        {
+            DeleteSelectedStations();
+            e.Handled = true;
         }
     }
 
@@ -320,6 +327,57 @@ public partial class StationManagerPage : UserControl
     private void OnOpenStationLinkClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         => OpenStationLinkAsync(sender).ForgetWithErrorHandling("Open station link", showDialog: true);
 
+    private void OnPlayFromContextClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is not StationManagerPageViewModel viewModel)
+        {
+            return;
+        }
+
+        var station = TryGetStationItem(sender);
+        if (station is null)
+        {
+            return;
+        }
+
+        viewModel.PlayStationCommand.Execute(station);
+    }
+
+    private void OnDeleteStationClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is not StationManagerPageViewModel viewModel)
+        {
+            return;
+        }
+
+        var station = TryGetStationItem(sender);
+        if (station is null)
+        {
+            return;
+        }
+
+        viewModel.RemoveStationCommand.Execute(station);
+    }
+
+    private void OnSetStationIconClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+        => SetStationIconAsync(sender).ForgetWithErrorHandling("Set station icon", showDialog: true);
+
+    private void OnClearStationIconClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+        if (DataContext is not StationManagerPageViewModel viewModel)
+        {
+            return;
+        }
+
+        var station = TryGetStationItem(sender);
+        if (station is null)
+        {
+            return;
+        }
+
+        viewModel.SetStationIconPath(station, null);
+    }
+
     private async Task CopySelectedStationIdAsync()
     {
         if (DataContext is not StationManagerPageViewModel viewModel || viewModel.SelectedStation is null)
@@ -368,11 +426,57 @@ public partial class StationManagerPage : UserControl
         return Task.CompletedTask;
     }
 
+    private async Task SetStationIconAsync(object? sender)
+    {
+        if (DataContext is not StationManagerPageViewModel viewModel)
+        {
+            return;
+        }
+
+        var station = TryGetStationItem(sender);
+        if (station is null)
+        {
+            return;
+        }
+
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel?.StorageProvider is null)
+        {
+            return;
+        }
+
+        var result = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            AllowMultiple = false,
+            Title = "Select station icon",
+            FileTypeFilter =
+            [
+                new FilePickerFileType("Image files")
+                {
+                    Patterns = ["*.png", "*.jpg", "*.jpeg", "*.ico", "*.bmp"],
+                },
+            ],
+        }).ConfigureAwait(true);
+
+        var selectedPath = result.FirstOrDefault()?.TryGetLocalPath();
+        if (string.IsNullOrWhiteSpace(selectedPath))
+        {
+            return;
+        }
+
+        viewModel.SetStationIconPath(station, selectedPath);
+    }
+
     private StationManagerPageViewModel.StationItem? TryGetStationItem(object? sender)
     {
         if (sender is Control { DataContext: StationManagerPageViewModel.StationItem station })
         {
             return station;
+        }
+
+        if (DataContext is StationManagerPageViewModel { SelectedStation: not null } viewModel)
+        {
+            return viewModel.SelectedStation;
         }
 
         return null;
@@ -396,5 +500,29 @@ public partial class StationManagerPage : UserControl
             text: message,
             priority: 100,
             duration: TimeSpan.FromSeconds(3));
+    }
+
+    private void DeleteSelectedStations()
+    {
+        if (DataContext is not StationManagerPageViewModel viewModel)
+        {
+            return;
+        }
+
+        var list = this.FindControl<ListBox>("StationsList");
+        if (list?.SelectedItems is null || list.SelectedItems.Count == 0)
+        {
+            return;
+        }
+
+        var selectedStations = list.SelectedItems
+            .OfType<StationManagerPageViewModel.StationItem>()
+            .ToArray();
+        if (selectedStations.Length == 0)
+        {
+            return;
+        }
+
+        viewModel.RemoveStations(selectedStations);
     }
 }

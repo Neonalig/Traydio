@@ -79,6 +79,29 @@ public sealed class StationRepository : IStationRepository
         return true;
     }
 
+    public bool SetStationIconPath(string stationId, string? iconPath)
+    {
+        var station = GetStation(stationId);
+        if (station is null)
+        {
+            return false;
+        }
+
+        var normalized = string.IsNullOrWhiteSpace(iconPath)
+            ? null
+            : iconPath.Trim();
+
+        if (string.Equals(station.IconPath, normalized, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        station.IconPath = normalized;
+        Save();
+        RaiseChanged();
+        return true;
+    }
+
     public string? ActiveStationId
     {
         get => _settings.ActiveStationId;

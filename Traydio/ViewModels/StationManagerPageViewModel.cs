@@ -1,6 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using System.Collections.Generic;
 using System;
+using System.Linq;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -50,6 +51,22 @@ public partial class StationManagerPageViewModel : ViewModelBase
 
             _stationRepository.AddStation(name, url);
         }
+    }
+
+    public void RemoveStations(IEnumerable<StationItem> stations)
+    {
+        foreach (var station in stations
+                     .Where(static s => s is not null)
+                     .DistinctBy(static s => s.Station.Id, StringComparer.Ordinal)
+                     .ToArray())
+        {
+            _stationRepository.RemoveStation(station.Station.Id);
+        }
+    }
+
+    public void SetStationIconPath(StationItem station, string? iconPath)
+    {
+        _stationRepository.SetStationIconPath(station.Station.Id, iconPath);
     }
 
     public StationManagerPageViewModel(
@@ -163,6 +180,8 @@ public partial class StationManagerPageViewModel : ViewModelBase
         public string Name => Station.Name;
 
         public string StreamUrl => Station.StreamUrl;
+
+        public string? IconPath => Station.IconPath;
 
         public bool IsActiveStation { get; } = isActiveStation;
 

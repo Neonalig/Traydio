@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Threading;
 using Traydio.Common;
 using Traydio.Models;
@@ -20,6 +21,8 @@ public sealed class DeferredPluginRadioPlayer(
 
     private IRadioPlayer? _inner;
     private string? _lastError;
+    private bool _isLoading;
+    private int _playRequestVersion;
 
     private int _requestedVolume = Math.Clamp(stationRepository.Volume, 0, 100);
     private string? _requestedAudioOutputDeviceId = string.IsNullOrWhiteSpace(stationRepository.AudioOutputDeviceId)
@@ -65,13 +68,17 @@ public sealed class DeferredPluginRadioPlayer(
     {
         ArgumentNullException.ThrowIfNull(station);
 
+        int requestVersion;
         lock (_gate)
         {
-            EnsureInnerPlayer_NoLock();
-            _inner?.Play(station);
+            _isLoading = true;
+            _lastError = null;
+            requestVersion = ++_playRequestVersion;
         }
 
         RaiseStateChanged();
+
+        _ = Task.Run(() => StartPlaybackWorker(station, requestVersion));
     }
 
     public void Pause()
@@ -212,7 +219,7 @@ public sealed class DeferredPluginRadioPlayer(
 
     private RadioPlayerState MergeLastError(RadioPlayerState state)
     {
-        if (string.IsNullOrWhiteSpace(_lastError))
+        if (string.IsNullOrWhiteSpace(_lastError) && !_isLoading)
         {
             return state;
         }
@@ -221,7 +228,7 @@ public sealed class DeferredPluginRadioPlayer(
         {
             IsPlaying = state.IsPlaying,
             IsPaused = state.IsPaused,
-            IsLoading = state.IsLoading,
+            IsLoading = _isLoading || state.IsLoading,
             IsMuted = state.IsMuted,
             Volume = state.Volume,
             Position = state.Position,
@@ -238,7 +245,7 @@ public sealed class DeferredPluginRadioPlayer(
         {
             IsPlaying = false,
             IsPaused = false,
-            IsLoading = false,
+            IsLoading = _isLoading,
             IsMuted = false,
             Volume = _requestedVolume,
             Position = TimeSpan.Zero,
@@ -252,6 +259,45 @@ public sealed class DeferredPluginRadioPlayer(
     private void RaiseStateChanged()
     {
         StateChanged?.Invoke(this, State);
+    }
+
+    private void StartPlaybackWorker(RadioStation station, int requestVersion)
+    {
+        try
+        {
+            lock (_gate)
+            {
+                if (requestVersion != _playRequestVersion)
+                {
+                    return;
+                }
+
+                EnsureInnerPlayer_NoLock();
+                _inner?.Play(station);
+            }
+        }
+        catch (Exception ex)
+        {
+            lock (_gate)
+            {
+                if (requestVersion == _playRequestVersion)
+                {
+                    _lastError = ex.Message;
+                }
+            }
+        }
+        finally
+        {
+            lock (_gate)
+            {
+                if (requestVersion == _playRequestVersion)
+                {
+                    _isLoading = false;
+                }
+            }
+
+            RaiseStateChanged();
+        }
     }
 }
 

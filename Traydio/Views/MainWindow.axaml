@@ -94,9 +94,17 @@
             <Border Classes="group-caption-chip">
                 <TextBlock Text="Workspace" Classes="group-title"/>
             </Border>
-            <Border Grid.Row="1" Classes="group-frame" Margin="0,-8,0,0">
-                <ContentControl Content="{Binding CurrentPageViewModel}"/>
-            </Border>
+            <Grid Grid.Row="1" Margin="0,-8,0,0">
+                <Border Classes="group-frame" IsEnabled="{Binding !IsMediaLoading}">
+                    <ContentControl Content="{Binding CurrentPageViewModel}"/>
+                </Border>
+                <Border IsVisible="{Binding IsMediaLoading}" Background="#40D4D0C8">
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                        <ProgressBar Width="180" IsIndeterminate="True"/>
+                        <TextBlock Text="Starting playback..." Classes="helper-text" HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
         </Grid>
 
         <Grid Grid.Row="3" RowDefinitions="Auto,*" RowSpacing="0" Margin="4,0,4,4" IsVisible="{Binding IsMediaBarVisible}">

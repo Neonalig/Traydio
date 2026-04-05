@@ -16,6 +16,8 @@ public interface IStationRepository
 
     bool RemoveStation(string stationId);
 
+    bool SetStationIconPath(string stationId, string? iconPath);
+
     string? ActiveStationId { get; set; }
 
     int Volume { get; set; }

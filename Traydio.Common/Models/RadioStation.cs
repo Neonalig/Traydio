@@ -7,5 +7,7 @@ public sealed class RadioStation
     public required string Name { get; init; }
 
     public required string StreamUrl { get; init; }
+
+    public string? IconPath { get; set; }
 }
 

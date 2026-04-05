@@ -12,6 +12,7 @@
     <UserControl.Resources>
         <imaging:Bitmap x:Key="PlayIcon">avares://Traydio/Assets/Icons9x/play.ico</imaging:Bitmap>
         <imaging:Bitmap x:Key="PauseIcon">avares://Traydio/Assets/Icons9x/pause.ico</imaging:Bitmap>
+        <conv:StationIconConverter x:Key="StationIconConverter" DefaultIcon="/Assets/Icons9x/stations.ico"/>
         <conv:BooleanToImageConverter x:Key="PlayPauseGlyphConverter"
                                       TrueImage="{StaticResource PauseIcon}"
                                       FalseImage="{StaticResource PlayIcon}"/>
@@ -34,22 +35,35 @@
                              Classes="list-surface"
                              ItemsSource="{Binding Stations}"
                              SelectedItem="{Binding SelectedStation}"
+                             SelectionMode="Multiple"
                              KeyDown="OnStationsListKeyDown"
                              DoubleTapped="OnStationsListDoubleTapped">
+                        <ListBox.Styles>
+                            <Style Selector="ListBoxItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            </Style>
+                        </ListBox.Styles>
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Border Classes="station-entry" Classes.playing-station="{Binding IsActivePlaying}">
+                                <Border Classes="station-entry"
+                                        Classes.playing-station="{Binding IsActivePlaying}"
+                                        HorizontalAlignment="Stretch"
+                                        Background="Transparent">
                                     <Border.ContextMenu>
                                         <ContextMenu>
+                                            <MenuItem Header="Play" Click="OnPlayStationClick"/>
+                                            <MenuItem Header="Delete" Click="OnRemoveStationClick"/>
+                                            <Separator/>
                                             <MenuItem Header="Copy Name" Click="OnCopyStationNameClick"/>
                                             <MenuItem Header="Copy Stream Link" Click="OnCopyStationLinkClick"/>
                                             <MenuItem Header="Copy Station Id" Click="OnCopyStationIdClick"/>
                                             <MenuItem Header="Copy Play Command" Click="OnCopyPlayCommandClick"/>
+                                            <Separator/>
                                             <MenuItem Header="Open Stream Link" Click="OnOpenStationLinkClick"/>
                                         </ContextMenu>
                                     </Border.ContextMenu>
                                     <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
-                                        <Image Source="/Assets/Icons9x/stations.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
+                                        <Image Source="{Binding IconPath, Converter={StaticResource StationIconConverter}}" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
                                         <StackPanel Grid.Column="1">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
@@ -74,7 +88,7 @@
                         </ListBox.ItemTemplate>
                     </ListBox>
 
-                    <Grid Grid.Row="1" ColumnDefinitions="*,*,Auto,Auto" ColumnSpacing="8">
+                    <Grid Grid.Row="1" ColumnDefinitions="*,*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
                         <TextBox Grid.Column="0" Watermark="Station name" Text="{Binding NewStationName}"/>
                         <TextBox Grid.Column="1" Watermark="Stream URL" Text="{Binding NewStationUrl}"/>
                         <Button Grid.Column="2" Classes="command-button" Command="{Binding AddStationCommand}">
@@ -87,6 +101,18 @@
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <Image Source="/Assets/Icons9x/search.ico" Classes="icon-small"/>
                                 <TextBlock Text="Find More" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="4" Classes="command-button" Click="OnSetStationIconClick">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Image Source="/Assets/Icons9x/folder.ico" Classes="icon-small"/>
+                                <TextBlock Text="Set Icon" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="5" Classes="command-button" Click="OnClearStationIconClick">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Image Source="/Assets/Icons9x/remove.ico" Classes="icon-small"/>
+                                <TextBlock Text="Clear Icon" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                     </Grid>

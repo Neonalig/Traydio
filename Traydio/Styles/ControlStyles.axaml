@@ -104,7 +104,7 @@
         <Setter Property="MinWidth" Value="92"/>
         <Setter Property="MaxHeight" Value="36"/>
         <Setter Property="Padding" Value="6,3"/>
-        <Setter Property="VerticalAlignment" Value="Top"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
 
     <Style Selector="Button.icon-only">
