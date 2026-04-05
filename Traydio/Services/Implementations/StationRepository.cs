@@ -114,6 +114,22 @@ public sealed class StationRepository : IStationRepository
 
     public CommunicationBridgeSettings Communication => _settings.Communication;
 
+    public void SaveCommunicationSettings(CommunicationBridgeSettings settings)
+    {
+        _settings.Communication = new CommunicationBridgeSettings
+        {
+            EnableNamedPipeRelay = settings.EnableNamedPipeRelay,
+            EnableLoopbackRelay = settings.EnableLoopbackRelay,
+            LoopbackHost = string.IsNullOrWhiteSpace(settings.LoopbackHost) ? "127.0.0.1" : settings.LoopbackHost.Trim(),
+            LoopbackPort = settings.LoopbackPort <= 0 ? 38473 : settings.LoopbackPort,
+            EnableProtocolUrlRelay = settings.EnableProtocolUrlRelay,
+            ProtocolScheme = string.IsNullOrWhiteSpace(settings.ProtocolScheme) ? "traydio" : settings.ProtocolScheme.Trim().ToLowerInvariant(),
+        };
+
+        Save();
+        RaiseChanged();
+    }
+
     private static RadioSettings LoadSettings(string path)
     {
         if (!File.Exists(path))

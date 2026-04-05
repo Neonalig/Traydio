@@ -21,5 +21,7 @@ public interface IStationRepository
     int Volume { get; set; }
 
     CommunicationBridgeSettings Communication { get; }
+
+    void SaveCommunicationSettings(CommunicationBridgeSettings settings);
 }
 

@@ -42,3 +42,4 @@ Settings use `System.Text.Json` source generation via `RadioSettingsJsonContext`
 - `EnableProtocolUrlRelay`
 - `ProtocolScheme`
 
+The station manager window includes a Communication Settings section where you can save bridge options and install/uninstall the protocol URL handler for the configured scheme.

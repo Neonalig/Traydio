@@ -69,6 +69,7 @@ sealed class Program
         services.AddSingleton<IWindowManager, WindowManager>();
         services.AddSingleton<IAppCommandDispatcher, AppCommandDispatcher>();
         services.AddSingleton<ICommandTextRouter, CommandTextRouter>();
+        services.AddSingleton<IProtocolRegistrationService, WindowsProtocolRegistrationService>();
         services.AddSingleton<IInstanceGate, MutexInstanceGate>();
         services.AddSingleton<ICommandRelayClient, NamedPipeCommandRelayClient>();
         services.AddSingleton<ICommandRelayClient, LoopbackCommandRelayClient>();
