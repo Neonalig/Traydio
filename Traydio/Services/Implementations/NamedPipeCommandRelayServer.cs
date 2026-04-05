@@ -8,16 +8,25 @@ using Traydio.Commands;
 
 namespace Traydio.Services.Implementations;
 
-public sealed class NamedPipeCommandRelayServer(ICommandTextRouter commandTextRouter) : ICommandRelayServer, IDisposable
+public sealed class NamedPipeCommandRelayServer : ICommandRelayServer, IDisposable
 {
     private const string _PIPE_NAME = "Traydio.CommandRelay.v1";
+
+    private readonly IStationRepository _stationRepository;
+    private readonly ICommandTextRouter _commandTextRouter;
 
     private CancellationTokenSource? _cts;
     private Task? _listenerTask;
 
+    public NamedPipeCommandRelayServer(IStationRepository stationRepository, ICommandTextRouter commandTextRouter)
+    {
+        _stationRepository = stationRepository;
+        _commandTextRouter = commandTextRouter;
+    }
+
     public void Start()
     {
-        if (_listenerTask is not null)
+        if (_listenerTask is not null || !_stationRepository.Communication.EnableNamedPipeRelay)
         {
             return;
         }
@@ -68,7 +77,7 @@ public sealed class NamedPipeCommandRelayServer(ICommandTextRouter commandTextRo
                 var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
                 if (!string.IsNullOrWhiteSpace(line))
                 {
-                    commandTextRouter.TryDispatch(line);
+                    _commandTextRouter.TryDispatch(line);
                 }
             }
             catch (OperationCanceledException)
@@ -82,5 +91,3 @@ public sealed class NamedPipeCommandRelayServer(ICommandTextRouter commandTextRo
         }
     }
 }
-
-

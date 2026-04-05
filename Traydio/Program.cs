@@ -1,7 +1,9 @@
 ﻿using Avalonia;
+using Avalonia.Controls;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using Avalonia.Controls;
+using System.Collections.Generic;
+using JetBrains.Annotations;
 using Traydio.Commands;
 using Traydio.Common;
 using Traydio.Services;
@@ -13,6 +15,7 @@ using Traydio.Views;
 
 namespace Traydio;
 
+[UsedImplicitly(ImplicitUseKindFlags.Assign, ImplicitUseTargetFlags.WithMembers)]
 sealed class Program
 {
     private static ServiceProvider? _services;
@@ -31,7 +34,8 @@ sealed class Program
 
         var commandRelayCoordinator = services.GetRequiredService<ICommandRelayCoordinator>();
         var instanceGate = services.GetRequiredService<IInstanceGate>();
-        var startupCommand = ParseStartupCommand(args);
+        var startupCommandBridges = services.GetServices<IStartupCommandBridge>();
+        var startupCommand = ParseStartupCommand(args, startupCommandBridges);
 
         if (!instanceGate.TryAcquire())
         {
@@ -67,7 +71,11 @@ sealed class Program
         services.AddSingleton<ICommandTextRouter, CommandTextRouter>();
         services.AddSingleton<IInstanceGate, MutexInstanceGate>();
         services.AddSingleton<ICommandRelayClient, NamedPipeCommandRelayClient>();
+        services.AddSingleton<ICommandRelayClient, LoopbackCommandRelayClient>();
         services.AddSingleton<ICommandRelayServer, NamedPipeCommandRelayServer>();
+        services.AddSingleton<ICommandRelayServer, LoopbackCommandRelayServer>();
+        services.AddSingleton<IStartupCommandBridge, ProtocolUrlStartupCommandBridge>();
+        services.AddSingleton<IStartupCommandBridge, CommandLineStartupCommandBridge>();
         services.AddSingleton<ICommandRelayCoordinator, CommandRelayCoordinator>();
         services.AddSingleton<ITrayController, TrayController>();
 
@@ -77,16 +85,19 @@ sealed class Program
         return services;
     }
 
-    private static string? ParseStartupCommand(string[] args)
+    private static string? ParseStartupCommand(string[] args, IEnumerable<IStartupCommandBridge> bridges)
     {
         if (args.Length == 0)
         {
             return null;
         }
 
-        if (args.Length >= 2 && string.Equals(args[0], "--cmd", StringComparison.OrdinalIgnoreCase))
+        foreach (var bridge in bridges)
         {
-            return string.Join(" ", args[1..]);
+            if (bridge.TryGetCommand(args, out var commandText) && !string.IsNullOrWhiteSpace(commandText))
+            {
+                return commandText;
+            }
         }
 
         return string.Join(" ", args);

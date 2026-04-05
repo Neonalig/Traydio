@@ -19,15 +19,26 @@ A text parser (`ICommandTextRouter`) is included so future integrations (for exa
 
 - Traydio runs as a single-instance app using a mutex gate service.
 - Secondary launches act as temporary relay instances that forward command text to the main instance and then exit.
-- Named pipe transport is implemented via services (`ICommandRelayClient` / `ICommandRelayServer`).
-- Communication methods are extensible by adding additional relay client/server implementations and registering them in DI.
+- Named pipe and loopback transports are implemented via services (`ICommandRelayClient` / `ICommandRelayServer`).
+- Protocol URL startup bridge is implemented via `IStartupCommandBridge`.
+- Communication methods are extensible by adding additional bridge implementations and registering them in DI.
 
 Examples:
 
 - Launching the app a second time (no args) relays `open` to the running instance.
 - Launching with `--cmd "pause"` relays a pause command.
+- Launching with `traydio://station/{id}` relays a station-switch command when protocol bridge is enabled.
 
 ## Persistence
 
 Settings use `System.Text.Json` source generation via `RadioSettingsJsonContext`.
+
+`settings.json` includes `Communication` options:
+
+- `EnableNamedPipeRelay`
+- `EnableLoopbackRelay`
+- `LoopbackHost`
+- `LoopbackPort`
+- `EnableProtocolUrlRelay`
+- `ProtocolScheme`
 

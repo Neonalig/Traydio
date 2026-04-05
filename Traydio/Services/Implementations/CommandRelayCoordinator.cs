@@ -5,7 +5,7 @@ namespace Traydio.Services.Implementations;
 
 public sealed class CommandRelayCoordinator(
     IEnumerable<ICommandRelayClient> relayClients,
-    ICommandRelayServer relayServer,
+    IEnumerable<ICommandRelayServer> relayServers,
     ICommandTextRouter commandTextRouter
 ) : ICommandRelayCoordinator
 {
@@ -29,12 +29,18 @@ public sealed class CommandRelayCoordinator(
 
     public void StartPrimaryRelay()
     {
-        relayServer.Start();
+        foreach (var relayServer in relayServers)
+        {
+            relayServer.Start();
+        }
     }
 
     public void StopPrimaryRelay()
     {
-        relayServer.Stop();
+        foreach (var relayServer in relayServers)
+        {
+            relayServer.Stop();
+        }
     }
 }
 

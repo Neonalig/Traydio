@@ -19,5 +19,7 @@ public interface IStationRepository
     string? ActiveStationId { get; set; }
 
     int Volume { get; set; }
+
+    CommunicationBridgeSettings Communication { get; }
 }
 

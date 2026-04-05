@@ -112,6 +112,8 @@ public sealed class StationRepository : IStationRepository
         }
     }
 
+    public CommunicationBridgeSettings Communication => _settings.Communication;
+
     private static RadioSettings LoadSettings(string path)
     {
         if (!File.Exists(path))
@@ -123,7 +125,28 @@ public sealed class StationRepository : IStationRepository
         {
             var json = File.ReadAllText(path);
             var settings = JsonSerializer.Deserialize(json, RadioSettingsJsonContext.Default.RadioSettings);
-            return settings ?? new RadioSettings();
+            if (settings is null)
+            {
+                return new RadioSettings();
+            }
+
+            settings.Communication ??= new CommunicationBridgeSettings();
+            if (string.IsNullOrWhiteSpace(settings.Communication.LoopbackHost))
+            {
+                settings.Communication.LoopbackHost = "127.0.0.1";
+            }
+
+            if (settings.Communication.LoopbackPort <= 0)
+            {
+                settings.Communication.LoopbackPort = 38473;
+            }
+
+            if (string.IsNullOrWhiteSpace(settings.Communication.ProtocolScheme))
+            {
+                settings.Communication.ProtocolScheme = "traydio";
+            }
+
+            return settings;
         }
         catch
         {
