@@ -1,3 +1,7 @@
 <Solution>
+  <Project Path="Traydio.Common/Traydio.Common.csproj" />
+  <Project Path="Traydio.SourceGenerator.Sample/Traydio.SourceGenerator.Sample.csproj" />
+  <Project Path="Traydio.SourceGenerator.Tests/Traydio.SourceGenerator.Tests.csproj" />
+  <Project Path="Traydio.SourceGenerator/Traydio.SourceGenerator.csproj" />
   <Project Path="Traydio/Traydio.csproj" />
 </Solution>
