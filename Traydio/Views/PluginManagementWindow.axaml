@@ -53,7 +53,24 @@
 
                     <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="6">
                         <TextBlock Grid.Row="0" Text="Installed Plugins" FontWeight="SemiBold"/>
-                        <ListBox Grid.Row="1" Classes="list-surface" ItemsSource="{Binding InstalledPlugins}" SelectedItem="{Binding SelectedInstalledPlugin}" DisplayMemberBinding="{Binding DisplayName}"/>
+                        <ListBox Grid.Row="1" Classes="list-surface" ItemsSource="{Binding InstalledPlugins}" SelectedItem="{Binding SelectedInstalledPlugin}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:PluginManagementWindowViewModel+InstalledPluginItem">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <TextBlock Grid.Column="0" Text="{Binding DisplayName}" VerticalAlignment="Center"/>
+                                        <Button Grid.Column="1"
+                                                Classes="command-button"
+                                                IsVisible="{Binding HasSettings}"
+                                                Click="OnPluginSettingsClick">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <Image Source="/Assets/Icons9x/settings.ico" Classes="icon-small"/>
+                                                <TextBlock Text="Settings" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
                     </Grid>
 
                     <Grid Grid.Row="2" RowDefinitions="Auto,*,Auto" RowSpacing="6">

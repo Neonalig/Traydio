@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Threading;
 using ManagedBass;
 using ManagedBass.Tags;
@@ -15,6 +16,8 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
     private static readonly HttpClient _http = new();
 
     private readonly Lock _gate = new();
+    private readonly string? _nativeLibraryFolder;
+    private readonly int? _preferredOutputDeviceIndex;
 
     private int _streamHandle;
     private bool _isInitialized;
@@ -60,8 +63,16 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
         }
     }
 
-    public BassRadioPlayer()
+    public BassRadioPlayer(string? nativeLibraryFolder = null, int? preferredOutputDeviceIndex = null)
     {
+        _nativeLibraryFolder = string.IsNullOrWhiteSpace(nativeLibraryFolder)
+            ? null
+            : nativeLibraryFolder.Trim();
+
+        _preferredOutputDeviceIndex = preferredOutputDeviceIndex is >= 0
+            ? preferredOutputDeviceIndex
+            : null;
+
         InitializeBass();
         RaiseStateChanged();
     }
@@ -223,7 +234,11 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
             return;
         }
 
-        if (!Bass.Init())
+        ConfigureNativeLibraryPath();
+
+        var outputDeviceIndex = _preferredOutputDeviceIndex ?? -1;
+
+        if (!Bass.Init(outputDeviceIndex))
         {
             throw new InvalidOperationException($"BASS init failed: {Bass.LastError}");
         }
@@ -242,6 +257,21 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
         TryLoadPlugin("libbassopus.dylib");
 
         _isInitialized = true;
+    }
+
+    private void ConfigureNativeLibraryPath()
+    {
+        if (!OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_nativeLibraryFolder) || !Directory.Exists(_nativeLibraryFolder))
+        {
+            return;
+        }
+
+        SetDllDirectory(_nativeLibraryFolder);
     }
 
     private static async System.Threading.Tasks.Task<string> ResolvePlayableUrl(string url)
@@ -349,6 +379,9 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
             // Ignore missing optional plugins.
         }
     }
+
+    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+    private static extern bool SetDllDirectory(string lpPathName);
 }
 
 

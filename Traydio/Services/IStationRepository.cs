@@ -31,5 +31,9 @@ public interface IStationRepository
     void SaveCommunicationSettings(CommunicationBridgeSettings settings);
 
     void SaveStationDiscoveryPluginSettings(StationDiscoveryPluginSettings settings);
+
+    IReadOnlyDictionary<string, string> GetPluginSettings(string pluginId);
+
+    void SavePluginSettings(string pluginId, IReadOnlyDictionary<string, string> settings);
 }
 

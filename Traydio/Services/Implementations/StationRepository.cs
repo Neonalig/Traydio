@@ -188,6 +188,41 @@ public sealed class StationRepository : IStationRepository
         RaiseChanged();
     }
 
+    public IReadOnlyDictionary<string, string> GetPluginSettings(string pluginId)
+    {
+        if (string.IsNullOrWhiteSpace(pluginId))
+        {
+            return new Dictionary<string, string>();
+        }
+
+        if (!_settings.PluginSettings.TryGetValue(pluginId.Trim(), out var values) || values is null)
+        {
+            return new Dictionary<string, string>();
+        }
+
+        return values.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
+    }
+
+    public void SavePluginSettings(string pluginId, IReadOnlyDictionary<string, string> settings)
+    {
+        if (string.IsNullOrWhiteSpace(pluginId))
+        {
+            return;
+        }
+
+        var normalizedPluginId = pluginId.Trim();
+        var normalized = settings
+            .Where(pair => !string.IsNullOrWhiteSpace(pair.Key))
+            .ToDictionary(
+                pair => pair.Key.Trim(),
+                pair => pair.Value,
+                StringComparer.OrdinalIgnoreCase);
+
+        _settings.PluginSettings[normalizedPluginId] = normalized;
+        Save();
+        RaiseChanged();
+    }
+
     private static RadioSettings LoadSettings(string path)
     {
         if (!File.Exists(path))
@@ -228,6 +263,8 @@ public sealed class StationRepository : IStationRepository
             {
                 settings.AudioOutputDeviceId = null;
             }
+
+            settings.PluginSettings ??= [];
 
             if (string.IsNullOrWhiteSpace(settings.RadioPlayerEngineId))
             {

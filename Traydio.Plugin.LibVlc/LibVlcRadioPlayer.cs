@@ -24,6 +24,7 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
     private bool _isLoading;
     private bool _disposed;
     private int _requestedVolume = 60;
+    private string? _requestedAudioOutputModule;
     private string? _requestedAudioOutputDeviceId;
 
     /// <inheritdoc />
@@ -41,10 +42,23 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
     /// <summary>
     /// Creates a new radio player instance.
     /// </summary>
+    /// <param name="requestedAudioOutputModule">Optional VLC output module. Leave null for system default.</param>
+    /// <param name="requestedAudioOutputDeviceId">Optional VLC output device id. Leave null for system default.</param>
     /// <param name="vlcOptions">Optional VLC startup options.</param>
-    public LibVlcRadioPlayer(params string[] vlcOptions)
+    public LibVlcRadioPlayer(
+        string? requestedAudioOutputModule = null,
+        string? requestedAudioOutputDeviceId = null,
+        params string[] vlcOptions)
     {
         Core.Initialize();
+
+        _requestedAudioOutputModule = string.IsNullOrWhiteSpace(requestedAudioOutputModule)
+            ? null
+            : requestedAudioOutputModule.Trim();
+
+        _requestedAudioOutputDeviceId = string.IsNullOrWhiteSpace(requestedAudioOutputDeviceId)
+            ? null
+            : requestedAudioOutputDeviceId.Trim();
 
         _libVlc = vlcOptions is { Length: > 0 }
             ? new LibVLC(enableDebugLogs: true, vlcOptions)
@@ -239,7 +253,7 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
         lock (_sync)
         {
             _requestedAudioOutputDeviceId = normalized;
-            _mediaPlayer.SetOutputDevice(null!, normalized);
+            _mediaPlayer.SetOutputDevice(_requestedAudioOutputModule!, normalized);
         }
 
         RaiseStateChanged();
@@ -323,7 +337,7 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
         {
             _isLoading = false;
             _mediaPlayer.Volume = _requestedVolume;
-            _mediaPlayer.SetOutputDevice(null!, _requestedAudioOutputDeviceId);
+            _mediaPlayer.SetOutputDevice(_requestedAudioOutputModule!, _requestedAudioOutputDeviceId);
             UpdateNowPlayingFromMedia();
         }
 

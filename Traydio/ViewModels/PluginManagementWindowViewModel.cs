@@ -18,6 +18,7 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
 {
     private readonly IPluginManager _pluginManager;
     private readonly IStationRepository _stationRepository;
+    private readonly IWindowManager _windowManager;
 
     public ObservableCollection<InstalledPluginItem> InstalledPlugins { get; } = [];
 
@@ -38,10 +39,11 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string _status = string.Empty;
 
-    public PluginManagementWindowViewModel(IPluginManager pluginManager, IStationRepository stationRepository)
+    public PluginManagementWindowViewModel(IPluginManager pluginManager, IStationRepository stationRepository, IWindowManager windowManager)
     {
         _pluginManager = pluginManager;
         _stationRepository = stationRepository;
+        _windowManager = windowManager;
 
         _pluginManager.PluginsChanged += (_, _) => Refresh();
         Refresh();
@@ -55,7 +57,10 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             InstalledPlugins.Clear();
             foreach (var plugin in _pluginManager.GetPlugins().OrderBy(p => p.DisplayName, StringComparer.OrdinalIgnoreCase))
             {
-                InstalledPlugins.Add(new InstalledPluginItem(plugin.Id, plugin.DisplayName));
+                InstalledPlugins.Add(new InstalledPluginItem(
+                    plugin.Id,
+                    plugin.DisplayName,
+                    plugin.Capabilities.OfType<IPluginSettingsCapability>().Any()));
             }
 
             PluginDirectory = _stationRepository.StationDiscoveryPlugins.PluginDirectory;
@@ -140,6 +145,30 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         Refresh();
     }
 
+    [RelayCommand]
+    private void OpenPluginSettings(InstalledPluginItem? pluginItem)
+    {
+        if (pluginItem is null)
+        {
+            Status = "Select an installed plugin first.";
+            return;
+        }
+
+        if (!pluginItem.HasSettings)
+        {
+            Status = $"Plugin '{pluginItem.DisplayName}' does not expose settings.";
+            return;
+        }
+
+        if (_windowManager.ShowPluginSettings(pluginItem.Id, out var error))
+        {
+            Status = $"Opened settings for '{pluginItem.DisplayName}'.";
+            return;
+        }
+
+        Status = "Could not open plugin settings: " + (error ?? "Unknown error.");
+    }
+
     private void InstallPluginFromPath(string path)
     {
         if (_pluginManager.AddPlugin(path, out var error))
@@ -192,11 +221,13 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             .Where(path => Path.GetFileName(path).Contains("Plugin", StringComparison.OrdinalIgnoreCase));
     }
 
-    public sealed class InstalledPluginItem(string id, string displayName)
+    public sealed class InstalledPluginItem(string id, string displayName, bool hasSettings)
     {
         public string Id { get; } = id;
 
         public string DisplayName { get; } = displayName;
+
+        public bool HasSettings { get; } = hasSettings;
     }
 
     public sealed class PluginCandidateItem(string path, string displayName)

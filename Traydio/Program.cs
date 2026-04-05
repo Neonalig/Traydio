@@ -3,7 +3,6 @@ using Avalonia.Controls;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using JetBrains.Annotations;
 using Traydio.Commands;
 using Traydio.Common;
@@ -65,7 +64,8 @@ sealed class Program
         var services = new ServiceCollection();
 
         services.AddSingleton<IStationRepository, StationRepository>();
-        services.AddSingleton<IRadioPlayer>(CreateRadioPlayer);
+        services.AddSingleton<IPluginSettingsProvider, PluginSettingsProvider>();
+        services.AddSingleton<IRadioPlayer, DeferredPluginRadioPlayer>();
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IWindowManager, WindowManager>();
         services.AddSingleton<IAppCommandDispatcher, AppCommandDispatcher>();
@@ -100,40 +100,6 @@ sealed class Program
         return services;
     }
 
-    private static IRadioPlayer CreateRadioPlayer(IServiceProvider serviceProvider)
-    {
-        var stationRepository = serviceProvider.GetRequiredService<IStationRepository>();
-        var pluginManager = serviceProvider.GetRequiredService<IPluginManager>();
-
-        var engines = pluginManager.GetPlugins()
-            .SelectMany(static plugin => plugin.Capabilities.OfType<IRadioPlayerEngineCapability>())
-            .GroupBy(static capability => capability.EngineId, StringComparer.OrdinalIgnoreCase)
-            .Select(static group => group.First())
-            .ToArray();
-
-        if (engines.Length == 0)
-        {
-            throw new InvalidOperationException("No radio player engines were found. Ensure at least one playback plugin is available.");
-        }
-
-        var requestedEngineId = stationRepository.RadioPlayerEngineId;
-        var selectedEngine = !string.IsNullOrWhiteSpace(requestedEngineId)
-            ? engines.FirstOrDefault(engine => string.Equals(engine.EngineId, requestedEngineId, StringComparison.OrdinalIgnoreCase))
-            : null;
-
-        selectedEngine ??= engines.First();
-
-        var player = selectedEngine.CreatePlayer();
-        player.SetVolume(stationRepository.Volume);
-        player.SetAudioOutputDevice(stationRepository.AudioOutputDeviceId);
-
-        if (!string.Equals(stationRepository.RadioPlayerEngineId, selectedEngine.EngineId, StringComparison.OrdinalIgnoreCase))
-        {
-            stationRepository.RadioPlayerEngineId = selectedEngine.EngineId;
-        }
-
-        return player;
-    }
 
     private static string? ParseStartupCommand(string[] args, IEnumerable<IStartupCommandBridge> bridges)
     {

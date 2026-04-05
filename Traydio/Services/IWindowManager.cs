@@ -11,5 +11,7 @@ public interface IWindowManager
     void ShowPluginManager();
 
     void ShowSettings();
+
+    bool ShowPluginSettings(string pluginId, out string? error);
 }
 

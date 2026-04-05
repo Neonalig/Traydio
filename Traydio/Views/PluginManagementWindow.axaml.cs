@@ -56,5 +56,20 @@ public partial class PluginManagementPage : UserControl
 
         viewModel.PluginDllPath = selected.TryGetLocalPath() ?? selected.Name;
     }
+
+    private void OnPluginSettingsClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not PluginManagementWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        if (sender is not Control { DataContext: PluginManagementWindowViewModel.InstalledPluginItem pluginItem })
+        {
+            return;
+        }
+
+        viewModel.OpenPluginSettingsCommand.Execute(pluginItem);
+    }
 }
 

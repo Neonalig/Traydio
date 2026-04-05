@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using Microsoft.Extensions.DependencyInjection;
 using JetBrains.Annotations;
 using Traydio.Common;
 using Traydio.Services;
@@ -8,12 +10,14 @@ namespace Traydio.Plugin.LibVlc;
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public sealed class LibVlcPlugin : ITraydioPlugin
 {
+    public const string PluginId = "plugin.playback.libvlc";
+
     public LibVlcPlugin()
     {
-        Capabilities = [new RadioPlayerEngineCapability()];
+        Capabilities = [new RadioPlayerEngineCapability(), new SettingsCapability()];
     }
 
-    public string Id => "plugin.playback.libvlc";
+    public string Id => PluginId;
 
     public string DisplayName => "LibVLC Playback";
 
@@ -27,7 +31,34 @@ public sealed class LibVlcPlugin : ITraydioPlugin
 
         public string DisplayName => "LibVLC";
 
-        public IRadioPlayer CreatePlayer() => new LibVlcRadioPlayer();
+        public IRadioPlayer CreatePlayer(IServiceProvider serviceProvider)
+        {
+            var settingsProvider = serviceProvider.GetService<IPluginSettingsProvider>();
+            var settings = settingsProvider?.GetPluginSettings(PluginId);
+
+            string? outputModule = null;
+            string? outputDeviceId = null;
+
+            if (settings is not null)
+            {
+                settings.TryGetValue(LibVlcPluginSettings.OutputModuleKey, out outputModule);
+                settings.TryGetValue(LibVlcPluginSettings.OutputDeviceIdKey, out outputDeviceId);
+            }
+
+            return new LibVlcRadioPlayer(outputModule, outputDeviceId);
+        }
+    }
+
+    private sealed class SettingsCapability : IPluginSettingsCapability
+    {
+        public string CapabilityId => "plugin-settings";
+
+        public string DisplayName => "LibVLC";
+
+        public object? CreateSettingsView(IPluginSettingsAccessor settingsAccessor)
+        {
+            return new LibVlcPluginSettingsView(settingsAccessor);
+        }
     }
 }
 

@@ -39,5 +39,7 @@ public sealed class RadioSettings
     public CommunicationBridgeSettings Communication { get; set; } = new();
 
     public StationDiscoveryPluginSettings StationDiscoveryPlugins { get; set; } = new();
+
+    public Dictionary<string, Dictionary<string, string>> PluginSettings { get; set; } = [];
 }
 

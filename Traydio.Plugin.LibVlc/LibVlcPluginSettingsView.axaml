@@ -1,0 +1,25 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Traydio.Plugin.LibVlc.LibVlcPluginSettingsView">
+    <Grid Margin="12" RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="10">
+        <TextBlock Grid.Row="0" Text="LibVLC Output Settings" FontSize="18" FontWeight="SemiBold"/>
+
+        <TextBlock Grid.Row="1"
+                   Text="Leave fields blank to use system defaults. Module examples on Windows include mmdevice, directsound, and waveout."
+                   TextWrapping="Wrap"/>
+
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+            <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Output module"/>
+            <TextBox x:Name="OutputModuleBox" Grid.Column="1" Watermark="Blank = system default"/>
+            <Button Grid.Column="2" Click="OnSaveClick">Save</Button>
+        </Grid>
+
+        <Grid Grid.Row="3" ColumnDefinitions="Auto,*" ColumnSpacing="8">
+            <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Output device id"/>
+            <TextBox x:Name="OutputDeviceIdBox" Grid.Column="1" Watermark="Blank = system default"/>
+        </Grid>
+
+        <TextBlock Grid.Row="4" x:Name="StatusText" Classes="accent-text" TextWrapping="Wrap"/>
+    </Grid>
+</UserControl>
+

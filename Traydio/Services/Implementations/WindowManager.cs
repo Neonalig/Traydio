@@ -1,10 +1,18 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using Avalonia.Controls;
 using Microsoft.Extensions.DependencyInjection;
+using Traydio.Common;
 using Traydio.Views;
 
 namespace Traydio.Services;
 
-public sealed class WindowManager(IServiceProvider serviceProvider, INavigationService navigationService) : IWindowManager
+public sealed class WindowManager(
+    IServiceProvider serviceProvider,
+    INavigationService navigationService,
+    IPluginManager pluginManager,
+    IPluginSettingsProvider pluginSettingsProvider) : IWindowManager
 {
     private MainWindow? _mainWindow;
 
@@ -43,6 +51,88 @@ public sealed class WindowManager(IServiceProvider serviceProvider, INavigationS
     {
         ShowMainWindow();
         navigationService.Navigate(AppPage.Settings);
+    }
+
+    public bool ShowPluginSettings(string pluginId, out string? error)
+    {
+        error = null;
+        var plugin = pluginManager.GetPlugins()
+            .FirstOrDefault(p => string.Equals(p.Id, pluginId, StringComparison.OrdinalIgnoreCase));
+
+        if (plugin is null)
+        {
+            error = "Plugin not found.";
+            return false;
+        }
+
+        var settingsCapability = plugin.Capabilities.OfType<IPluginSettingsCapability>().FirstOrDefault();
+        if (settingsCapability is null)
+        {
+            error = "This plugin does not expose a settings page.";
+            return false;
+        }
+
+        var content = settingsCapability.CreateSettingsView(new PluginSettingsAccessor(pluginSettingsProvider, plugin.Id));
+        if (content is not Control control)
+        {
+            error = "Plugin returned an unsupported settings view.";
+            return false;
+        }
+
+        ShowMainWindow();
+
+        var settingsWindow = new Window
+        {
+            Title = $"{plugin.DisplayName} Settings",
+            Width = 720,
+            Height = 420,
+            Content = control,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        };
+
+        if (_mainWindow is not null)
+        {
+            _ = settingsWindow.ShowDialog(_mainWindow);
+        }
+        else
+        {
+            settingsWindow.Show();
+        }
+
+        return true;
+    }
+
+    private sealed class PluginSettingsAccessor(IPluginSettingsProvider pluginSettingsProvider, string pluginId) : IPluginSettingsAccessor
+    {
+        private readonly Dictionary<string, string> _values = new(
+            pluginSettingsProvider.GetPluginSettings(pluginId),
+            StringComparer.OrdinalIgnoreCase);
+
+        public string? GetValue(string key)
+        {
+            return _values.TryGetValue(key, out var value) ? value : null;
+        }
+
+        public void SetValue(string key, string? value)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                _values.Remove(key.Trim());
+                return;
+            }
+
+            _values[key.Trim()] = value.Trim();
+        }
+
+        public void Save()
+        {
+            pluginSettingsProvider.SavePluginSettings(pluginId, _values);
+        }
     }
 }
 

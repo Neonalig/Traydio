@@ -1,4 +1,5 @@
-﻿using Traydio.Services;
+﻿using System;
+using Traydio.Services;
 
 namespace Traydio.Common;
 
@@ -8,6 +9,6 @@ public interface IRadioPlayerEngineCapability : IPluginCapability
 
     string DisplayName { get; }
 
-    IRadioPlayer CreatePlayer();
+    IRadioPlayer CreatePlayer(IServiceProvider serviceProvider);
 }
 
