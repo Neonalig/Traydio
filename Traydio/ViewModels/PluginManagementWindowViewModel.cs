@@ -56,20 +56,21 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         void Update()
         {
             var installedByAssemblyName = new Dictionary<string, Version>(StringComparer.OrdinalIgnoreCase);
+            var previousInstalledId = SelectedInstalledPlugin?.Id;
+            var previousCandidatePath = SelectedPluginCandidate?.Path;
 
             InstalledPlugins.Clear();
-            foreach (var plugin in _pluginManager.GetPlugins().OrderBy(p => p.DisplayName, StringComparer.OrdinalIgnoreCase))
+            foreach (var plugin in _pluginManager.GetPluginInventory().OrderBy(p => p.DisplayName, StringComparer.OrdinalIgnoreCase))
             {
-                var version = plugin.GetType().Assembly.GetName().Version ?? new Version(0, 0, 0, 0);
-                var assemblyName = plugin.GetType().Assembly.GetName().Name ?? plugin.Id;
-                installedByAssemblyName[assemblyName] = version;
+                installedByAssemblyName[plugin.AssemblyName] = plugin.Version;
 
                 InstalledPlugins.Add(new InstalledPluginItem(
                     plugin.Id,
                     plugin.DisplayName,
-                    plugin.Capabilities.OfType<IPluginSettingsCapability>().Any(),
-                    assemblyName,
-                    version));
+                    plugin.HasSettings,
+                    plugin.AssemblyName,
+                    plugin.Version,
+                    plugin.IsEnabled));
             }
 
             PluginDirectory = _stationRepository.StationDiscoveryPlugins.PluginDirectory;
@@ -84,8 +85,13 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
                 PluginCandidates.Add(candidate);
             }
 
-            SelectedInstalledPlugin ??= InstalledPlugins.FirstOrDefault();
-            SelectedPluginCandidate ??= PluginCandidates.FirstOrDefault();
+            SelectedInstalledPlugin = InstalledPlugins.FirstOrDefault(item =>
+                string.Equals(item.Id, previousInstalledId, StringComparison.OrdinalIgnoreCase))
+                ?? InstalledPlugins.FirstOrDefault();
+
+            SelectedPluginCandidate = PluginCandidates.FirstOrDefault(item =>
+                string.Equals(item.Path, previousCandidatePath, StringComparison.OrdinalIgnoreCase))
+                ?? PluginCandidates.FirstOrDefault();
         }
 
         if (Dispatcher.UIThread.CheckAccess())
@@ -131,7 +137,7 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             return;
         }
 
-        if (_pluginManager.RemovePlugin(selectedPlugin.Id, out var error))
+        if (_pluginManager.SetPluginEnabled(selectedPlugin.Id, enabled: false, out var error))
         {
             Status = $"Plugin '{selectedPlugin.DisplayName}' disabled.";
             Refresh();
@@ -190,6 +196,121 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         }
 
         Status = "Could not install plugin: " + (error ?? "Unknown error.");
+    }
+
+    public void InstallPluginsFromDroppedPaths(IReadOnlyList<string> paths)
+    {
+        if (paths.Count == 0)
+        {
+            return;
+        }
+
+        var successes = 0;
+        string? lastError = null;
+
+        foreach (var path in paths)
+        {
+            if (_pluginManager.AddPlugin(path, out var error))
+            {
+                successes++;
+            }
+            else
+            {
+                lastError = error;
+            }
+        }
+
+        Refresh();
+        Status = successes > 0
+            ? $"Installed {successes} plugin file(s)."
+            : "Could not install dropped plugins: " + (lastError ?? "Unknown error.");
+    }
+
+    public bool SetInstalledPluginEnabled(InstalledPluginItem? pluginItem, bool enabled)
+    {
+        if (pluginItem is null)
+        {
+            Status = "Select an installed plugin first.";
+            return false;
+        }
+
+        if (_pluginManager.SetPluginEnabled(pluginItem.Id, enabled, out var error))
+        {
+            Status = enabled
+                ? $"Plugin '{pluginItem.DisplayName}' enabled."
+                : $"Plugin '{pluginItem.DisplayName}' disabled.";
+            Refresh();
+            return true;
+        }
+
+        Status = "Could not update plugin state: " + (error ?? "Unknown error.");
+        return false;
+    }
+
+    public void ToggleInstalledPlugin(InstalledPluginItem? pluginItem)
+    {
+        if (pluginItem is null)
+        {
+            return;
+        }
+
+        SetInstalledPluginEnabled(pluginItem, !pluginItem.IsEnabled);
+    }
+
+    public void InstallCandidate(PluginCandidateItem? candidate)
+    {
+        if (candidate is null)
+        {
+            return;
+        }
+
+        InstallPluginFromPath(candidate.Path);
+    }
+
+    public bool ChangePluginDirectory(string newDirectory, bool migrateExistingPlugins, out string? error)
+    {
+        error = null;
+        if (string.IsNullOrWhiteSpace(newDirectory))
+        {
+            error = "Plugin directory path is empty.";
+            return false;
+        }
+
+        try
+        {
+            var currentConfigured = _stationRepository.StationDiscoveryPlugins.PluginDirectory;
+            var oldPath = Path.IsPathRooted(currentConfigured)
+                ? currentConfigured
+                : Path.Combine(AppContext.BaseDirectory, currentConfigured);
+
+            var targetPath = Path.GetFullPath(newDirectory.Trim());
+            Directory.CreateDirectory(targetPath);
+
+            if (migrateExistingPlugins && Directory.Exists(oldPath) && !string.Equals(oldPath, targetPath, StringComparison.OrdinalIgnoreCase))
+            {
+                foreach (var file in Directory.GetFiles(oldPath, "*.dll", SearchOption.TopDirectoryOnly))
+                {
+                    var destination = Path.Combine(targetPath, Path.GetFileName(file));
+                    File.Copy(file, destination, overwrite: true);
+                }
+            }
+
+            var settings = _stationRepository.StationDiscoveryPlugins;
+            _stationRepository.SaveStationDiscoveryPluginSettings(new StationDiscoveryPluginSettings
+            {
+                PluginDirectory = targetPath,
+                DisabledPluginIds = settings.DisabledPluginIds,
+            });
+
+            PluginDirectory = targetPath;
+            Refresh();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
     }
 
     [RelayCommand]
@@ -346,7 +467,7 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             .Where(path => Path.GetFileName(path).Contains("Plugin", StringComparison.OrdinalIgnoreCase));
     }
 
-    public sealed class InstalledPluginItem(string id, string displayName, bool hasSettings, string assemblyName, Version version)
+    public sealed class InstalledPluginItem(string id, string displayName, bool hasSettings, string assemblyName, Version version, bool isEnabled)
     {
         public string Id { get; } = id;
 
@@ -359,6 +480,8 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         public Version Version { get; } = version;
 
         public string VersionText { get; } = FormatVersion(version);
+
+        public bool IsEnabled { get; } = isEnabled;
     }
 
     public sealed class PluginCandidateItem(

@@ -12,6 +12,7 @@ namespace Traydio.Services.Implementations;
 public sealed class PluginManager(IStationRepository stationRepository) : IPluginManager
 {
     private readonly List<ITraydioPlugin> _plugins = [];
+    private readonly List<PluginDescriptor> _inventory = [];
     private readonly Dictionary<string, LoadedPlugin> _loadedPlugins = new(StringComparer.OrdinalIgnoreCase);
 
     private FileSystemWatcher? _watcher;
@@ -23,6 +24,20 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
     public IReadOnlyList<ITraydioPlugin> GetPlugins()
     {
         return _plugins.ToArray();
+    }
+
+    public IReadOnlyList<PluginInventoryItem> GetPluginInventory()
+    {
+        return _inventory
+            .OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .Select(item => new PluginInventoryItem(
+                item.Id,
+                item.DisplayName,
+                item.AssemblyName,
+                item.Version,
+                item.HasSettings,
+                item.IsEnabled))
+            .ToArray();
     }
 
     public bool AddPlugin(string sourceDllPath, out string? error)
@@ -42,15 +57,27 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
             var sourceFullPath = Path.GetFullPath(sourceDllPath);
             var targetFullPath = Path.GetFullPath(targetPath);
 
+            string? installedAssemblyName = null;
+            try
+            {
+                installedAssemblyName = AssemblyName.GetAssemblyName(sourceFullPath).Name;
+            }
+            catch
+            {
+                // Best-effort metadata read.
+            }
+
             if (string.Equals(sourceFullPath, targetFullPath, StringComparison.OrdinalIgnoreCase))
             {
                 // Already in plugin folder; treat this as a refresh request.
                 ReloadPlugins();
+                ReEnableInstalledAssembly(installedAssemblyName);
                 return true;
             }
 
             File.Copy(sourceFullPath, targetFullPath, overwrite: true);
             ReloadPlugins();
+            ReEnableInstalledAssembly(installedAssemblyName);
             return true;
         }
         catch (IOException)
@@ -65,25 +92,59 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
         }
     }
 
+    private void ReEnableInstalledAssembly(string? assemblyName)
+    {
+        if (string.IsNullOrWhiteSpace(assemblyName))
+        {
+            return;
+        }
+
+        var candidate = _inventory.FirstOrDefault(item =>
+            string.Equals(item.AssemblyName, assemblyName, StringComparison.OrdinalIgnoreCase));
+        if (candidate is null || candidate.IsEnabled)
+        {
+            return;
+        }
+
+        SetPluginEnabled(candidate.Id, enabled: true, out _);
+    }
+
     public bool RemovePlugin(string pluginId, out string? error)
     {
+        return SetPluginEnabled(pluginId, enabled: false, out error);
+    }
+
+    public bool SetPluginEnabled(string pluginId, bool enabled, out string? error)
+    {
         error = null;
-        var settings = stationRepository.StationDiscoveryPlugins;
 
-        if (_plugins.Any(p => string.Equals(p.Id, pluginId, StringComparison.OrdinalIgnoreCase)))
+        if (_inventory.All(p => !string.Equals(p.Id, pluginId, StringComparison.OrdinalIgnoreCase)))
         {
-            if (!settings.DisabledPluginIds.Contains(pluginId, StringComparer.OrdinalIgnoreCase))
-            {
-                settings.DisabledPluginIds.Add(pluginId);
-                stationRepository.SaveStationDiscoveryPluginSettings(settings);
-            }
+            error = "Plugin not found.";
+            return false;
+        }
 
-            ReloadPlugins();
+        var settings = stationRepository.StationDiscoveryPlugins;
+        var changed = false;
+
+        if (enabled)
+        {
+            changed = settings.DisabledPluginIds.RemoveAll(id => string.Equals(id, pluginId, StringComparison.OrdinalIgnoreCase)) > 0;
+        }
+        else if (!settings.DisabledPluginIds.Contains(pluginId, StringComparer.OrdinalIgnoreCase))
+        {
+            settings.DisabledPluginIds.Add(pluginId);
+            changed = true;
+        }
+
+        if (!changed)
+        {
             return true;
         }
 
-        error = "Plugin not found.";
-        return false;
+        stationRepository.SaveStationDiscoveryPluginSettings(settings);
+        ReloadPlugins();
+        return true;
     }
 
     public void Start()
@@ -142,6 +203,7 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
     {
         EnsurePluginDirectory();
         _plugins.Clear();
+        _inventory.Clear();
 
         foreach (var loadedPlugin in _loadedPlugins.Values)
         {
@@ -156,7 +218,14 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
         LoadPluginsFromBaseDirectory();
 
         var disabled = stationRepository.StationDiscoveryPlugins.DisabledPluginIds;
-        _plugins.RemoveAll(plugin => disabled.Contains(plugin.Id, StringComparer.OrdinalIgnoreCase));
+        foreach (var item in _inventory)
+        {
+            item.IsEnabled = !disabled.Contains(item.Id, StringComparer.OrdinalIgnoreCase);
+            if (item.IsEnabled)
+            {
+                _plugins.Add(item.Plugin);
+            }
+        }
 
         PluginsChanged?.Invoke(this, EventArgs.Empty);
     }
@@ -190,7 +259,7 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
         {
             foreach (var plugin in CreatePlugins(assembly))
             {
-                AddIfNotExists(plugin);
+                AddIfNotExists(plugin, assembly);
             }
         }
     }
@@ -220,7 +289,7 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
             _loadedPlugins[pluginPath] = new LoadedPlugin(loadContext, plugins);
             foreach (var plugin in plugins)
             {
-                AddIfNotExists(plugin);
+                AddIfNotExists(plugin, assembly);
             }
         }
         catch
@@ -258,14 +327,40 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
         }
     }
 
-    private void AddIfNotExists(ITraydioPlugin plugin)
+    private void AddIfNotExists(ITraydioPlugin plugin, Assembly sourceAssembly)
     {
-        if (_plugins.Any(p => string.Equals(p.Id, plugin.Id, StringComparison.OrdinalIgnoreCase)))
+        if (_inventory.Any(p => string.Equals(p.Id, plugin.Id, StringComparison.OrdinalIgnoreCase)))
         {
             return;
         }
 
-        _plugins.Add(plugin);
+        var assemblyName = sourceAssembly.GetName();
+        _inventory.Add(new PluginDescriptor
+        {
+            Plugin = plugin,
+            Id = plugin.Id,
+            DisplayName = plugin.DisplayName,
+            AssemblyName = assemblyName.Name ?? plugin.Id,
+            Version = assemblyName.Version ?? new Version(0, 0, 0, 0),
+            HasSettings = plugin.Capabilities.OfType<IPluginSettingsCapability>().Any(),
+        });
+    }
+
+    private sealed class PluginDescriptor
+    {
+        public required ITraydioPlugin Plugin { get; init; }
+
+        public required string Id { get; init; }
+
+        public required string DisplayName { get; init; }
+
+        public required string AssemblyName { get; init; }
+
+        public required Version Version { get; init; }
+
+        public required bool HasSettings { get; init; }
+
+        public bool IsEnabled { get; set; }
     }
 
     private sealed class LoadedPlugin(PluginLoadContext context, IReadOnlyList<ITraydioPlugin> plugins)

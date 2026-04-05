@@ -6,65 +6,62 @@
              mc:Ignorable="d"
              x:Class="Traydio.Views.PluginManagementPage"
              x:DataType="vm:PluginManagementWindowViewModel">
-    <Grid Margin="0" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="6">
-        <Border Grid.Row="0" Classes="toolbar-frame" Margin="0">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-                <Button Classes="toolbar-button" Command="{Binding RefreshCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Image Source="/Assets/Icons9x/refresh.ico" Classes="icon-small"/>
-                        <TextBlock Text="Refresh Inventory" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-                <Button Classes="toolbar-button" Command="{Binding DisableSelectedPluginCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Image Source="/Assets/Icons9x/remove.ico" Classes="icon-small"/>
-                        <TextBlock Text="Disable Installed" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-                <Button Classes="toolbar-button" Command="{Binding InstallSelectedCandidateCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Image Source="/Assets/Icons9x/add.ico" Classes="icon-small"/>
-                        <TextBlock Text="Install Candidate" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-            </StackPanel>
+    <Grid Margin="0" RowDefinitions="Auto,*,Auto" RowSpacing="6">
+
+        <Border Grid.Row="0" Classes="status-strip" Margin="0">
+            <TextBlock Text="Double-click candidates to install and installed entries to disable/enable. You can also drop plugin DLLs from File Explorer onto either list." Classes="helper-text"/>
         </Border>
 
-        <Border Grid.Row="1" Classes="status-strip" Margin="0">
-            <TextBlock Text="Choose a plugin folder, refresh candidates, then install verified DLLs. Disable installed entries to roll back quickly." Classes="helper-text"/>
-        </Border>
-
-        <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="0" Margin="4,0,4,4">
+        <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="0" Margin="4,0,4,4">
             <Border Classes="group-caption-chip">
                 <TextBlock Text="Plugin Source and Inventory" Classes="group-title"/>
             </Border>
             <Border Grid.Row="1" Classes="group-frame" Margin="0,-8,0,0">
                 <Grid RowDefinitions="Auto,*,*" RowSpacing="10">
-                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Plugin directory"/>
+                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Plugin install folder"/>
                         <TextBox Grid.Column="1" Text="{Binding PluginDirectory}"/>
-                        <Button Grid.Column="2" Classes="command-button" Command="{Binding SavePluginDirectoryCommand}">
+                        <Button Grid.Column="2" Classes="command-button" Click="OnChangePluginDirectoryClick">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <Image Source="/Assets/Icons9x/folder.ico" Classes="icon-small"/>
-                                <TextBlock Text="Save Directory" VerticalAlignment="Center"/>
+                                <TextBlock Text="Browse..." VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="3" Classes="command-button" Command="{Binding RefreshCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Image Source="/Assets/Icons9x/refresh.ico" Classes="icon-small"/>
+                                <TextBlock Text="Refresh" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                     </Grid>
 
                     <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="6">
                         <TextBlock Grid.Row="0" Text="Installed Plugins" FontWeight="SemiBold"/>
-                        <ListBox Grid.Row="1" Classes="list-surface" ItemsSource="{Binding InstalledPlugins}" SelectedItem="{Binding SelectedInstalledPlugin}">
+                        <ListBox Grid.Row="1"
+                                 x:Name="InstalledPluginsList"
+                                 Classes="list-surface"
+                                 ItemsSource="{Binding InstalledPlugins}"
+                                 SelectedItem="{Binding SelectedInstalledPlugin}"
+                                 DoubleTapped="OnInstalledListDoubleTapped"
+                                 DragDrop.AllowDrop="True"
+                                 DragDrop.DragOver="OnPluginListDragOver"
+                                 DragDrop.Drop="OnInstalledListDrop">
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="vm:PluginManagementWindowViewModel+InstalledPluginItem">
-                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-                                        <Image Grid.Column="0" Source="/Assets/Icons9x/plugins.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
-                                        <StackPanel Grid.Column="1" Spacing="2">
+                                    <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8">
+                                        <CheckBox Grid.Column="0"
+                                                  IsChecked="{Binding IsEnabled}"
+                                                  VerticalAlignment="Center"
+                                                  Click="OnInstalledCheckboxClick"/>
+                                        <Image Grid.Column="1" Source="/Assets/Icons9x/plugins.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
+                                        <StackPanel Grid.Column="2" Spacing="2" IsEnabled="{Binding IsEnabled}">
                                             <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
                                             <TextBlock Text="{Binding VersionText, StringFormat='v{0}'}" Classes="subtle-text"/>
                                         </StackPanel>
-                                        <Button Grid.Column="2"
+                                        <Button Grid.Column="3"
                                                 Classes="command-button"
                                                 IsVisible="{Binding HasSettings}"
+                                                IsEnabled="{Binding IsEnabled}"
                                                 Click="OnPluginSettingsClick">
                                             <StackPanel Orientation="Horizontal" Spacing="6">
                                                 <Image Source="/Assets/Icons9x/settings.ico" Classes="icon-small"/>
@@ -79,7 +76,15 @@
 
                     <Grid Grid.Row="2" RowDefinitions="Auto,*,Auto" RowSpacing="6">
                         <TextBlock Grid.Row="0" Text="Discovered Eligible Plugin DLLs" FontWeight="SemiBold"/>
-                        <ListBox Grid.Row="1" Classes="list-surface" ItemsSource="{Binding PluginCandidates}" SelectedItem="{Binding SelectedPluginCandidate}">
+                        <ListBox Grid.Row="1"
+                                 x:Name="PluginCandidatesList"
+                                 Classes="list-surface"
+                                 ItemsSource="{Binding PluginCandidates}"
+                                 SelectedItem="{Binding SelectedPluginCandidate}"
+                                 DoubleTapped="OnCandidateListDoubleTapped"
+                                 DragDrop.AllowDrop="True"
+                                 DragDrop.DragOver="OnPluginListDragOver"
+                                 DragDrop.Drop="OnCandidateListDrop">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
@@ -104,22 +109,16 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
 
-                        <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="8">
                             <TextBox Grid.Column="0" Watermark="Browse or paste plugin DLL path" Text="{Binding PluginDllPath}"/>
                             <Button Grid.Column="1" Classes="command-button" Click="OnBrowsePluginClick">Browse...</Button>
-                            <Button Grid.Column="2" Classes="command-button" Click="OnInstallFromPathClick">
-                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <Image Source="/Assets/Icons9x/add.ico" Classes="icon-small"/>
-                                    <TextBlock Text="Install From Path" VerticalAlignment="Center"/>
-                                </StackPanel>
-                            </Button>
                         </Grid>
                     </Grid>
                 </Grid>
             </Border>
         </Grid>
 
-        <Border Grid.Row="3" Classes="status-strip" Margin="0">
+        <Border Grid.Row="2" Classes="status-strip" Margin="0">
             <TextBlock Text="{Binding Status}" Classes="accent-text"/>
         </Border>
     </Grid>
