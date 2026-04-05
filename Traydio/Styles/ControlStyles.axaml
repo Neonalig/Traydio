@@ -100,6 +100,13 @@
         <Setter Property="Padding" Value="8,3"/>
     </Style>
 
+    <Style Selector="Button.plugin-row-button">
+        <Setter Property="MinWidth" Value="92"/>
+        <Setter Property="MaxHeight" Value="36"/>
+        <Setter Property="Padding" Value="6,3"/>
+        <Setter Property="VerticalAlignment" Value="Top"/>
+    </Style>
+
     <Style Selector="Button.icon-only">
         <Setter Property="MinWidth" Value="28"/>
         <Setter Property="Width" Value="28"/>
@@ -146,6 +153,10 @@
 
     <Style Selector="ListBox.list-surface">
         <Setter Property="MinHeight" Value="210"/>
+    </Style>
+
+    <Style Selector="ListBox.plugin-list-surface">
+        <Setter Property="MinHeight" Value="130"/>
     </Style>
 
     <Style Selector="Border.station-entry">
