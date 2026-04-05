@@ -84,35 +84,37 @@
                 <TextBlock Text="Playback Console" Classes="group-title"/>
             </Border>
             <Border Grid.Row="1" Classes="group-frame" Margin="0,-8,0,0">
-                <Grid ColumnDefinitions="Auto,Auto,*,Auto,*,Auto" ColumnSpacing="8" Opacity="{Binding MediaControlsOpacity}">
-                    <Button Grid.Column="0" Classes="icon-only" Command="{Binding TogglePlayPauseCommand}">
-                        <Image Source="{Binding IsMediaPlaying, Converter={StaticResource PlayPauseIconConverter}}" Classes="icon-small"/>
-                    </Button>
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Opacity="{Binding MediaControlsOpacity}">
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <Button Classes="icon-only" Command="{Binding TogglePlayPauseCommand}">
+                            <Image Source="{Binding IsMediaPlaying, Converter={StaticResource PlayPauseIconConverter}}" Classes="icon-small"/>
+                        </Button>
+                        <TextBlock VerticalAlignment="Center" Text="{Binding PlaybackTimeText}" Classes="subtle-text"/>
+                    </StackPanel>
 
-                    <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{Binding PlaybackTimeText}" Classes="subtle-text"/>
-
-                    <Grid Grid.Column="2">
-                        <TextBlock VerticalAlignment="Center"
-                                   Text="{Binding MediaCenterText}"
-                                   FontWeight="SemiBold"
-                                   TextWrapping="Wrap"
-                                   IsVisible="{Binding !HasMediaError}"/>
-                        <TextBlock VerticalAlignment="Center"
-                                   Text="{Binding MediaCenterText}"
-                                   TextWrapping="Wrap"
-                                   Classes="error-text"
-                                   IsVisible="{Binding HasMediaError}"/>
+                    <Grid Grid.Column="1">
+                        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="560">
+                            <TextBlock Text="{Binding MediaCenterText}"
+                                       FontWeight="SemiBold"
+                                       TextWrapping="Wrap"
+                                       TextAlignment="Center"
+                                       IsVisible="{Binding !HasMediaError}"/>
+                            <TextBlock Text="{Binding MediaCenterText}"
+                                       TextWrapping="Wrap"
+                                       TextAlignment="Center"
+                                       Classes="error-text"
+                                       IsVisible="{Binding HasMediaError}"/>
+                        </StackPanel>
+                        <ProgressBar HorizontalAlignment="Right" VerticalAlignment="Center" Width="110" IsIndeterminate="True" IsVisible="{Binding IsMediaLoading}"/>
                     </Grid>
 
-                    <ProgressBar Grid.Column="3" Width="110" IsIndeterminate="True" IsVisible="{Binding IsMediaLoading}"/>
-
-                    <Grid Grid.Column="4" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6" VerticalAlignment="Center">
-                        <Button Grid.Column="0" Classes="icon-only" Command="{Binding ToggleMuteCommand}">
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <Button Classes="icon-only" Command="{Binding ToggleMuteCommand}">
                             <Image Source="{Binding IsMediaMuted, Converter={StaticResource VolumeMuteIconConverter}}" Classes="icon-small"/>
                         </Button>
-                        <Slider Grid.Column="1" Minimum="0" Maximum="100" Width="120" Value="{Binding FooterVolume}"/>
-                        <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="{Binding FooterVolumeText}" Classes="subtle-text"/>
-                    </Grid>
+                        <Slider Minimum="0" Maximum="100" Width="120" Value="{Binding FooterVolume}" IsEnabled="{Binding !IsMediaMuted}"/>
+                        <TextBlock VerticalAlignment="Center" Text="{Binding FooterVolumeText}" Classes="subtle-text" IsEnabled="{Binding !IsMediaMuted}"/>
+                    </StackPanel>
                 </Grid>
             </Border>
         </Grid>
