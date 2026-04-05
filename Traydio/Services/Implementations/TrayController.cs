@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Platform;
 using Avalonia.Threading;
+using CommunityToolkit.Mvvm.Input;
 using Traydio.Commands;
 
 namespace Traydio.Services;
@@ -30,44 +31,43 @@ public sealed class TrayController : ITrayController
             ToolTipText = "Traydio",
             Icon = new WindowIcon(iconStream),
             Menu = BuildMenu(),
+            Command = new RelayCommand(() => Dispatch(AppCommandKind.ToggleMuteOrOpenStationManager)),
         };
     }
 
     private NativeMenu BuildMenu()
     {
-        var menu = new NativeMenu();
+        return
+        [
+            // Playback controls
 
-        if (OperatingSystem.IsWindows())
-        {
-            menu.Add(CreateItem("Primary Action", () => Dispatch(AppCommandKind.ToggleMuteOrOpenStationManager)));
-            menu.Add(new NativeMenuItemSeparator());
-        }
+            CreateItem("Play / Resume", () => Dispatch(AppCommandKind.Play)),
+            CreateItem("Pause", () => Dispatch(AppCommandKind.Pause)),
+            new NativeMenuItemSeparator(),
 
-        menu.Add(CreateItem("Play / Resume", () => Dispatch(AppCommandKind.Play)));
-        menu.Add(CreateItem("Pause", () => Dispatch(AppCommandKind.Pause)));
-        menu.Add(new NativeMenuItemSeparator());
+            // Stations
 
-        var stationsMenu = new NativeMenuItem("Stations")
-        {
-            Menu = BuildStationsMenu(),
-        };
+            new NativeMenuItem("Stations")
+            {
+                Menu = BuildStationsMenu(),
+            },
 
-        menu.Add(stationsMenu);
-        menu.Add(new NativeMenuItem("Add Station...")
-        {
-            Menu = BuildAddStationMenu(),
-        });
-        menu.Add(new NativeMenuItemSeparator());
+            CreateItem("Add Station...", () => Dispatch(AppCommandKind.OpenStationManager)),
+            CreateItem("Find More Stations", () => Dispatch(AppCommandKind.OpenStationSearch)),
 
-        menu.Add(CreateItem("Volume +", () =>
-            _commandDispatcher.Dispatch(new AppCommand { Kind = AppCommandKind.VolumeUp, Value = 5 })));
-        menu.Add(CreateItem("Volume -", () =>
-            _commandDispatcher.Dispatch(new AppCommand { Kind = AppCommandKind.VolumeDown, Value = 5 })));
-        menu.Add(new NativeMenuItemSeparator());
+            new NativeMenuItemSeparator(),
 
-        menu.Add(CreateItem("Exit", () => Dispatch(AppCommandKind.Exit)));
+            // Volume controls
 
-        return menu;
+            CreateItem("Volume +", () => _commandDispatcher.Dispatch(new AppCommand { Kind = AppCommandKind.VolumeUp, Value = 5 })),
+            CreateItem("Volume -", () => _commandDispatcher.Dispatch(new AppCommand { Kind = AppCommandKind.VolumeDown, Value = 5 })),
+
+            new NativeMenuItemSeparator(),
+
+            // Exit
+
+            CreateItem("Exit", () => Dispatch(AppCommandKind.Exit))
+        ];
     }
 
     private NativeMenu BuildAddStationMenu()
@@ -133,6 +133,11 @@ public sealed class TrayController : ITrayController
             }
 
             _trayIcon.Menu = BuildMenu();
+
+            if (OperatingSystem.IsWindows())
+            {
+                _trayIcon.Command = new RelayCommand(() => Dispatch(AppCommandKind.ToggleMuteOrOpenStationManager));
+            }
         });
     }
 }

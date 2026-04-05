@@ -155,7 +155,7 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
 
     private IEnumerable<PluginCandidateItem> DiscoverEligiblePluginDlls()
     {
-        var knownPaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var knownFileNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         var configuredDir = _stationRepository.StationDiscoveryPlugins.PluginDirectory;
         var pluginDir = Path.IsPathRooted(configuredDir)
@@ -164,7 +164,8 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
 
         foreach (var path in EnumerateMatches(pluginDir))
         {
-            if (knownPaths.Add(path))
+            var fileName = Path.GetFileName(path);
+            if (knownFileNames.Add(fileName))
             {
                 yield return new PluginCandidateItem(path, Path.GetFileNameWithoutExtension(path));
             }
@@ -172,7 +173,8 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
 
         foreach (var path in EnumerateMatches(AppContext.BaseDirectory))
         {
-            if (knownPaths.Add(path))
+            var fileName = Path.GetFileName(path);
+            if (knownFileNames.Add(fileName))
             {
                 yield return new PluginCandidateItem(path, Path.GetFileNameWithoutExtension(path));
             }
