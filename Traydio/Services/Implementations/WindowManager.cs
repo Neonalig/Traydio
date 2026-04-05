@@ -62,6 +62,7 @@ public sealed class WindowManager(
         if (plugin is null)
         {
             error = "Plugin not found.";
+            Console.Error.WriteLine($"[Traydio][PluginSettings] {error} pluginId={pluginId}");
             return false;
         }
 
@@ -69,6 +70,7 @@ public sealed class WindowManager(
         if (settingsCapability is null)
         {
             error = "This plugin does not expose a settings page.";
+            Console.Error.WriteLine($"[Traydio][PluginSettings] {error} pluginId={plugin.Id}");
             return false;
         }
 
@@ -80,12 +82,14 @@ public sealed class WindowManager(
         catch (Exception ex)
         {
             error = "Plugin settings failed to open: " + ex.Message;
+            Console.Error.WriteLine($"[Traydio][PluginSettings] Failed to create settings view for pluginId={plugin.Id}: {ex}");
             return false;
         }
 
         if (content is not Control control)
         {
             error = "Plugin returned an unsupported settings view.";
+            Console.Error.WriteLine($"[Traydio][PluginSettings] {error} pluginId={plugin.Id}");
             return false;
         }
 

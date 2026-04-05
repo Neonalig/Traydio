@@ -164,25 +164,37 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
     [RelayCommand]
     private void OpenPluginSettings(InstalledPluginItem? pluginItem)
     {
-        if (pluginItem is null)
+        if (TryOpenPluginSettings(pluginItem, out var error))
         {
-            Status = "Select an installed plugin first.";
-            return;
-        }
-
-        if (!pluginItem.HasSettings)
-        {
-            Status = $"Plugin '{pluginItem.DisplayName}' does not expose settings.";
-            return;
-        }
-
-        if (_windowManager.ShowPluginSettings(pluginItem.Id, out var error))
-        {
-            Status = $"Opened settings for '{pluginItem.DisplayName}'.";
             return;
         }
 
         Status = "Could not open plugin settings: " + (error ?? "Unknown error.");
+    }
+
+    public bool TryOpenPluginSettings(InstalledPluginItem? pluginItem, out string? error)
+    {
+        error = null;
+        if (pluginItem is null)
+        {
+            error = "Select an installed plugin first.";
+            return false;
+        }
+
+        if (!pluginItem.HasSettings)
+        {
+            error = $"Plugin '{pluginItem.DisplayName}' does not expose settings.";
+            return false;
+        }
+
+        if (_windowManager.ShowPluginSettings(pluginItem.Id, out error))
+        {
+            Status = $"Opened settings for '{pluginItem.DisplayName}'.";
+            return true;
+        }
+
+        error ??= "Unknown error.";
+        return false;
     }
 
     private void InstallPluginFromPath(string path)

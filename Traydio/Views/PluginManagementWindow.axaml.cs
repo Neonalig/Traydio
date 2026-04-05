@@ -62,7 +62,7 @@ public partial class PluginManagementPage : UserControl
         viewModel.InstallPluginFromFilePath(viewModel.PluginDllPath);
     }
 
-    private void OnPluginSettingsClick(object? sender, RoutedEventArgs e)
+    private async void OnPluginSettingsClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not PluginManagementWindowViewModel viewModel)
         {
@@ -74,7 +74,12 @@ public partial class PluginManagementPage : UserControl
             return;
         }
 
-        viewModel.OpenPluginSettingsCommand.Execute(pluginItem);
+        if (viewModel.TryOpenPluginSettings(pluginItem, out var error))
+        {
+            return;
+        }
+
+        await ShowInfoDialogAsync("Plugin settings error", error ?? "Unknown error.");
     }
 
     private void OnUpgradeCandidateClick(object? sender, RoutedEventArgs e)
