@@ -14,10 +14,11 @@
     <Grid RowDefinitions="Auto,Auto,*,Auto,Auto" ColumnDefinitions="*" Margin="12" RowSpacing="10">
         <TextBlock Grid.Row="0" Text="Manage stations and playback" FontSize="18" FontWeight="SemiBold"/>
 
-        <Grid Grid.Row="1" ColumnDefinitions="2*,3*,Auto" ColumnSpacing="8">
+        <Grid Grid.Row="1" ColumnDefinitions="2*,3*,Auto,Auto" ColumnSpacing="8">
             <TextBox Grid.Column="0" Watermark="Station name" Text="{Binding StationName}"/>
             <TextBox Grid.Column="1" Watermark="Stream URL" Text="{Binding StationUrl}"/>
             <Button Grid.Column="2" Content="Add" Command="{Binding AddStationCommand}" MinWidth="90"/>
+            <Button Grid.Column="3" Content="Find More" Command="{Binding OpenStationSearchCommand}" MinWidth="110"/>
         </Grid>
 
         <Grid Grid.Row="2" ColumnDefinitions="*" RowDefinitions="*,Auto" RowSpacing="8">
@@ -37,7 +38,6 @@
             <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
                 <Button Content="Play Selected" Command="{Binding PlaySelectedStationCommand}"/>
                 <Button Content="Pause" Command="{Binding PauseCommand}"/>
-                <Button Content="Find Stations" Command="{Binding OpenStationSearchCommand}"/>
                 <Button Content="Remove Selected" Command="{Binding RemoveSelectedStationCommand}"/>
             </StackPanel>
         </Grid>
@@ -71,6 +71,7 @@
                     <Button Content="Save Communication Settings" Command="{Binding ApplyCommunicationSettingsCommand}"/>
                     <Button Content="Install Protocol Handler" Command="{Binding InstallProtocolHandlerCommand}"/>
                     <Button Content="Uninstall Protocol Handler" Command="{Binding UninstallProtocolHandlerCommand}"/>
+                    <Button Content="Plugin Manager" Command="{Binding OpenPluginManagerCommand}"/>
                     <TextBlock VerticalAlignment="Center" Text="{Binding SettingsStatus}"/>
                 </StackPanel>
             </Grid>

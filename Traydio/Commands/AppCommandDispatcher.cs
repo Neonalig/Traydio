@@ -52,6 +52,20 @@ public sealed class AppCommandDispatcher(
             case AppCommandKind.OpenStationSearch:
                 windowManager.ShowStationSearch();
                 break;
+            case AppCommandKind.OpenPluginManager:
+                windowManager.ShowPluginManager();
+                break;
+            case AppCommandKind.ToggleMuteOrOpenStationManager:
+                if (radioPlayer.IsPlaying)
+                {
+                    radioPlayer.ToggleMute();
+                }
+                else
+                {
+                    windowManager.ShowStationManager();
+                }
+
+                break;
             case AppCommandKind.Exit:
                 radioPlayer.Stop();
                 _lifetime?.Shutdown();

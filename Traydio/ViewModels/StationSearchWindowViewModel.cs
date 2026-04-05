@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Traydio.Commands;
 using Traydio.Common;
 using Traydio.Services;
 using Traydio.Views;
@@ -19,6 +20,7 @@ public partial class StationSearchWindowViewModel : ViewModelBase
     private readonly IStationDiscoveryService _stationDiscoveryService;
     private readonly IPluginManager _pluginManager;
     private readonly IStationRepository _stationRepository;
+    private readonly IAppCommandDispatcher _commandDispatcher;
 
     private CancellationTokenSource? _searchCancellation;
     private readonly List<DiscoveredStation> _lastSearchResults = [];
@@ -51,11 +53,13 @@ public partial class StationSearchWindowViewModel : ViewModelBase
     public StationSearchWindowViewModel(
         IStationDiscoveryService stationDiscoveryService,
         IPluginManager pluginManager,
-        IStationRepository stationRepository)
+        IStationRepository stationRepository,
+        IAppCommandDispatcher commandDispatcher)
     {
         _stationDiscoveryService = stationDiscoveryService;
         _pluginManager = pluginManager;
         _stationRepository = stationRepository;
+        _commandDispatcher = commandDispatcher;
 
         _pluginManager.PluginsChanged += (_, _) => RefreshProviders();
         RefreshProviders();
@@ -191,6 +195,12 @@ public partial class StationSearchWindowViewModel : ViewModelBase
 
             Status = $"Showing {Results.Count} filtered station(s) from {_lastSearchResults.Count}.";
         });
+    }
+
+    [RelayCommand]
+    private void OpenPluginManagerWindow()
+    {
+        _commandDispatcher.Dispatch(new AppCommand { Kind = AppCommandKind.OpenPluginManager });
     }
 
     private static bool MatchesFilter(DiscoveredStation station, string filter)

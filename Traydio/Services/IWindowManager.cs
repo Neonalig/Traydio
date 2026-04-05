@@ -5,5 +5,7 @@ public interface IWindowManager
     void ShowStationManager();
 
     void ShowStationSearch();
+
+    void ShowPluginManager();
 }
 

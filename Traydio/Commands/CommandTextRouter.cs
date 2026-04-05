@@ -34,6 +34,9 @@ public sealed class CommandTextRouter(IAppCommandDispatcher dispatcher) : IComma
             case "search":
                 dispatcher.Dispatch(new AppCommand { Kind = AppCommandKind.OpenStationSearch });
                 return true;
+            case "plugins":
+                dispatcher.Dispatch(new AppCommand { Kind = AppCommandKind.OpenPluginManager });
+                return true;
             case "volup":
                 dispatcher.Dispatch(new AppCommand { Kind = AppCommandKind.VolumeUp, Value = 5 });
                 return true;

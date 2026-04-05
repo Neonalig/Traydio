@@ -20,6 +20,8 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
 
     public bool IsPlaying => _mediaPlayer.IsPlaying;
 
+    public bool IsMuted => _mediaPlayer.Mute;
+
     public void Play(RadioStation station)
     {
         _currentMedia?.Dispose();
@@ -54,6 +56,11 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
     public void SetVolume(int volume)
     {
         _mediaPlayer.Volume = Math.Clamp(volume, 0, 100);
+    }
+
+    public void ToggleMute()
+    {
+        _mediaPlayer.Mute = !_mediaPlayer.Mute;
     }
 
     public void Dispose()

@@ -8,6 +8,7 @@ public sealed class WindowManager(IServiceProvider serviceProvider) : IWindowMan
 {
     private MainWindow? _mainWindow;
     private StationSearchWindow? _stationSearchWindow;
+    private PluginManagementWindow? _pluginManagementWindow;
 
     public void ShowStationManager()
     {
@@ -33,6 +34,19 @@ public sealed class WindowManager(IServiceProvider serviceProvider) : IWindowMan
         _stationSearchWindow = serviceProvider.GetRequiredService<StationSearchWindow>();
         _stationSearchWindow.Closed += (_, _) => _stationSearchWindow = null;
         _stationSearchWindow.Show();
+    }
+
+    public void ShowPluginManager()
+    {
+        if (_pluginManagementWindow is { IsVisible: true })
+        {
+            _pluginManagementWindow.Activate();
+            return;
+        }
+
+        _pluginManagementWindow = serviceProvider.GetRequiredService<PluginManagementWindow>();
+        _pluginManagementWindow.Closed += (_, _) => _pluginManagementWindow = null;
+        _pluginManagementWindow.Show();
     }
 }
 

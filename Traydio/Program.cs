@@ -90,8 +90,10 @@ sealed class Program
         services.AddSingleton<ITrayController, TrayController>();
 
         services.AddTransient<MainWindowViewModel>();
+        services.AddTransient<PluginManagementWindowViewModel>();
         services.AddTransient<StationSearchWindowViewModel>();
         services.AddTransient<MainWindow>();
+        services.AddTransient<PluginManagementWindow>();
         services.AddTransient<StationSearchWindow>();
 
         return services;

@@ -1,0 +1,60 @@
+﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Traydio.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        x:Class="Traydio.Views.PluginManagementWindow"
+        x:DataType="vm:PluginManagementWindowViewModel"
+        Width="900"
+        Height="640"
+        Title="Traydio - Plugin Management">
+
+    <Grid Margin="12" RowDefinitions="Auto,Auto,*,*,Auto" RowSpacing="8">
+        <TextBlock Grid.Row="0" Text="Plugin Management" FontWeight="SemiBold" FontSize="18"/>
+
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+            <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Plugin directory"/>
+            <TextBox Grid.Column="1" Text="{Binding PluginDirectory}"/>
+            <Button Grid.Column="2" Content="Save Directory" Command="{Binding SavePluginDirectoryCommand}"/>
+        </Grid>
+
+        <Border Grid.Row="2" BorderBrush="#445" BorderThickness="1" Padding="8" CornerRadius="6">
+            <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8">
+                <TextBlock Grid.Row="0" Text="Installed Plugins" FontWeight="SemiBold"/>
+                <ListBox Grid.Row="1" ItemsSource="{Binding InstalledPlugins}" SelectedItem="{Binding SelectedInstalledPlugin}" DisplayMemberBinding="{Binding DisplayName}"/>
+                <Button Grid.Row="2" Content="Disable Selected" Command="{Binding DisableSelectedPluginCommand}" HorizontalAlignment="Left"/>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="3" BorderBrush="#445" BorderThickness="1" Padding="8" CornerRadius="6">
+            <Grid RowDefinitions="Auto,*,Auto,Auto" RowSpacing="8">
+                <TextBlock Grid.Row="0" Text="Discovered Eligible Plugin DLLs" FontWeight="SemiBold"/>
+                <ListBox Grid.Row="1" ItemsSource="{Binding PluginCandidates}" SelectedItem="{Binding SelectedPluginCandidate}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel>
+                                <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"/>
+                                <TextBlock Text="{Binding Path}" Opacity="0.75" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8">
+                    <Button Content="Install Selected Candidate" Command="{Binding InstallSelectedCandidateCommand}"/>
+                    <Button Content="Refresh" Command="{Binding RefreshCommand}"/>
+                </StackPanel>
+
+                <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                    <TextBox Grid.Column="0" Watermark="Browse or paste plugin DLL path" Text="{Binding PluginDllPath}"/>
+                    <Button Grid.Column="1" Content="Browse..." Click="OnBrowsePluginClick"/>
+                    <Button Grid.Column="2" Content="Install From Path" Command="{Binding InstallFromPathCommand}"/>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <TextBlock Grid.Row="4" Text="{Binding Status}"/>
+    </Grid>
+</Window>
+

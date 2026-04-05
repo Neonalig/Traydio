@@ -22,10 +22,9 @@
             <Button Grid.Column="4" Content="Apply Filter" Command="{Binding ApplyFilterCommand}"/>
         </Grid>
 
-        <Grid Grid.Row="1" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-            <TextBox Grid.Column="0" Watermark="External plugin DLL path" Text="{Binding PluginDllPath}"/>
-            <Button Grid.Column="1" Content="Add Plugin" Command="{Binding AddPluginFromPathCommand}"/>
-            <Button Grid.Column="2" Content="Disable Selected Provider" Command="{Binding RemoveSelectedProviderCommand}"/>
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="8">
+            <Button Grid.Column="0" Content="Open Plugin Manager" Command="{Binding OpenPluginManagerWindowCommand}"/>
+            <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="Manage plugin install/disable from the dedicated plugin management window." Opacity="0.75"/>
         </Grid>
 
         <ListBox Grid.Row="2" ItemsSource="{Binding Results}" SelectedItem="{Binding SelectedResult}">

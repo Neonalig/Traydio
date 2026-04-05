@@ -6,6 +6,8 @@ public interface IRadioPlayer
 {
     bool IsPlaying { get; }
 
+    bool IsMuted { get; }
+
     void Play(RadioStation station);
 
     void Pause();
@@ -15,5 +17,7 @@ public interface IRadioPlayer
     void Stop();
 
     void SetVolume(int volume);
+
+    void ToggleMute();
 }
 

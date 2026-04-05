@@ -122,6 +122,12 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void OpenPluginManager()
+    {
+        _commandDispatcher.Dispatch(new AppCommand { Kind = AppCommandKind.OpenPluginManager });
+    }
+
+    [RelayCommand]
     private void ApplyVolume()
     {
         _commandDispatcher.Dispatch(new AppCommand

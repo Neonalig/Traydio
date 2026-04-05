@@ -35,12 +35,17 @@ public sealed class TrayController : ITrayController
 
     private NativeMenu BuildMenu()
     {
-        var menu = new NativeMenu
+        var menu = new NativeMenu();
+
+        if (OperatingSystem.IsWindows())
         {
-            CreateItem("Play / Resume", () => Dispatch(AppCommandKind.Play)),
-            CreateItem("Pause", () => Dispatch(AppCommandKind.Pause)),
-            new NativeMenuItemSeparator()
-        };
+            menu.Add(CreateItem("Primary Action", () => Dispatch(AppCommandKind.ToggleMuteOrOpenStationManager)));
+            menu.Add(new NativeMenuItemSeparator());
+        }
+
+        menu.Add(CreateItem("Play / Resume", () => Dispatch(AppCommandKind.Play)));
+        menu.Add(CreateItem("Pause", () => Dispatch(AppCommandKind.Pause)));
+        menu.Add(new NativeMenuItemSeparator());
 
         var stationsMenu = new NativeMenuItem("Stations")
         {
@@ -48,8 +53,10 @@ public sealed class TrayController : ITrayController
         };
 
         menu.Add(stationsMenu);
-        menu.Add(CreateItem("Add Station...", () => Dispatch(AppCommandKind.OpenStationManager)));
-        menu.Add(CreateItem("Find Stations...", () => Dispatch(AppCommandKind.OpenStationSearch)));
+        menu.Add(new NativeMenuItem("Add Station...")
+        {
+            Menu = BuildAddStationMenu(),
+        });
         menu.Add(new NativeMenuItemSeparator());
 
         menu.Add(CreateItem("Volume +", () =>
@@ -61,6 +68,15 @@ public sealed class TrayController : ITrayController
         menu.Add(CreateItem("Exit", () => Dispatch(AppCommandKind.Exit)));
 
         return menu;
+    }
+
+    private NativeMenu BuildAddStationMenu()
+    {
+        return
+        [
+            CreateItem("Open Station Manager", () => Dispatch(AppCommandKind.OpenStationManager)),
+            CreateItem("Find More Stations", () => Dispatch(AppCommandKind.OpenStationSearch))
+        ];
     }
 
     private NativeMenu BuildStationsMenu()

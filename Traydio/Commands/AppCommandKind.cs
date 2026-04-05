@@ -11,6 +11,8 @@ public enum AppCommandKind
     SetVolume,
     OpenStationManager,
     OpenStationSearch,
+    OpenPluginManager,
+    ToggleMuteOrOpenStationManager,
     Exit,
 }
 
