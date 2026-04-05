@@ -7,14 +7,45 @@
         x:Class="Traydio.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
-        Title="Traydio">
+        Width="760"
+        Height="520"
+        Title="Traydio - Station Manager">
 
-    <Design.DataContext>
-        <!-- This only sets the DataContext for the previewer in an IDE,
-             to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
-        <vm:MainWindowViewModel/>
-    </Design.DataContext>
+    <Grid RowDefinitions="Auto,Auto,*,Auto" ColumnDefinitions="*" Margin="12" RowSpacing="10">
+        <TextBlock Grid.Row="0" Text="Manage stations and playback" FontSize="18" FontWeight="SemiBold"/>
 
-    <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        <Grid Grid.Row="1" ColumnDefinitions="2*,3*,Auto" ColumnSpacing="8">
+            <TextBox Grid.Column="0" Watermark="Station name" Text="{Binding StationName}"/>
+            <TextBox Grid.Column="1" Watermark="Stream URL" Text="{Binding StationUrl}"/>
+            <Button Grid.Column="2" Content="Add" Command="{Binding AddStationCommand}" MinWidth="90"/>
+        </Grid>
+
+        <Grid Grid.Row="2" ColumnDefinitions="*" RowDefinitions="*,Auto" RowSpacing="8">
+            <ListBox Grid.Row="0"
+                     ItemsSource="{Binding Stations}"
+                     SelectedItem="{Binding SelectedStation}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel>
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding StreamUrl}" Opacity="0.7"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+                <Button Content="Play Selected" Command="{Binding PlaySelectedStationCommand}"/>
+                <Button Content="Pause" Command="{Binding PauseCommand}"/>
+                <Button Content="Remove Selected" Command="{Binding RemoveSelectedStationCommand}"/>
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+            <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Volume"/>
+            <Slider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding Volume}"/>
+            <Button Grid.Column="2" Content="Apply" Command="{Binding ApplyVolumeCommand}"/>
+        </Grid>
+    </Grid>
 
 </Window>

@@ -4,8 +4,9 @@ using Avalonia.Data.Core;
 using Avalonia.Data.Core.Plugins;
 using System.Linq;
 using Avalonia.Markup.Xaml;
-using Traydio.ViewModels;
-using Traydio.Views;
+using Microsoft.Extensions.DependencyInjection;
+using Traydio.Commands;
+using Traydio.Services;
 
 namespace Traydio;
 
@@ -18,15 +19,22 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        if (DataTemplates.OfType<ViewLocator>().FirstOrDefault() is { } viewLocator)
+        {
+            viewLocator.Services = Program.Services;
+        }
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             // Avoid duplicate validations from both Avalonia and the CommunityToolkit. 
             // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
             DisableAvaloniaDataAnnotationValidation();
-            desktop.MainWindow = new MainWindow
-            {
-                DataContext = new MainWindowViewModel(),
-            };
+
+            var commandDispatcher = Program.Services.GetRequiredService<IAppCommandDispatcher>();
+            commandDispatcher.Initialize(desktop);
+
+            var trayController = Program.Services.GetRequiredService<ITrayController>();
+            trayController.Initialize(desktop);
         }
 
         base.OnFrameworkInitializationCompleted();

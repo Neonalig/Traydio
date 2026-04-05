@@ -7,8 +7,9 @@ namespace Traydio.Views;
 [ViewFor(typeof(MainWindowViewModel))]
 public partial class MainWindow : Window
 {
-    public MainWindow()
+    public MainWindow(MainWindowViewModel viewModel)
     {
         InitializeComponent();
+        DataContext = viewModel;
     }
 }
