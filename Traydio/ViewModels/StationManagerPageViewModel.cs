@@ -81,18 +81,30 @@ public partial class StationManagerPageViewModel : ViewModelBase
     [RelayCommand]
     private void RemoveSelectedStation()
     {
-        if (SelectedStation is null)
-        {
-            return;
-        }
-
-        _stationRepository.RemoveStation(SelectedStation.Id);
+        RemoveStation(SelectedStation);
     }
 
     [RelayCommand]
     private void PlaySelectedStation()
     {
-        if (SelectedStation is null)
+        PlayStation(SelectedStation);
+    }
+
+    [RelayCommand]
+    private void RemoveStation(RadioStation? station)
+    {
+        if (station is null)
+        {
+            return;
+        }
+
+        _stationRepository.RemoveStation(station.Id);
+    }
+
+    [RelayCommand]
+    private void PlayStation(RadioStation? station)
+    {
+        if (station is null)
         {
             return;
         }
@@ -100,14 +112,8 @@ public partial class StationManagerPageViewModel : ViewModelBase
         _commandDispatcher.Dispatch(new AppCommand
         {
             Kind = AppCommandKind.PlayStation,
-            StationId = SelectedStation.Id,
+            StationId = station.Id,
         });
-    }
-
-    [RelayCommand]
-    private void Pause()
-    {
-        _commandDispatcher.Dispatch(new AppCommand { Kind = AppCommandKind.Pause });
     }
 
     private void RefreshStations()

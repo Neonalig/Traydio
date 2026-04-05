@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -18,15 +17,10 @@ public partial class StationManagerPage : UserControl
 {
     // ReSharper disable once InconsistentNaming
     private const string _M3U_EXTINF_PREFIX = "#EXTINF:";
-    private StationManagerPageViewModel? _boundViewModel;
-    private Flyout? _addFlyout;
 
     public StationManagerPage()
     {
         AvaloniaXamlLoader.Load(this);
-        HookAddFlyoutEvents();
-        DataContextChanged += OnDataContextChanged;
-        AttachToViewModel(DataContext as StationManagerPageViewModel);
     }
 
     public StationManagerPage(StationManagerPageViewModel viewModel)
@@ -76,7 +70,6 @@ public partial class StationManagerPage : UserControl
             if (files.Length == 1 && distinctStations.Length == 1)
             {
                 viewModel.PrefillNewStation(distinctStations[0].Name, distinctStations[0].Url);
-                OpenAddFlyout();
                 return;
             }
 
@@ -107,7 +100,6 @@ public partial class StationManagerPage : UserControl
             if (links.Length == 1)
             {
                 viewModel.PrefillNewStation("Dropped stream", links[0]);
-                OpenAddFlyout();
                 return;
             }
 
@@ -252,76 +244,48 @@ public partial class StationManagerPage : UserControl
                || string.Equals(ext, ".txt", StringComparison.OrdinalIgnoreCase);
     }
 
-    private void OpenAddFlyout()
+    private void OnStationsListDoubleTapped(object? sender, TappedEventArgs e)
     {
-        if (DataContext is StationManagerPageViewModel viewModel)
-        {
-            viewModel.IsAddFlyoutOpen = true;
-        }
-
-        var addButton = this.FindControl<Button>("AddStationButton");
-        addButton?.Flyout?.ShowAt(addButton);
-    }
-
-    private void HookAddFlyoutEvents()
-    {
-        var addButton = this.FindControl<Button>("AddStationButton");
-        _addFlyout = addButton?.Flyout as Flyout;
-        if (_addFlyout is null)
+        if (DataContext is not StationManagerPageViewModel viewModel)
         {
             return;
         }
 
-        _addFlyout.Opened += OnAddFlyoutOpened;
-        _addFlyout.Closed += OnAddFlyoutClosed;
-    }
-
-    private void OnDataContextChanged(object? sender, EventArgs e)
-    {
-        AttachToViewModel(DataContext as StationManagerPageViewModel);
-    }
-
-    private void AttachToViewModel(StationManagerPageViewModel? viewModel)
-    {
-        if (_boundViewModel is not null)
-        {
-            _boundViewModel.PropertyChanged -= OnViewModelPropertyChanged;
-        }
-
-        _boundViewModel = viewModel;
-
-        if (_boundViewModel is not null)
-        {
-            _boundViewModel.PropertyChanged += OnViewModelPropertyChanged;
-        }
-    }
-
-    private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
-    {
-        if (!string.Equals(e.PropertyName, nameof(StationManagerPageViewModel.IsAddFlyoutOpen), StringComparison.Ordinal))
+        if (sender is not ListBox { SelectedItem: Models.RadioStation station })
         {
             return;
         }
 
-        if (_boundViewModel?.IsAddFlyoutOpen == false)
-        {
-            _addFlyout?.Hide();
-        }
+        viewModel.PlayStationCommand.Execute(station);
     }
 
-    private void OnAddFlyoutOpened(object? sender, EventArgs e)
+    private void OnPlayStationClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (DataContext is StationManagerPageViewModel viewModel)
+        if (DataContext is not StationManagerPageViewModel viewModel)
         {
-            viewModel.IsAddFlyoutOpen = true;
+            return;
         }
+
+        if (sender is not Control { DataContext: Models.RadioStation station })
+        {
+            return;
+        }
+
+        viewModel.PlayStationCommand.Execute(station);
     }
 
-    private void OnAddFlyoutClosed(object? sender, EventArgs e)
+    private void OnRemoveStationClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        if (DataContext is StationManagerPageViewModel viewModel)
+        if (DataContext is not StationManagerPageViewModel viewModel)
         {
-            viewModel.IsAddFlyoutOpen = false;
+            return;
         }
+
+        if (sender is not Control { DataContext: Models.RadioStation station })
+        {
+            return;
+        }
+
+        viewModel.RemoveStationCommand.Execute(station);
     }
 }

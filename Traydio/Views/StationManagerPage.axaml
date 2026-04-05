@@ -2,83 +2,65 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Traydio.ViewModels"
              x:Class="Traydio.Views.StationManagerPage"
+             x:Name="Root"
              x:DataType="vm:StationManagerPageViewModel"
              DragDrop.AllowDrop="True"
              DragDrop.DragOver="OnDragOver"
              DragDrop.Drop="OnDrop">
 
-    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="6" Margin="0">
-        <Border Grid.Row="0" Classes="toolbar-frame" Margin="0">
-            <StackPanel Orientation="Horizontal" Spacing="6">
-                <Button x:Name="AddStationButton" Classes="toolbar-button">
-                    <Button.Flyout>
-                        <Flyout Placement="Bottom">
-                            <StackPanel Width="380" Spacing="8" Margin="8">
-                                <TextBlock Text="Add Station" FontWeight="SemiBold"/>
-                                <TextBlock Text="Enter a readable station name and a direct stream URL." Classes="helper-text"/>
-                                <TextBox Watermark="Station name" Text="{Binding NewStationName}"/>
-                                <TextBox Watermark="Stream URL" Text="{Binding NewStationUrl}"/>
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Button Classes="command-button" Content="Add" Command="{Binding AddStationCommand}"/>
-                                    <Button Classes="command-button" Content="Find More" Command="{Binding FindMoreStationsCommand}"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Flyout>
-                    </Button.Flyout>
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Image Source="/Assets/Icons9x/add.ico" Classes="icon-small"/>
-                        <TextBlock Text="Add Station" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-
-                <Button Classes="toolbar-button" Command="{Binding PlaySelectedStationCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Image Source="/Assets/Icons9x/play.ico" Classes="icon-small"/>
-                        <TextBlock Text="Play Selected" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-
-                <Button Classes="toolbar-button" Command="{Binding PauseCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Image Source="/Assets/Icons9x/pause.ico" Classes="icon-small"/>
-                        <TextBlock Text="Pause" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-
-                <Button Classes="toolbar-button" Command="{Binding RemoveSelectedStationCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Image Source="/Assets/Icons9x/remove.ico" Classes="icon-small"/>
-                        <TextBlock Text="Remove Selected" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-            </StackPanel>
-        </Border>
-
-        <Border Grid.Row="1" Classes="status-strip" Margin="0">
+    <Grid RowDefinitions="Auto,*" RowSpacing="6" Margin="0">
+        <Border Grid.Row="0" Classes="status-strip" Margin="0">
             <TextBlock Text="Tip: drag and drop stations to reorder playback priority. Changes are retained when station operations run." Classes="helper-text"/>
         </Border>
 
-        <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="0" Margin="4,0,4,4">
+        <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="0" Margin="4,0,4,4">
             <Border Classes="group-caption-chip">
                 <TextBlock Text="Saved Stations" Classes="group-title"/>
             </Border>
             <Border Grid.Row="1" Classes="group-frame" Margin="0,-8,0,0">
-                <Grid RowDefinitions="*,Auto" RowSpacing="8">
-                    <ListBox Grid.Row="0" Classes="list-surface" ItemsSource="{Binding Stations}" SelectedItem="{Binding SelectedStation}">
+                <Grid RowDefinitions="*,Auto" RowSpacing="10">
+                    <ListBox Grid.Row="0"
+                             x:Name="StationsList"
+                             Classes="list-surface"
+                             ItemsSource="{Binding Stations}"
+                             SelectedItem="{Binding SelectedStation}"
+                             DoubleTapped="OnStationsListDoubleTapped">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
                                     <Image Source="/Assets/Icons9x/stations.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
                                     <StackPanel Grid.Column="1">
                                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
                                         <TextBlock Text="{Binding StreamUrl}" Classes="subtle-text"/>
                                     </StackPanel>
+                                    <Button Grid.Column="2"
+                                            Classes="icon-only"
+                                            Click="OnPlayStationClick">
+                                        <Image Source="/Assets/Icons9x/play.ico" Classes="icon-small"/>
+                                    </Button>
+                                    <Button Grid.Column="3"
+                                            Classes="icon-only"
+                                            Click="OnRemoveStationClick">
+                                        <Image Source="/Assets/Icons9x/remove.ico" Classes="icon-small"/>
+                                    </Button>
                                 </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
 
-                    <TextBlock Grid.Row="1" Text="Select a station, then use toolbar actions to play, pause, or remove it." Classes="helper-text"/>
+                    <Grid Grid.Row="1" ColumnDefinitions="*,*,Auto,Auto" ColumnSpacing="8">
+                        <TextBox Grid.Column="0" Watermark="Station name" Text="{Binding NewStationName}"/>
+                        <TextBox Grid.Column="1" Watermark="Stream URL" Text="{Binding NewStationUrl}"/>
+                        <Button Grid.Column="2" Classes="command-button" Command="{Binding AddStationCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Image Source="/Assets/Icons9x/add.ico" Classes="icon-small"/>
+                                <TextBlock Text="Add" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="3" Classes="command-button" Command="{Binding FindMoreStationsCommand}">
+                            <TextBlock Text="Find More" VerticalAlignment="Center"/>
+                        </Button>
+                    </Grid>
                 </Grid>
             </Border>
         </Grid>
