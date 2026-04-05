@@ -152,12 +152,12 @@ public partial class StationSearchWindowViewModel : ViewModelBase
 
         if (_pluginManager.RemovePlugin(SelectedProvider.PluginId, out var error))
         {
-            Status = $"Provider '{SelectedProvider.DisplayName}' disabled.";
+            Status = $"Provider '{SelectedProvider.DisplayName}' removed or disabled.";
             RefreshProviders();
             return;
         }
 
-        Status = "Could not disable provider: " + (error ?? "Unknown error.");
+        Status = "Could not remove provider: " + (error ?? "Unknown error.");
     }
 
     [RelayCommand]

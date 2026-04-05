@@ -60,6 +60,7 @@ public partial class PluginManagementPage : UserControl
 
         viewModel.PluginDllPath = selected.TryGetLocalPath() ?? selected.Name;
         viewModel.InstallPluginFromFilePath(viewModel.PluginDllPath);
+        await ShowViewModelStatusDialogAsync(viewModel, "Plugin install");
     }
 
     private async void OnPluginSettingsClick(object? sender, RoutedEventArgs e)
@@ -82,7 +83,7 @@ public partial class PluginManagementPage : UserControl
         await ShowInfoDialogAsync("Plugin settings error", error ?? "Unknown error.");
     }
 
-    private void OnUpgradeCandidateClick(object? sender, RoutedEventArgs e)
+    private async void OnUpgradeCandidateClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not PluginManagementWindowViewModel viewModel)
         {
@@ -94,10 +95,11 @@ public partial class PluginManagementPage : UserControl
             return;
         }
 
-        viewModel.UpgradeCandidateCommand.Execute(candidate);
+        viewModel.InstallCandidate(candidate);
+        await ShowViewModelStatusDialogAsync(viewModel, "Plugin upgrade");
     }
 
-    private void OnInstalledCheckboxClick(object? sender, RoutedEventArgs e)
+    private async void OnInstalledCheckboxClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not PluginManagementWindowViewModel viewModel)
         {
@@ -110,9 +112,10 @@ public partial class PluginManagementPage : UserControl
         }
 
         viewModel.SetInstalledPluginEnabled(pluginItem, isChecked);
+        await ShowViewModelStatusDialogAsync(viewModel, "Plugin state");
     }
 
-    private void OnInstalledListDoubleTapped(object? sender, TappedEventArgs e)
+    private async void OnInstalledListDoubleTapped(object? sender, TappedEventArgs e)
     {
         if (DataContext is not PluginManagementWindowViewModel viewModel)
         {
@@ -125,9 +128,63 @@ public partial class PluginManagementPage : UserControl
         }
 
         viewModel.ToggleInstalledPlugin(pluginItem);
+        await ShowViewModelStatusDialogAsync(viewModel, "Plugin state");
     }
 
-    private void OnCandidateListDoubleTapped(object? sender, TappedEventArgs e)
+    private async void OnInstalledListKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key != Key.Delete)
+        {
+            return;
+        }
+
+        if (DataContext is not PluginManagementWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        var pluginItem = viewModel.SelectedInstalledPlugin;
+        if (pluginItem is null)
+        {
+            return;
+        }
+
+        await ConfirmAndRemovePluginAsync(viewModel, pluginItem);
+        e.Handled = true;
+    }
+
+    private async void OnUninstallPluginClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not PluginManagementWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        if (sender is not Control { DataContext: PluginManagementWindowViewModel.InstalledPluginItem pluginItem })
+        {
+            return;
+        }
+
+        await ConfirmAndRemovePluginAsync(viewModel, pluginItem);
+    }
+
+    private async Task ConfirmAndRemovePluginAsync(PluginManagementWindowViewModel viewModel, PluginManagementWindowViewModel.InstalledPluginItem pluginItem)
+    {
+        var verb = pluginItem.CanUninstall ? "uninstall" : "disable";
+        var choice = await ShowYesNoCancelDialogAsync(
+            $"Confirm {verb}",
+            $"{(pluginItem.CanUninstall ? "Uninstall" : "Disable")} plugin '{pluginItem.DisplayName}'?");
+
+        if (choice != UserChoice.Yes)
+        {
+            return;
+        }
+
+        viewModel.RemoveInstalledPlugin(pluginItem);
+        await ShowViewModelStatusDialogAsync(viewModel, "Plugin remove");
+    }
+
+    private async void OnCandidateListDoubleTapped(object? sender, TappedEventArgs e)
     {
         if (DataContext is not PluginManagementWindowViewModel viewModel)
         {
@@ -140,6 +197,7 @@ public partial class PluginManagementPage : UserControl
         }
 
         viewModel.InstallCandidate(candidate);
+        await ShowViewModelStatusDialogAsync(viewModel, "Plugin install");
     }
 
     private void OnPluginListDragOver(object? sender, DragEventArgs e)
@@ -151,17 +209,17 @@ public partial class PluginManagementPage : UserControl
         e.DragEffects = hasFiles ? DragDropEffects.Copy : DragDropEffects.None;
     }
 
-    private void OnInstalledListDrop(object? sender, DragEventArgs e)
+    private async void OnInstalledListDrop(object? sender, DragEventArgs e)
     {
-        InstallDroppedPluginFiles(e);
+        await InstallDroppedPluginFilesAsync(e);
     }
 
-    private void OnCandidateListDrop(object? sender, DragEventArgs e)
+    private async void OnCandidateListDrop(object? sender, DragEventArgs e)
     {
-        InstallDroppedPluginFiles(e);
+        await InstallDroppedPluginFilesAsync(e);
     }
 
-    private void InstallDroppedPluginFiles(DragEventArgs e)
+    private async Task InstallDroppedPluginFilesAsync(DragEventArgs e)
     {
         if (DataContext is not PluginManagementWindowViewModel viewModel)
         {
@@ -182,6 +240,7 @@ public partial class PluginManagementPage : UserControl
         }
 
         viewModel.InstallPluginsFromDroppedPaths(files);
+        await ShowViewModelStatusDialogAsync(viewModel, "Plugin install");
     }
 
     private async void OnChangePluginDirectoryClick(object? sender, RoutedEventArgs e)
@@ -237,11 +296,11 @@ public partial class PluginManagementPage : UserControl
 
         if (viewModel.ChangePluginDirectory(nextPath, migrate, out var error))
         {
-            viewModel.Status = "Plugin install folder updated.";
+            await ShowInfoDialogAsync("Plugin folder", "Plugin install folder updated.");
             return;
         }
 
-        viewModel.Status = "Could not change plugin folder: " + (error ?? "Unknown error.");
+        await ShowInfoDialogAsync("Plugin folder", "Could not change plugin folder: " + (error ?? "Unknown error."));
     }
 
     private async void OnInstallFromPathClick(object? sender, RoutedEventArgs e)
@@ -258,6 +317,17 @@ public partial class PluginManagementPage : UserControl
         }
 
         viewModel.InstallPluginFromFilePath(viewModel.PluginDllPath);
+        await ShowViewModelStatusDialogAsync(viewModel, "Plugin install");
+    }
+
+    private async Task ShowViewModelStatusDialogAsync(PluginManagementWindowViewModel viewModel, string title)
+    {
+        if (string.IsNullOrWhiteSpace(viewModel.Status))
+        {
+            return;
+        }
+
+        await ShowInfoDialogAsync(title, viewModel.Status);
     }
 
     private async Task ShowInfoDialogAsync(string title, string message)

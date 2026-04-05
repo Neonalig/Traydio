@@ -6,10 +6,10 @@
              mc:Ignorable="d"
              x:Class="Traydio.Views.PluginManagementPage"
              x:DataType="vm:PluginManagementWindowViewModel">
-    <Grid Margin="0" RowDefinitions="Auto,*,Auto" RowSpacing="6">
+    <Grid Margin="0" RowDefinitions="Auto,*" RowSpacing="6">
 
         <Border Grid.Row="0" Classes="status-strip" Margin="0">
-            <TextBlock Text="Double-click candidates to install and installed entries to disable/enable. You can also drop plugin DLLs from File Explorer onto either list." Classes="helper-text"/>
+            <TextBlock Text="Double-click candidates to install and installed entries to disable/enable. Use Uninstall (or Delete key) on installed plugins to remove/disable them. You can also drop plugin DLLs from File Explorer onto either list." Classes="helper-text"/>
         </Border>
 
         <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="0" Margin="4,0,4,4">
@@ -42,13 +42,14 @@
                                  Classes="list-surface"
                                  ItemsSource="{Binding InstalledPlugins}"
                                  SelectedItem="{Binding SelectedInstalledPlugin}"
+                                 KeyDown="OnInstalledListKeyDown"
                                  DoubleTapped="OnInstalledListDoubleTapped"
                                  DragDrop.AllowDrop="True"
                                  DragDrop.DragOver="OnPluginListDragOver"
                                  DragDrop.Drop="OnInstalledListDrop">
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="vm:PluginManagementWindowViewModel+InstalledPluginItem">
-                                    <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8">
+                                    <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="8">
                                         <CheckBox Grid.Column="0"
                                                   IsChecked="{Binding IsEnabled}"
                                                   VerticalAlignment="Center"
@@ -67,6 +68,11 @@
                                                 <Image Source="/Assets/Icons9x/settings.ico" Classes="icon-small"/>
                                                 <TextBlock Text="Settings" VerticalAlignment="Center"/>
                                             </StackPanel>
+                                        </Button>
+                                        <Button Grid.Column="4"
+                                                Classes="command-button"
+                                                Click="OnUninstallPluginClick">
+                                            <TextBlock Text="Uninstall" VerticalAlignment="Center"/>
                                         </Button>
                                     </Grid>
                                 </DataTemplate>
@@ -118,9 +124,6 @@
             </Border>
         </Grid>
 
-        <Border Grid.Row="2" Classes="status-strip" Margin="0">
-            <TextBlock Text="{Binding Status}" Classes="accent-text"/>
-        </Border>
     </Grid>
 </UserControl>
 

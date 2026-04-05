@@ -29,5 +29,5 @@ public sealed record PluginInventoryItem(
     string AssemblyName,
     Version Version,
     bool HasSettings,
-    bool IsEnabled);
-
+    bool IsEnabled,
+    bool CanUninstall);

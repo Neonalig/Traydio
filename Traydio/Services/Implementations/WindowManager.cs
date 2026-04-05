@@ -81,9 +81,8 @@ public sealed class WindowManager(
         }
         catch (Exception ex)
         {
-            error = "Plugin settings failed to open: " + ex.Message;
             Console.Error.WriteLine($"[Traydio][PluginSettings] Failed to create settings view for pluginId={plugin.Id}: {ex}");
-            return false;
+            content = CreatePluginSettingsFailureView(plugin.DisplayName, ex);
         }
 
         if (content is not Control control)
@@ -114,6 +113,33 @@ public sealed class WindowManager(
         }
 
         return true;
+    }
+
+    private static Control CreatePluginSettingsFailureView(string pluginDisplayName, Exception ex)
+    {
+        return new StackPanel
+        {
+            Margin = new Avalonia.Thickness(12),
+            Spacing = 8,
+            Children =
+            {
+                new TextBlock
+                {
+                    Text = $"{pluginDisplayName} settings could not be loaded.",
+                    FontWeight = Avalonia.Media.FontWeight.SemiBold,
+                },
+                new TextBlock
+                {
+                    Text = "The plugin threw an exception while creating its settings view.",
+                    TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+                },
+                new TextBlock
+                {
+                    Text = ex.GetType().Name + ": " + ex.Message,
+                    TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+                },
+            },
+        };
     }
 
     private sealed class PluginSettingsAccessor(IPluginSettingsProvider pluginSettingsProvider, string pluginId) : IPluginSettingsAccessor
@@ -149,4 +175,3 @@ public sealed class WindowManager(
         }
     }
 }
-

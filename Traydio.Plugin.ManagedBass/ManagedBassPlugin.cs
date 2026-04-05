@@ -61,8 +61,12 @@ public sealed class ManagedBassPlugin : ITraydioPlugin
 
         public object? CreateSettingsView(IPluginSettingsAccessor settingsAccessor)
         {
+            if (settingsAccessor is null)
+            {
+                throw new ArgumentNullException(nameof(settingsAccessor));
+            }
+
             return new BassPluginSettingsView(settingsAccessor);
         }
     }
 }
-

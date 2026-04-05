@@ -17,18 +17,67 @@ public partial class BassPluginSettingsView : UserControl
     private static readonly HttpClient _http = new();
 
     private readonly IPluginSettingsAccessor _settingsAccessor;
+    private readonly TextBox _folderPathBox;
+    private readonly ComboBox _outputDeviceComboBox;
+    private readonly TextBlock _statusText;
 
     public BassPluginSettingsView(IPluginSettingsAccessor settingsAccessor)
     {
-        _settingsAccessor = settingsAccessor;
-        AvaloniaXamlLoader.Load(this);
+        _settingsAccessor = settingsAccessor ?? throw new ArgumentNullException(nameof(settingsAccessor));
+        _folderPathBox = new TextBox();
+        _outputDeviceComboBox = new ComboBox();
+        _statusText = new TextBlock();
 
-        var configuredPath = _settingsAccessor.GetValue(BassPluginSettings.NativeLibraryFolderKey);
-        FolderPathBox.Text = string.IsNullOrWhiteSpace(configuredPath)
-            ? Path.Combine(AppContext.BaseDirectory, "BASS")
-            : configuredPath;
+        try
+        {
+            AvaloniaXamlLoader.Load(this);
 
-        LoadOutputDeviceOptions();
+            _folderPathBox = this.FindControl<TextBox>("FolderPathBox")
+                ?? throw new InvalidOperationException("ManagedBass settings view is missing FolderPathBox.");
+            _outputDeviceComboBox = this.FindControl<ComboBox>("OutputDeviceComboBox")
+                ?? throw new InvalidOperationException("ManagedBass settings view is missing OutputDeviceComboBox.");
+            _statusText = this.FindControl<TextBlock>("StatusText")
+                ?? throw new InvalidOperationException("ManagedBass settings view is missing StatusText.");
+
+            _folderPathBox.Text = Path.Combine(AppContext.BaseDirectory, "BASS");
+
+            try
+            {
+                var configuredPath = _settingsAccessor.GetValue(BassPluginSettings.NativeLibraryFolderKey);
+                if (!string.IsNullOrWhiteSpace(configuredPath))
+                {
+                    _folderPathBox.Text = configuredPath;
+                }
+            }
+            catch (Exception ex)
+            {
+                _statusText.Text = "Failed to load saved path: " + ex.Message;
+            }
+
+            LoadOutputDeviceOptions();
+        }
+        catch (Exception ex)
+        {
+            Content = new StackPanel
+            {
+                Margin = new Avalonia.Thickness(12),
+                Spacing = 8,
+                Children =
+                {
+                    new TextBlock
+                    {
+                        Text = "ManagedBass settings could not be loaded.",
+                        FontWeight = Avalonia.Media.FontWeight.SemiBold,
+                    },
+                    new TextBlock
+                    {
+                        Text = ex.GetType().Name + ": " + ex.Message,
+                        TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+                    },
+                },
+            };
+            _statusText.Text = "Initialization failed.";
+        }
     }
 
     private async void OnBrowseClick(object? sender, RoutedEventArgs e)
@@ -51,21 +100,21 @@ public partial class BassPluginSettingsView : UserControl
             return;
         }
 
-        FolderPathBox.Text = selected.TryGetLocalPath() ?? selected.Name;
+        _folderPathBox.Text = selected.TryGetLocalPath() ?? selected.Name;
         SaveFolderPath();
-        StatusText.Text = "Saved native folder path.";
+        _statusText.Text = "Saved native folder path.";
     }
 
     private void OnSavePathClick(object? sender, RoutedEventArgs e)
     {
         SaveFolderPath();
-        StatusText.Text = "Saved native folder path.";
+        _statusText.Text = "Saved native folder path.";
     }
 
     private void OnSaveOutputDeviceClick(object? sender, RoutedEventArgs e)
     {
         SaveOutputDeviceIndex();
-        StatusText.Text = "Saved output device setting.";
+        _statusText.Text = "Saved output device setting.";
     }
 
     private async void OnDownloadClick(object? sender, RoutedEventArgs e)
@@ -86,10 +135,10 @@ public partial class BassPluginSettingsView : UserControl
 
     private async System.Threading.Tasks.Task DownloadNativeFileAsync(string archiveUrl, string dllName, string downloadingMessage)
     {
-        var folderPath = FolderPathBox.Text?.Trim();
+        var folderPath = _folderPathBox.Text?.Trim();
         if (string.IsNullOrWhiteSpace(folderPath))
         {
-            StatusText.Text = "Choose a folder first.";
+            _statusText.Text = "Choose a folder first.";
             return;
         }
 
@@ -99,7 +148,7 @@ public partial class BassPluginSettingsView : UserControl
             SaveFolderPath();
             SaveOutputDeviceIndex();
 
-            StatusText.Text = downloadingMessage;
+            _statusText.Text = downloadingMessage;
             var zipBytes = await _http.GetByteArrayAsync(archiveUrl).ConfigureAwait(true);
 
             using var archiveStream = new MemoryStream(zipBytes);
@@ -111,7 +160,7 @@ public partial class BassPluginSettingsView : UserControl
 
             if (entry is null)
             {
-                StatusText.Text = $"Downloaded archive did not contain {architectureFolder}/{dllName}.";
+                _statusText.Text = $"Downloaded archive did not contain {architectureFolder}/{dllName}.";
                 return;
             }
 
@@ -120,23 +169,23 @@ public partial class BassPluginSettingsView : UserControl
             await using var outputStream = File.Create(outputPath);
             await entryStream.CopyToAsync(outputStream).ConfigureAwait(true);
 
-            StatusText.Text = $"Downloaded {dllName} to {outputPath}";
+            _statusText.Text = $"Downloaded {dllName} to {outputPath}";
         }
         catch (Exception ex)
         {
-            StatusText.Text = "Download failed: " + ex.Message;
+            _statusText.Text = "Download failed: " + ex.Message;
         }
     }
 
     private void SaveFolderPath()
     {
-        _settingsAccessor.SetValue(BassPluginSettings.NativeLibraryFolderKey, FolderPathBox.Text);
+        _settingsAccessor.SetValue(BassPluginSettings.NativeLibraryFolderKey, _folderPathBox.Text);
         _settingsAccessor.Save();
     }
 
     private void SaveOutputDeviceIndex()
     {
-        if (OutputDeviceComboBox.SelectedItem is OutputDeviceOption { DeviceIndex: int selectedIndex })
+        if (_outputDeviceComboBox.SelectedItem is OutputDeviceOption { DeviceIndex: { } selectedIndex })
         {
             _settingsAccessor.SetValue(BassPluginSettings.OutputDeviceIndexKey, selectedIndex.ToString());
         }
@@ -150,31 +199,47 @@ public partial class BassPluginSettingsView : UserControl
 
     private void LoadOutputDeviceOptions()
     {
-        var configuredValue = _settingsAccessor.GetValue(BassPluginSettings.OutputDeviceIndexKey);
-        var configuredIndex = int.TryParse(configuredValue, out var parsedIndex)
-            ? parsedIndex
-            : (int?)null;
+        int? configuredIndex = null;
+
+        try
+        {
+            var configuredValue = _settingsAccessor.GetValue(BassPluginSettings.OutputDeviceIndexKey);
+            configuredIndex = int.TryParse(configuredValue, out var parsedIndex)
+                ? parsedIndex
+                : (int?)null;
+        }
+        catch (Exception ex)
+        {
+            _statusText.Text = "Failed to load saved output device: " + ex.Message;
+        }
 
         var options = new System.Collections.Generic.List<OutputDeviceOption>
         {
             new(null, "System default"),
         };
 
-        for (var index = 0; index < Bass.DeviceCount; index++)
+        try
         {
-            if (!Bass.GetDeviceInfo(index, out var info) || !info.IsEnabled)
+            for (var index = 0; index < Bass.DeviceCount; index++)
             {
-                continue;
-            }
+                if (!Bass.GetDeviceInfo(index, out var info) || !info.IsEnabled)
+                {
+                    continue;
+                }
 
-            var name = string.IsNullOrWhiteSpace(info.Name)
-                ? $"Device {index}"
-                : info.Name;
-            options.Add(new OutputDeviceOption(index, $"{name} ({index})"));
+                var name = string.IsNullOrWhiteSpace(info.Name)
+                    ? $"Device {index}"
+                    : info.Name;
+                options.Add(new OutputDeviceOption(index, $"{name} ({index})"));
+            }
+        }
+        catch (Exception ex)
+        {
+            _statusText.Text = "Failed to list output devices: " + ex.Message;
         }
 
-        OutputDeviceComboBox.ItemsSource = options;
-        OutputDeviceComboBox.SelectedItem = options.FirstOrDefault(option => option.DeviceIndex == configuredIndex)
+        _outputDeviceComboBox.ItemsSource = options;
+        _outputDeviceComboBox.SelectedItem = options.FirstOrDefault(option => option.DeviceIndex == configuredIndex)
             ?? options.First();
     }
 

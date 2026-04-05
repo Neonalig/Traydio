@@ -36,7 +36,8 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
                 item.AssemblyName,
                 item.Version,
                 item.HasSettings,
-                item.IsEnabled))
+                item.IsEnabled,
+                item.CanUninstall))
             .ToArray();
     }
 
@@ -111,16 +112,59 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
 
     public bool RemovePlugin(string pluginId, out string? error)
     {
-        return SetPluginEnabled(pluginId, enabled: false, out error);
+        error = null;
+        Console.Error.WriteLine($"[Traydio][PluginManager] Remove requested pluginId={pluginId}");
+
+        var descriptor = _inventory.FirstOrDefault(item =>
+            string.Equals(item.Id, pluginId, StringComparison.OrdinalIgnoreCase));
+        if (descriptor is null)
+        {
+            error = "Plugin not found.";
+            Console.Error.WriteLine($"[Traydio][PluginManager] Remove failed pluginId={pluginId}: {error}");
+            return false;
+        }
+
+        if (!descriptor.CanUninstall || string.IsNullOrWhiteSpace(descriptor.SourcePath))
+        {
+            // Built-in/referenced plugins cannot be deleted from disk, so remove means disable.
+            Console.Error.WriteLine($"[Traydio][PluginManager] Remove fallback-to-disable pluginId={pluginId}");
+            return SetPluginEnabled(pluginId, enabled: false, out error);
+        }
+
+        try
+        {
+            var settings = stationRepository.StationDiscoveryPlugins;
+            settings.DisabledPluginIds.RemoveAll(id => string.Equals(id, pluginId, StringComparison.OrdinalIgnoreCase));
+            stationRepository.SaveStationDiscoveryPluginSettings(settings);
+
+            File.Delete(descriptor.SourcePath);
+            ReloadPlugins();
+            Console.Error.WriteLine($"[Traydio][PluginManager] Remove succeeded pluginId={pluginId} path={descriptor.SourcePath}");
+            return true;
+        }
+        catch (IOException ex)
+        {
+            error = "Plugin file is currently locked and could not be removed.";
+            Console.Error.WriteLine($"[Traydio][PluginManager] Remove IO failure pluginId={pluginId} path={descriptor.SourcePath}: {ex}");
+            return false;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            error = "Access denied while removing plugin file.";
+            Console.Error.WriteLine($"[Traydio][PluginManager] Remove access denied pluginId={pluginId} path={descriptor.SourcePath}: {ex}");
+            return false;
+        }
     }
 
     public bool SetPluginEnabled(string pluginId, bool enabled, out string? error)
     {
         error = null;
+        Console.Error.WriteLine($"[Traydio][PluginManager] SetPluginEnabled pluginId={pluginId} enabled={enabled}");
 
         if (_inventory.All(p => !string.Equals(p.Id, pluginId, StringComparison.OrdinalIgnoreCase)))
         {
             error = "Plugin not found.";
+            Console.Error.WriteLine($"[Traydio][PluginManager] SetPluginEnabled failed pluginId={pluginId}: {error}");
             return false;
         }
 
@@ -139,11 +183,13 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
 
         if (!changed)
         {
+            Console.Error.WriteLine($"[Traydio][PluginManager] SetPluginEnabled no-op pluginId={pluginId} enabled={enabled}");
             return true;
         }
 
         stationRepository.SaveStationDiscoveryPluginSettings(settings);
         ReloadPlugins();
+        Console.Error.WriteLine($"[Traydio][PluginManager] SetPluginEnabled succeeded pluginId={pluginId} enabled={enabled}");
         return true;
     }
 
@@ -259,7 +305,7 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
         {
             foreach (var plugin in CreatePlugins(assembly))
             {
-                AddIfNotExists(plugin, assembly);
+                AddIfNotExists(plugin, assembly, sourcePath: null, canUninstall: false);
             }
         }
     }
@@ -287,9 +333,10 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
             }
 
             _loadedPlugins[pluginPath] = new LoadedPlugin(loadContext, plugins);
+            var canUninstall = IsPathUnderConfiguredPluginDirectory(pluginPath);
             foreach (var plugin in plugins)
             {
-                AddIfNotExists(plugin, assembly);
+                AddIfNotExists(plugin, assembly, pluginPath, canUninstall);
             }
         }
         catch
@@ -327,7 +374,27 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
         }
     }
 
-    private void AddIfNotExists(ITraydioPlugin plugin, Assembly sourceAssembly)
+    private bool IsPathUnderConfiguredPluginDirectory(string pluginPath)
+    {
+        if (string.IsNullOrWhiteSpace(_pluginDirectory))
+        {
+            return false;
+        }
+
+        try
+        {
+            var pluginFullPath = Path.GetFullPath(pluginPath);
+            var pluginDirectoryFullPath = Path.GetFullPath(_pluginDirectory);
+
+            return string.Equals(Path.GetDirectoryName(pluginFullPath), pluginDirectoryFullPath, StringComparison.OrdinalIgnoreCase);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void AddIfNotExists(ITraydioPlugin plugin, Assembly sourceAssembly, string? sourcePath, bool canUninstall)
     {
         if (_inventory.Any(p => string.Equals(p.Id, plugin.Id, StringComparison.OrdinalIgnoreCase)))
         {
@@ -343,6 +410,8 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
             AssemblyName = assemblyName.Name ?? plugin.Id,
             Version = assemblyName.Version ?? new Version(0, 0, 0, 0),
             HasSettings = plugin.Capabilities.OfType<IPluginSettingsCapability>().Any(),
+            SourcePath = sourcePath,
+            CanUninstall = canUninstall,
         });
     }
 
@@ -361,6 +430,10 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
         public required bool HasSettings { get; init; }
 
         public bool IsEnabled { get; set; }
+
+        public string? SourcePath { get; init; }
+
+        public bool CanUninstall { get; init; }
     }
 
     private sealed class LoadedPlugin(PluginLoadContext context, IReadOnlyList<ITraydioPlugin> plugins)

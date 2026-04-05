@@ -70,7 +70,8 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
                     plugin.HasSettings,
                     plugin.AssemblyName,
                     plugin.Version,
-                    plugin.IsEnabled));
+                    plugin.IsEnabled,
+                    plugin.CanUninstall));
             }
 
             PluginDirectory = _stationRepository.StationDiscoveryPlugins.PluginDirectory;
@@ -145,6 +146,18 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         }
 
         Status = "Could not disable plugin: " + (error ?? "Unknown error.");
+    }
+
+    [RelayCommand]
+    private void RemoveSelectedPlugin()
+    {
+        RemoveInstalledPlugin(SelectedInstalledPlugin);
+    }
+
+    [RelayCommand]
+    private void RemovePlugin(InstalledPluginItem? pluginItem)
+    {
+        RemoveInstalledPlugin(pluginItem);
     }
 
     [RelayCommand]
@@ -267,6 +280,27 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         }
 
         SetInstalledPluginEnabled(pluginItem, !pluginItem.IsEnabled);
+    }
+
+    public bool RemoveInstalledPlugin(InstalledPluginItem? pluginItem)
+    {
+        if (pluginItem is null)
+        {
+            Status = "Select an installed plugin first.";
+            return false;
+        }
+
+        if (_pluginManager.RemovePlugin(pluginItem.Id, out var error))
+        {
+            Status = pluginItem.CanUninstall
+                ? $"Plugin '{pluginItem.DisplayName}' uninstalled."
+                : $"Plugin '{pluginItem.DisplayName}' disabled.";
+            Refresh();
+            return true;
+        }
+
+        Status = "Could not remove plugin: " + (error ?? "Unknown error.");
+        return false;
     }
 
     public void InstallCandidate(PluginCandidateItem? candidate)
@@ -479,7 +513,7 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             .Where(path => Path.GetFileName(path).Contains("Plugin", StringComparison.OrdinalIgnoreCase));
     }
 
-    public sealed class InstalledPluginItem(string id, string displayName, bool hasSettings, string assemblyName, Version version, bool isEnabled)
+    public sealed class InstalledPluginItem(string id, string displayName, bool hasSettings, string assemblyName, Version version, bool isEnabled, bool canUninstall)
     {
         public string Id { get; } = id;
 
@@ -494,6 +528,8 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         public string VersionText { get; } = FormatVersion(version);
 
         public bool IsEnabled { get; } = isEnabled;
+
+        public bool CanUninstall { get; } = canUninstall;
     }
 
     public sealed class PluginCandidateItem(
