@@ -55,6 +55,47 @@ public sealed class StationRepository : IStationRepository
         return station;
     }
 
+    public bool UpdateStation(string stationId, string name, string streamUrl)
+    {
+        if (string.IsNullOrWhiteSpace(stationId))
+        {
+            return false;
+        }
+
+        if (!Uri.TryCreate(streamUrl, UriKind.Absolute, out _))
+        {
+            throw new InvalidOperationException("Station URL must be an absolute URI.");
+        }
+
+        var index = _settings.Stations.FindIndex(s => string.Equals(s.Id, stationId, StringComparison.Ordinal));
+        if (index < 0)
+        {
+            return false;
+        }
+
+        var existing = _settings.Stations[index];
+        var trimmedName = name.Trim();
+        var trimmedUrl = streamUrl.Trim();
+
+        if (string.Equals(existing.Name, trimmedName, StringComparison.Ordinal)
+            && string.Equals(existing.StreamUrl, trimmedUrl, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        _settings.Stations[index] = new RadioStation
+        {
+            Id = existing.Id,
+            Name = trimmedName,
+            StreamUrl = trimmedUrl,
+            IconPath = existing.IconPath,
+        };
+
+        Save();
+        RaiseChanged();
+        return true;
+    }
+
     public bool RemoveStation(string stationId)
     {
         var station = GetStation(stationId);

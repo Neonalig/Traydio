@@ -64,6 +64,7 @@
                                             <MenuItem Header="Copy Play Command" Click="OnCopyPlayCommandClick"/>
                                             <Separator/>
                                             <MenuItem Header="Open Stream Link" Click="OnOpenStationLinkClick"/>
+                                            <MenuItem Header="Export M3U Playlist" Click="OnExportM3UClick"/>
                                         </ContextMenu>
                                     </Border.ContextMenu>
                                     <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
@@ -93,30 +94,54 @@
                     </ListBox>
 
                     <Grid Grid.Row="1" ColumnDefinitions="*,*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
-                        <TextBox Grid.Column="0" Watermark="Station name" Text="{Binding NewStationName}"/>
-                        <TextBox Grid.Column="1" Watermark="Stream URL" Text="{Binding NewStationUrl}"/>
-                        <Button Grid.Column="2" Classes="command-button" Command="{Binding AddStationCommand}">
+                        <TextBox Grid.Column="0"
+                                 Watermark="Station name"
+                                 Text="{Binding NewStationName}"
+                                 IsEnabled="{Binding IsStationEditorEnabled}"/>
+                        <TextBox Grid.Column="1"
+                                 Watermark="Stream URL"
+                                 Text="{Binding NewStationUrl}"
+                                 IsEnabled="{Binding IsStationEditorEnabled}"/>
+                        <Button Grid.Column="2"
+                                Classes="command-button"
+                                Command="{Binding AddStationCommand}"
+                                IsVisible="{Binding CanAddStation}">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <Image Source="/Assets/Icons9x/add.ico" Classes="icon-small"/>
                                 <TextBlock Text="Add" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
-                        <Button Grid.Column="3" Classes="command-button" Command="{Binding FindMoreStationsCommand}">
+                        <Button Grid.Column="2"
+                                Classes="command-button"
+                                Command="{Binding BeginEditSelectedStationCommand}"
+                                IsVisible="{Binding CanEditSelectedStation}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Image Source="/Assets/Icons9x/settings.ico" Classes="icon-small"/>
+                                <TextBlock Text="Edit" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="3"
+                                Classes="command-button"
+                                Command="{Binding SaveSelectedStationEditsCommand}"
+                                IsVisible="{Binding CanSaveOrDiscardSelectedStation}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Image Source="/Assets/Icons9x/save.ico" Classes="icon-small"/>
+                                <TextBlock Text="Save" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="4"
+                                Classes="command-button"
+                                Command="{Binding DiscardSelectedStationEditsCommand}"
+                                IsVisible="{Binding CanSaveOrDiscardSelectedStation}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Image Source="/Assets/Icons9x/remove.ico" Classes="icon-small"/>
+                                <TextBlock Text="Discard" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
+                        <Button Grid.Column="5" Classes="command-button" Command="{Binding FindMoreStationsCommand}">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <Image Source="/Assets/Icons9x/search.ico" Classes="icon-small"/>
                                 <TextBlock Text="Find More" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Grid.Column="4" Classes="command-button" Click="OnSetStationIconClick">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Image Source="/Assets/Icons9x/folder.ico" Classes="icon-small"/>
-                                <TextBlock Text="Set Icon" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Grid.Column="5" Classes="command-button" Click="OnClearStationIconClick">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Image Source="/Assets/Icons9x/remove.ico" Classes="icon-small"/>
-                                <TextBlock Text="Clear Icon" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                     </Grid>

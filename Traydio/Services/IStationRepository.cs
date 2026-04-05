@@ -14,6 +14,8 @@ public interface IStationRepository
 
     RadioStation AddStation(string name, string streamUrl);
 
+    bool UpdateStation(string stationId, string name, string streamUrl);
+
     bool RemoveStation(string stationId);
 
     bool SetStationIconPath(string stationId, string? iconPath);

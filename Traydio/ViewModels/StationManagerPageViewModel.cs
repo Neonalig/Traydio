@@ -24,6 +24,11 @@ public partial class StationManagerPageViewModel : ViewModelBase
     public ObservableCollection<StationItem> Stations { get; } = [];
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSelectedStation))]
+    [NotifyPropertyChangedFor(nameof(IsStationEditorEnabled))]
+    [NotifyPropertyChangedFor(nameof(CanEditSelectedStation))]
+    [NotifyPropertyChangedFor(nameof(CanSaveOrDiscardSelectedStation))]
+    [NotifyPropertyChangedFor(nameof(CanAddStation))]
     private StationItem? _selectedStation;
 
     [ObservableProperty]
@@ -35,8 +40,26 @@ public partial class StationManagerPageViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isAddFlyoutOpen;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsStationEditorEnabled))]
+    [NotifyPropertyChangedFor(nameof(CanEditSelectedStation))]
+    [NotifyPropertyChangedFor(nameof(CanSaveOrDiscardSelectedStation))]
+    private bool _isEditingSelectedStation;
+
+    public bool HasSelectedStation => SelectedStation is not null;
+
+    public bool IsStationEditorEnabled => !HasSelectedStation || IsEditingSelectedStation;
+
+    public bool CanEditSelectedStation => HasSelectedStation && !IsEditingSelectedStation;
+
+    public bool CanSaveOrDiscardSelectedStation => HasSelectedStation && IsEditingSelectedStation;
+
+    public bool CanAddStation => !HasSelectedStation;
+
     public void PrefillNewStation(string name, string url)
     {
+        SelectedStation = null;
+        IsEditingSelectedStation = false;
         NewStationName = name;
         NewStationUrl = url;
     }
@@ -90,6 +113,11 @@ public partial class StationManagerPageViewModel : ViewModelBase
     [RelayCommand]
     private void AddStation()
     {
+        if (!CanAddStation)
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(NewStationName) || string.IsNullOrWhiteSpace(NewStationUrl))
         {
             return;
@@ -151,6 +179,51 @@ public partial class StationManagerPageViewModel : ViewModelBase
         });
     }
 
+    [RelayCommand]
+    private void BeginEditSelectedStation()
+    {
+        if (!HasSelectedStation)
+        {
+            return;
+        }
+
+        IsEditingSelectedStation = true;
+    }
+
+    [RelayCommand]
+    private void SaveSelectedStationEdits()
+    {
+        if (SelectedStation is null || !CanSaveOrDiscardSelectedStation)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(NewStationName) || string.IsNullOrWhiteSpace(NewStationUrl))
+        {
+            return;
+        }
+
+        if (!_stationRepository.UpdateStation(SelectedStation.Station.Id, NewStationName, NewStationUrl))
+        {
+            return;
+        }
+
+        IsEditingSelectedStation = false;
+    }
+
+    [RelayCommand]
+    private void DiscardSelectedStationEdits()
+    {
+        if (SelectedStation is null || !CanSaveOrDiscardSelectedStation)
+        {
+            return;
+        }
+
+        NewStationName = SelectedStation.Name;
+        NewStationUrl = SelectedStation.StreamUrl;
+        IsEditingSelectedStation = false;
+    }
+
     private void RefreshStations()
     {
         void Update()
@@ -158,6 +231,7 @@ public partial class StationManagerPageViewModel : ViewModelBase
             var activeStationId = _stationRepository.ActiveStationId;
             var isPlaying = _radioPlayer.IsPlaying;
             var hasPlaybackError = !string.IsNullOrWhiteSpace(_latestRadioState.LastError);
+            var selectedStationId = SelectedStation?.Station.Id;
 
             Stations.Clear();
             var orderedStations = _stationRepository.GetStations().ToList();
@@ -181,6 +255,10 @@ public partial class StationManagerPageViewModel : ViewModelBase
                     isActiveStation && isPlaying,
                     isActiveStation && hasPlaybackError));
             }
+
+            SelectedStation = !string.IsNullOrWhiteSpace(selectedStationId)
+                ? Stations.FirstOrDefault(station => string.Equals(station.Station.Id, selectedStationId, StringComparison.Ordinal))
+                : null;
         }
 
         if (Dispatcher.UIThread.CheckAccess())
@@ -190,6 +268,19 @@ public partial class StationManagerPageViewModel : ViewModelBase
         }
 
         Dispatcher.UIThread.Post(Update);
+    }
+
+    partial void OnSelectedStationChanged(StationItem? value)
+    {
+        if (value is null)
+        {
+            IsEditingSelectedStation = false;
+            return;
+        }
+
+        NewStationName = value.Name;
+        NewStationUrl = value.StreamUrl;
+        IsEditingSelectedStation = false;
     }
 
     public sealed class StationItem(RadioStation station, bool isActiveStation, bool isActivePlaying, bool isRecentFailure)

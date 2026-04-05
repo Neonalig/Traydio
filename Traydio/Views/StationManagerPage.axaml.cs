@@ -327,6 +327,10 @@ public partial class StationManagerPage : UserControl
     private void OnOpenStationLinkClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
         => OpenStationLinkAsync(sender).ForgetWithErrorHandling("Open station link", showDialog: true);
 
+    private void OnExportM3UClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    {
+    }
+
     private void OnPlayFromContextClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         if (DataContext is not StationManagerPageViewModel viewModel)

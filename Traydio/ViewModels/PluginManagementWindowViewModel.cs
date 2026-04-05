@@ -83,6 +83,7 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             PluginDirectory = _stationRepository.StationDiscoveryPlugins.PluginDirectory;
 
             var discovered = DiscoverEligiblePluginDlls(installedByAssemblyName)
+                .Where(candidate => !candidate.IsSameVersionInstalled)
                 .OrderBy(p => p.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
@@ -454,10 +455,14 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
                 Path.GetFileNameWithoutExtension(path),
                 null,
                 null,
+                false,
+                false,
                 false);
         }
 
         installedByAssemblyName.TryGetValue(assemblyName, out var installedVersion);
+        var hasInstalledVersion = installedVersion is not null;
+        var isSameVersionInstalled = version is not null && installedVersion is not null && version == installedVersion;
         var isUpgrade = version is not null && installedVersion is not null && version > installedVersion;
 
         return new PluginCandidateItem(
@@ -466,7 +471,9 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             assemblyName,
             version,
             installedVersion,
-            isUpgrade);
+            isUpgrade,
+            hasInstalledVersion,
+            isSameVersionInstalled);
     }
 
     private static bool TryGetPluginAssemblyMetadata(string path, out string assemblyName, out Version? version)
@@ -551,7 +558,9 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         string assemblyName,
         Version? version,
         Version? installedVersion,
-        bool isUpgrade)
+        bool isUpgrade,
+        bool hasInstalledVersion,
+        bool isSameVersionInstalled)
     {
         public string Path { get; } = path;
 
@@ -567,7 +576,11 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
 
         public string InstalledVersionText { get; } = FormatVersion(installedVersion);
 
+        public bool HasInstalledVersion { get; } = hasInstalledVersion;
+
         public bool IsUpgrade { get; } = isUpgrade;
+
+        public bool IsSameVersionInstalled { get; } = isSameVersionInstalled;
     }
 }
 
