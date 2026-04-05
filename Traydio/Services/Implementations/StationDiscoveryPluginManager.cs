@@ -36,9 +36,33 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
 
         EnsurePluginDirectory();
         var targetPath = Path.Combine(_pluginDirectory!, Path.GetFileName(sourceDllPath));
-        File.Copy(sourceDllPath, targetPath, overwrite: true);
-        ReloadPlugins();
-        return true;
+
+        try
+        {
+            var sourceFullPath = Path.GetFullPath(sourceDllPath);
+            var targetFullPath = Path.GetFullPath(targetPath);
+
+            if (string.Equals(sourceFullPath, targetFullPath, StringComparison.OrdinalIgnoreCase))
+            {
+                // Already in plugin folder; treat this as a refresh request.
+                ReloadPlugins();
+                return true;
+            }
+
+            File.Copy(sourceFullPath, targetFullPath, overwrite: true);
+            ReloadPlugins();
+            return true;
+        }
+        catch (IOException)
+        {
+            error = "Plugin file is currently locked. If this plugin is already installed, use Refresh; otherwise close the process using the DLL and try again.";
+            return false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            error = "Access denied while copying plugin DLL.";
+            return false;
+        }
     }
 
     public bool RemovePlugin(string pluginId, out string? error)

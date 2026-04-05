@@ -6,7 +6,7 @@
         mc:Ignorable="d"
         x:Class="Traydio.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/internet-radio.ico"
+        Icon="/Assets/Icons9x/stations.ico"
         Width="1100"
         Height="760"
         Title="Traydio">
