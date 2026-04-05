@@ -4,6 +4,8 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
+using System.Text;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -17,6 +19,10 @@ namespace Traydio.ViewModels;
 [ViewModelFor(typeof(PluginManagementPage))]
 public partial class PluginManagementWindowViewModel : ViewModelBase
 {
+    private const string _RECOMMENDED_ASSEMBLY_HASH_METADATA_KEY = "Traydio.RecommendedPluginAssemblyNameHash";
+
+    private static readonly HashSet<string> _recommendedAssemblyNameHashes = LoadRecommendedHashes(_RECOMMENDED_ASSEMBLY_HASH_METADATA_KEY);
+
     private readonly IPluginManager _pluginManager;
     private readonly IStationRepository _stationRepository;
     private readonly IWindowManager _windowManager;
@@ -84,7 +90,8 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
 
             var discovered = DiscoverEligiblePluginDlls(installedByAssemblyName)
                 .Where(candidate => !candidate.IsSameVersionInstalled)
-                .OrderBy(p => p.DisplayName, StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(candidate => candidate.IsRecommended)
+                .ThenBy(candidate => candidate.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
             PluginCandidates.Clear();
@@ -417,7 +424,8 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         InstallPluginFromPath(path);
     }
 
-    private IEnumerable<PluginCandidateItem> DiscoverEligiblePluginDlls(IReadOnlyDictionary<string, Version> installedByAssemblyName)
+    private IEnumerable<PluginCandidateItem> DiscoverEligiblePluginDlls(
+        IReadOnlyDictionary<string, Version> installedByAssemblyName)
     {
         var knownFileNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -431,7 +439,7 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             var fileName = Path.GetFileName(path);
             if (knownFileNames.Add(fileName))
             {
-                yield return CreateCandidate(path, installedByAssemblyName);
+                yield return CreateCandidate(path, installedByAssemblyName, _recommendedAssemblyNameHashes);
             }
         }
 
@@ -440,12 +448,15 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             var fileName = Path.GetFileName(path);
             if (knownFileNames.Add(fileName))
             {
-                yield return CreateCandidate(path, installedByAssemblyName);
+                yield return CreateCandidate(path, installedByAssemblyName, _recommendedAssemblyNameHashes);
             }
         }
     }
 
-    private static PluginCandidateItem CreateCandidate(string path, IReadOnlyDictionary<string, Version> installedByAssemblyName)
+    private static PluginCandidateItem CreateCandidate(
+        string path,
+        IReadOnlyDictionary<string, Version> installedByAssemblyName,
+        ISet<string> recommendedAssemblyNameHashes)
     {
         if (!TryGetPluginAssemblyMetadata(path, out var assemblyName, out var version))
         {
@@ -457,6 +468,7 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
                 null,
                 false,
                 false,
+                false,
                 false);
         }
 
@@ -464,6 +476,8 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         var hasInstalledVersion = installedVersion is not null;
         var isSameVersionInstalled = version is not null && installedVersion is not null && version == installedVersion;
         var isUpgrade = version is not null && installedVersion is not null && version > installedVersion;
+
+        var isRecommended = IsRecommendedCandidate(assemblyName, recommendedAssemblyNameHashes);
 
         return new PluginCandidateItem(
             path,
@@ -473,7 +487,73 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             installedVersion,
             isUpgrade,
             hasInstalledVersion,
-            isSameVersionInstalled);
+            isSameVersionInstalled,
+            isRecommended);
+    }
+
+    private static bool IsRecommendedCandidate(string assemblyName, ISet<string> recommendedAssemblyNameHashes)
+    {
+        if (recommendedAssemblyNameHashes.Count == 0)
+        {
+            return false;
+        }
+
+        var normalizedAssemblyName = assemblyName.Trim().ToLowerInvariant();
+        return recommendedAssemblyNameHashes.Contains(ComputeSha256Hex(normalizedAssemblyName));
+    }
+
+    private static HashSet<string> LoadRecommendedHashes(string metadataKey)
+    {
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        try
+        {
+            var metadata = Assembly.GetExecutingAssembly().GetCustomAttributes<AssemblyMetadataAttribute>();
+            foreach (var item in metadata)
+            {
+                if (!string.Equals(item.Key, metadataKey, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                var normalized = NormalizeHash(item.Value);
+                if (normalized is not null)
+                {
+                    result.Add(normalized);
+                }
+            }
+        }
+        catch
+        {
+            // Failing closed keeps plugin candidate rendering stable.
+        }
+
+        return result;
+    }
+
+    private static string? NormalizeHash(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var trimmed = value.Trim().ToLowerInvariant();
+        if (trimmed.Length != 64)
+        {
+            return null;
+        }
+
+        return trimmed.All(static c => char.IsAsciiHexDigit(c))
+            ? trimmed
+            : null;
+    }
+
+    private static string ComputeSha256Hex(string value)
+    {
+        var bytes = Encoding.UTF8.GetBytes(value);
+        var hash = SHA256.HashData(bytes);
+        return Convert.ToHexString(hash).ToLowerInvariant();
     }
 
     private static bool TryGetPluginAssemblyMetadata(string path, out string assemblyName, out Version? version)
@@ -502,14 +582,14 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         }
 
         var parts = new[] { version.Major, version.Minor, version.Build, version.Revision }
-            .TakeWhile((value, index) => value >= 0 && (index < 2 || value > 0 || partsBeforeHadValue(index, version)))
+            .TakeWhile((value, index) => value >= 0 && (index < 2 || value > 0 || PartsBeforeHadValue(index, version)))
             .ToArray();
 
         return parts.Length == 0
             ? $"{version.Major}.{version.Minor}"
             : string.Join('.', parts);
 
-        static bool partsBeforeHadValue(int index, Version v)
+        static bool PartsBeforeHadValue(int index, Version v)
         {
             return index switch
             {
@@ -560,7 +640,8 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         Version? installedVersion,
         bool isUpgrade,
         bool hasInstalledVersion,
-        bool isSameVersionInstalled)
+        bool isSameVersionInstalled,
+        bool isRecommended)
     {
         public string Path { get; } = path;
 
@@ -581,6 +662,8 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         public bool IsUpgrade { get; } = isUpgrade;
 
         public bool IsSameVersionInstalled { get; } = isSameVersionInstalled;
+
+        public bool IsRecommended { get; } = isRecommended;
     }
 }
 

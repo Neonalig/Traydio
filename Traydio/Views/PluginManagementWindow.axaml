@@ -107,11 +107,19 @@
                                  DragDrop.DragOver="OnPluginListDragOver"
                                  DragDrop.Drop="OnCandidateListDrop">
                             <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Padding="0,4">
+                                <DataTemplate x:DataType="vm:PluginManagementWindowViewModel+PluginCandidateItem">
+                                    <Border Padding="0,4"
+                                            Classes="plugin-candidate-entry"
+                                            Classes.recommended-candidate="{Binding IsRecommended}">
                                         <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
                                             <Image Source="/Assets/Icons9x/plugins.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
-                                            <StackPanel Grid.Column="1">
+                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                <Border Classes="recommended-badge" IsVisible="{Binding IsRecommended}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                                        <Image Source="/Assets/Icons9x/recommended.ico" Classes="icon-small"/>
+                                                        <TextBlock Text="Recommended" Classes="recommended-badge-text"/>
+                                                    </StackPanel>
+                                                </Border>
                                                 <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="{Binding VersionText, StringFormat='v{0}'}" Classes="subtle-text"/>
                                                 <TextBlock Text="{Binding InstalledVersionText, StringFormat='Installed v{0}'}" Classes="subtle-text" IsVisible="{Binding HasInstalledVersion}"/>

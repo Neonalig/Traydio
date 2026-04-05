@@ -52,4 +52,15 @@
         <PackageReference Include="JetBrains.Annotations" Version="2025.2.4" />
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.8"/>
     </ItemGroup>
+
+    <ItemGroup>
+        <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+            <_Parameter1>Traydio.RecommendedPluginAssemblyNameHash</_Parameter1>
+            <_Parameter2>27a25b1c13d488acd2b8044a02a1df2384570abaaf87728be08c0f47ccd7db46</_Parameter2>
+        </AssemblyAttribute>
+        <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+            <_Parameter1>Traydio.RecommendedPluginAssemblyNameHash</_Parameter1>
+            <_Parameter2>665c627788c7ee8096f4e560ebee9addb642dd516726a00f3245c3da9bc588ee</_Parameter2>
+        </AssemblyAttribute>
+    </ItemGroup>
 </Project>

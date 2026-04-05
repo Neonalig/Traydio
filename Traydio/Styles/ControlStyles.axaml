@@ -117,7 +117,7 @@
         <Setter Property="Padding" Value="4,0,4,2"/>
         <Setter Property="Margin" Value="10,0,0,0"/>
         <Setter Property="HorizontalAlignment" Value="Left"/>
-        <Setter Property="Panel.ZIndex" Value="1"/>
+        <Setter Property="ZIndex" Value="1"/>
     </Style>
 
     <Style Selector="TextBlock.group-title">
@@ -219,6 +219,33 @@
         <Setter Property="VerticalAlignment" Value="Center"/>
         <Setter Property="Margin" Value="8,0,8,0"/>
         <Setter Property="TextAlignment" Value="Left"/>
+    </Style>
+
+    <Style Selector="Border.plugin-candidate-entry">
+        <Setter Property="Padding" Value="4"/>
+        <Setter Property="Margin" Value="0,0,0,4"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+    </Style>
+
+    <Style Selector="Border.plugin-candidate-entry.recommended-candidate">
+        <Setter Property="BorderBrush" Value="#D2A500"/>
+        <Setter Property="Background" Value="#20FFE699"/>
+    </Style>
+
+    <Style Selector="Border.recommended-badge">
+        <Setter Property="Padding" Value="4,1"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="BorderBrush" Value="#CC9A00"/>
+        <Setter Property="Background" Value="#FFF5C8"/>
+        <Setter Property="CornerRadius" Value="3"/>
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+    </Style>
+
+    <Style Selector="TextBlock.recommended-badge-text">
+        <Setter Property="FontWeight" Value="SemiBold"/>
+        <Setter Property="Foreground" Value="#6E5500"/>
+        <Setter Property="FontSize" Value="11"/>
     </Style>
 </Styles>
 
