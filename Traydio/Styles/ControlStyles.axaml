@@ -66,6 +66,15 @@
         <Setter Property="HorizontalContentAlignment" Value="Left"/>
     </Style>
 
+    <Style Selector="Button.ribbon-button">
+        <Setter Property="MinWidth" Value="88"/>
+        <Setter Property="Width" Value="88"/>
+        <Setter Property="Height" Value="72"/>
+        <Setter Property="Padding" Value="6,4"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+
     <Style Selector="Button.command-button">
         <Setter Property="MinWidth" Value="104"/>
         <Setter Property="Padding" Value="8,3"/>
@@ -106,6 +115,11 @@
     </Style>
 
     <Style Selector="Image.icon-large">
+        <Setter Property="Width" Value="24"/>
+        <Setter Property="Height" Value="24"/>
+    </Style>
+
+    <Style Selector="Image.icon-ribbon">
         <Setter Property="Width" Value="24"/>
         <Setter Property="Height" Value="24"/>
     </Style>

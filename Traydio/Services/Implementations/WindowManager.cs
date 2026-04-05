@@ -53,6 +53,29 @@ public sealed class WindowManager(
         navigationService.Navigate(AppPage.Settings);
     }
 
+    public void ShowCommandTester()
+    {
+        ShowMainWindow();
+
+        var page = serviceProvider.GetRequiredService<CommandTesterPage>();
+        var window = new Window
+        {
+            Title = "Commands",
+            Width = 760,
+            Height = 520,
+            Content = page,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+        };
+
+        if (_mainWindow is not null)
+        {
+            _ = window.ShowDialog(_mainWindow);
+            return;
+        }
+
+        window.Show();
+    }
+
     public bool ShowPluginSettings(string pluginId, out string? error)
     {
         error = null;

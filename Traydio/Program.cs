@@ -109,6 +109,7 @@ sealed class Program
         services.AddTransient<SettingsPageViewModel>();
         services.AddTransient<PluginManagementWindowViewModel>();
         services.AddTransient<StationSearchWindowViewModel>();
+        services.AddTransient<CommandTesterPage>();
         services.AddTransient<MainWindow>();
 
         return services;

@@ -29,37 +29,41 @@
     <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="6">
         <Border Grid.Row="0" Classes="toolbar-frame" Margin="0">
             <Grid RowDefinitions="Auto,Auto" RowSpacing="6">
-                <Grid Grid.Row="0" ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                    <TextBlock Text="Traydio - Internet Radio Control Center" Classes="section-title"/>
-                    <TextBlock Grid.Column="1" Text="Ready" VerticalAlignment="Center" Classes="accent-text"/>
-                </Grid>
+                <TextBlock HorizontalAlignment="Right" Text="Ready" VerticalAlignment="Center" Classes="accent-text"/>
 
                 <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="6">
-                    <Button Classes="toolbar-button" Command="{Binding OpenStationsCommand}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Image Source="/Assets/Icons9x/stations.ico" Classes="icon-small"/>
-                            <TextBlock Text="Station Manager" VerticalAlignment="Center"/>
+                    <Button Classes="ribbon-button" Command="{Binding OpenStationsCommand}">
+                        <StackPanel Orientation="Vertical" Spacing="4" HorizontalAlignment="Center">
+                            <Image Source="/Assets/Icons9x/stations.ico" Classes="icon-ribbon" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Stations" TextAlignment="Center"/>
                         </StackPanel>
                     </Button>
 
-                    <Button Classes="toolbar-button" Command="{Binding OpenSearchCommand}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Image Source="/Assets/Icons9x/search.ico" Classes="icon-small"/>
-                            <TextBlock Text="Search Catalog" VerticalAlignment="Center"/>
+                    <Button Classes="ribbon-button" Command="{Binding OpenSearchCommand}">
+                        <StackPanel Orientation="Vertical" Spacing="4" HorizontalAlignment="Center">
+                            <Image Source="/Assets/Icons9x/search.ico" Classes="icon-ribbon" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Search" TextAlignment="Center"/>
                         </StackPanel>
                     </Button>
 
-                    <Button Classes="toolbar-button" Command="{Binding OpenPluginsCommand}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Image Source="/Assets/Icons9x/plugins.ico" Classes="icon-small"/>
-                            <TextBlock Text="Plugin Manager" VerticalAlignment="Center"/>
+                    <Button Classes="ribbon-button" Command="{Binding OpenPluginsCommand}">
+                        <StackPanel Orientation="Vertical" Spacing="4" HorizontalAlignment="Center">
+                            <Image Source="/Assets/Icons9x/plugins.ico" Classes="icon-ribbon" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Plugins" TextAlignment="Center"/>
                         </StackPanel>
                     </Button>
 
-                    <Button Classes="toolbar-button" Command="{Binding OpenSettingsCommand}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Image Source="/Assets/Icons9x/settings.ico" Classes="icon-small"/>
-                            <TextBlock Text="Settings" VerticalAlignment="Center"/>
+                    <Button Classes="ribbon-button" Command="{Binding OpenSettingsCommand}">
+                        <StackPanel Orientation="Vertical" Spacing="4" HorizontalAlignment="Center">
+                            <Image Source="/Assets/Icons9x/settings.ico" Classes="icon-ribbon" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Settings" TextAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Button Classes="ribbon-button" Command="{Binding OpenCommandsCommand}">
+                        <StackPanel Orientation="Vertical" Spacing="4" HorizontalAlignment="Center">
+                            <Image Source="/Assets/Icons9x/info.ico" Classes="icon-ribbon" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Commands" TextAlignment="Center"/>
                         </StackPanel>
                     </Button>
                 </StackPanel>
@@ -67,7 +71,7 @@
         </Border>
 
         <Border Grid.Row="1" Classes="status-strip" Margin="0">
-            <TextBlock Text="Choose a command from the toolbar. Each page explains what to do next and which action commits your changes." Classes="helper-text"/>
+            <TextBlock Text="Use the ribbon to switch pages. The Commands page includes syntax hints and a test runner for command text routing." Classes="helper-text"/>
         </Border>
 
         <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="0" Margin="4,0,4,4">

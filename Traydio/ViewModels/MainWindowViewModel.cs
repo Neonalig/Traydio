@@ -15,6 +15,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly INavigationService _navigationService;
     private readonly IAppCommandDispatcher _commandDispatcher;
     private readonly IRadioPlayer _radioPlayer;
+    private readonly IWindowManager _windowManager;
 
     private bool _suppressVolumeDispatch;
 
@@ -63,11 +64,13 @@ public partial class MainWindowViewModel : ViewModelBase
     public MainWindowViewModel(
         INavigationService navigationService,
         IAppCommandDispatcher commandDispatcher,
-        IRadioPlayer radioPlayer)
+        IRadioPlayer radioPlayer,
+        IWindowManager windowManager)
     {
         _navigationService = navigationService;
         _commandDispatcher = commandDispatcher;
         _radioPlayer = radioPlayer;
+        _windowManager = windowManager;
 
         _navigationService.Changed += (_, _) => CurrentPageViewModel = _navigationService.CurrentPageViewModel;
         _radioPlayer.StateChanged += (_, state) => UpdateMediaState(state);
@@ -99,6 +102,12 @@ public partial class MainWindowViewModel : ViewModelBase
     private void OpenSettings()
     {
         _commandDispatcher.Dispatch(new AppCommand { Kind = AppCommandKind.OpenSettings });
+    }
+
+    [RelayCommand]
+    private void OpenCommands()
+    {
+        _windowManager.ShowCommandTester();
     }
 
     [RelayCommand]
