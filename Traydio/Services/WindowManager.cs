@@ -4,15 +4,9 @@ using Traydio.Views;
 
 namespace Traydio.Services;
 
-public sealed class WindowManager : IWindowManager
+public sealed class WindowManager(IServiceProvider serviceProvider) : IWindowManager
 {
-    private readonly IServiceProvider _serviceProvider;
     private MainWindow? _mainWindow;
-
-    public WindowManager(IServiceProvider serviceProvider)
-    {
-        _serviceProvider = serviceProvider;
-    }
 
     public void ShowStationManager()
     {
@@ -22,7 +16,7 @@ public sealed class WindowManager : IWindowManager
             return;
         }
 
-        _mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+        _mainWindow = serviceProvider.GetRequiredService<MainWindow>();
         _mainWindow.Closed += (_, _) => _mainWindow = null;
         _mainWindow.Show();
     }

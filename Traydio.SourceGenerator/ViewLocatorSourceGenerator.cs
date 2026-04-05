@@ -540,54 +540,32 @@ public sealed class ViewLocatorSourceGenerator : IIncrementalGenerator
         ViewModelFor,
     }
 
-    private sealed class MappingCandidate
+    private sealed class MappingCandidate(INamedTypeSymbol targetType, INamedTypeSymbol linkedType, MappingKind kind, Location location)
     {
-        public MappingCandidate(INamedTypeSymbol targetType, INamedTypeSymbol linkedType, MappingKind kind, Location location)
-        {
-            TargetType = targetType;
-            LinkedType = linkedType;
-            Kind = kind;
-            Location = location;
-        }
+        public INamedTypeSymbol TargetType { get; } = targetType;
 
-        public INamedTypeSymbol TargetType { get; }
+        public INamedTypeSymbol LinkedType { get; } = linkedType;
 
-        public INamedTypeSymbol LinkedType { get; }
+        public MappingKind Kind { get; } = kind;
 
-        public MappingKind Kind { get; }
-
-        public Location Location { get; }
+        public Location Location { get; } = location;
     }
 
-    private sealed class ViewModelToViewMapping
+    private sealed class ViewModelToViewMapping(INamedTypeSymbol viewModelType, INamedTypeSymbol viewType)
     {
-        public ViewModelToViewMapping(INamedTypeSymbol viewModelType, INamedTypeSymbol viewType)
-        {
-            ViewModelType = viewModelType;
-            ViewType = viewType;
-        }
+        public INamedTypeSymbol ViewModelType { get; } = viewModelType;
 
-        public INamedTypeSymbol ViewModelType { get; }
-
-        public INamedTypeSymbol ViewType { get; }
+        public INamedTypeSymbol ViewType { get; } = viewType;
     }
 
-    private sealed class LocatorConfig
+    private sealed class LocatorConfig(string ns, string className, string serviceProviderPropertyName, bool enableDependencyInjection)
     {
-        public LocatorConfig(string @namespace, string className, string serviceProviderPropertyName, bool enableDependencyInjection)
-        {
-            Namespace = @namespace;
-            ClassName = className;
-            ServiceProviderPropertyName = serviceProviderPropertyName;
-            EnableDependencyInjection = enableDependencyInjection;
-        }
+        public string Namespace { get; } = ns;
 
-        public string Namespace { get; }
+        public string ClassName { get; } = className;
 
-        public string ClassName { get; }
+        public string ServiceProviderPropertyName { get; } = serviceProviderPropertyName;
 
-        public string ServiceProviderPropertyName { get; }
-
-        public bool EnableDependencyInjection { get; }
+        public bool EnableDependencyInjection { get; } = enableDependencyInjection;
     }
 }

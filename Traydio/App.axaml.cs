@@ -33,8 +33,13 @@ public partial class App : Application
             var commandDispatcher = Program.Services.GetRequiredService<IAppCommandDispatcher>();
             commandDispatcher.Initialize(desktop);
 
+            var relayCoordinator = Program.Services.GetRequiredService<ICommandRelayCoordinator>();
+            relayCoordinator.StartPrimaryRelay();
+
             var trayController = Program.Services.GetRequiredService<ITrayController>();
             trayController.Initialize(desktop);
+
+            desktop.Exit += (_, _) => relayCoordinator.StopPrimaryRelay();
         }
 
         base.OnFrameworkInitializationCompleted();

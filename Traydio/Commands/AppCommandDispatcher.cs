@@ -5,22 +5,13 @@ using Traydio.Services;
 
 namespace Traydio.Commands;
 
-public sealed class AppCommandDispatcher : IAppCommandDispatcher
+public sealed class AppCommandDispatcher(
+    IRadioPlayer radioPlayer,
+    IStationRepository stationRepository,
+    IWindowManager windowManager
+) : IAppCommandDispatcher
 {
-    private readonly IRadioPlayer _radioPlayer;
-    private readonly IStationRepository _stationRepository;
-    private readonly IWindowManager _windowManager;
     private IClassicDesktopStyleApplicationLifetime? _lifetime;
-
-    public AppCommandDispatcher(
-        IRadioPlayer radioPlayer,
-        IStationRepository stationRepository,
-        IWindowManager windowManager)
-    {
-        _radioPlayer = radioPlayer;
-        _stationRepository = stationRepository;
-        _windowManager = windowManager;
-    }
 
     public void Initialize(IClassicDesktopStyleApplicationLifetime lifetime)
     {
@@ -35,10 +26,10 @@ public sealed class AppCommandDispatcher : IAppCommandDispatcher
                 PlayActiveStation();
                 break;
             case AppCommandKind.Pause:
-                _radioPlayer.Pause();
+                radioPlayer.Pause();
                 break;
             case AppCommandKind.TogglePause:
-                _radioPlayer.TogglePause();
+                radioPlayer.TogglePause();
                 break;
             case AppCommandKind.PlayStation:
                 PlayStation(command.StationId);
@@ -56,10 +47,10 @@ public sealed class AppCommandDispatcher : IAppCommandDispatcher
                 }
                 break;
             case AppCommandKind.OpenStationManager:
-                _windowManager.ShowStationManager();
+                windowManager.ShowStationManager();
                 break;
             case AppCommandKind.Exit:
-                _radioPlayer.Stop();
+                radioPlayer.Stop();
                 _lifetime?.Shutdown();
                 break;
         }
@@ -67,13 +58,13 @@ public sealed class AppCommandDispatcher : IAppCommandDispatcher
 
     private void PlayActiveStation()
     {
-        if (!string.IsNullOrWhiteSpace(_stationRepository.ActiveStationId))
+        if (!string.IsNullOrWhiteSpace(stationRepository.ActiveStationId))
         {
-            PlayStation(_stationRepository.ActiveStationId);
+            PlayStation(stationRepository.ActiveStationId);
             return;
         }
 
-        var first = _stationRepository.GetStations().FirstOrDefault();
+        var first = stationRepository.GetStations().FirstOrDefault();
         if (first is not null)
         {
             PlayStation(first.Id);
@@ -87,25 +78,25 @@ public sealed class AppCommandDispatcher : IAppCommandDispatcher
             return;
         }
 
-        var station = _stationRepository.GetStation(stationId);
+        var station = stationRepository.GetStation(stationId);
         if (station is null)
         {
             return;
         }
 
-        _stationRepository.ActiveStationId = station.Id;
-        _radioPlayer.Play(station);
+        stationRepository.ActiveStationId = station.Id;
+        radioPlayer.Play(station);
     }
 
     private void AdjustVolume(int delta)
     {
-        SetVolume(_stationRepository.Volume + delta);
+        SetVolume(stationRepository.Volume + delta);
     }
 
     private void SetVolume(int value)
     {
-        _stationRepository.Volume = Math.Clamp(value, 0, 100);
-        _radioPlayer.SetVolume(_stationRepository.Volume);
+        stationRepository.Volume = Math.Clamp(value, 0, 100);
+        radioPlayer.SetVolume(stationRepository.Volume);
     }
 }
 

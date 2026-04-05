@@ -3,12 +3,7 @@
 namespace Traydio.SourceGenerator.Sample;
 
 [ViewFor(typeof(SampleViewModel))]
-public partial class SampleView
+public partial class SampleView(IGreetingService greetingService)
 {
-    public SampleView(IGreetingService greetingService)
-    {
-        Greeting = greetingService.Greeting;
-    }
-
-    public string Greeting { get; }
+    public string Greeting { get; } = greetingService.Greeting;
 }
