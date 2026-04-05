@@ -11,7 +11,7 @@
         Icon="/Assets/Icons9x/stations.ico"
         Width="1100"
         Height="760"
-        Title="Traydio">
+        Title="Traydio - Internet Radio Control Center">
     <Window.Resources>
         <imaging:Bitmap x:Key="PlayIcon">avares://Traydio/Assets/Icons9x/play.ico</imaging:Bitmap>
         <imaging:Bitmap x:Key="PauseIcon">avares://Traydio/Assets/Icons9x/pause.ico</imaging:Bitmap>

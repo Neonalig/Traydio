@@ -417,12 +417,12 @@ public partial class BassPluginSettingsView : UserControl
 
     private void RefreshDependencyStatuses()
     {
-        UpdateDependencyStatus(_bassStatusIcon, "bass.dll", _bassPathBox.Text);
-        UpdateDependencyStatus(_bassOpusStatusIcon, "bassopus.dll", _bassOpusPathBox.Text);
-        UpdateDependencyStatus(_tagsStatusIcon, "tags.dll", _tagsPathBox.Text);
+        UpdateDependencyStatus(_bassStatusIcon, "bass.dll", _bassPathBox.Text, false);
+        UpdateDependencyStatus(_bassOpusStatusIcon, "bassopus.dll", _bassOpusPathBox.Text, true);
+        UpdateDependencyStatus(_tagsStatusIcon, "tags.dll", _tagsPathBox.Text, true);
     }
 
-    private static void UpdateDependencyStatus(Image icon, string displayName, string? path)
+    private static void UpdateDependencyStatus(Image icon, string displayName, string? path, bool mayLoadOnDemand)
     {
         if (!IsValidDllPath(path))
         {
@@ -439,7 +439,10 @@ public partial class BassPluginSettingsView : UserControl
         }
 
         icon.Source = _statusWarningIcon;
-        ToolTip.SetTip(icon, $"{displayName}: valid path, restart app to load");
+        var warningText = mayLoadOnDemand
+            ? $"{displayName}: valid path. This dependency may load only when first used, so this can remain pending until playback/metadata touches it."
+            : $"{displayName}: valid path, restart app to load";
+        ToolTip.SetTip(icon, warningText);
     }
 
     private static IImage LoadIcon(string uri)
