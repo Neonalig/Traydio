@@ -252,7 +252,7 @@ public partial class BassPluginSettingsView : UserControl
 
     private void LoadOutputDeviceOptions()
     {
-        int? configuredIndex = null;
+        int? configuredIndex = 1;
 
         try
         {
@@ -269,7 +269,7 @@ public partial class BassPluginSettingsView : UserControl
 
         var options = new System.Collections.Generic.List<OutputDeviceOption>
         {
-            new(null, "System default"),
+            new(1, "Default (1)"),
         };
 
         try

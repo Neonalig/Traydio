@@ -327,8 +327,46 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
             return;
         }
 
-        var tag = BassTags.Read(_streamHandle, "%IFV1(%ARTI - )%TITL");
-        _nowPlaying = string.IsNullOrWhiteSpace(tag) ? null : tag;
+        try
+        {
+            var tag = BassTags.Read(_streamHandle, "%IFV1(%ARTI - )%TITL");
+            _nowPlaying = string.IsNullOrWhiteSpace(tag) ? null : tag;
+        }
+        catch (DllNotFoundException ex)
+        {
+            _nowPlaying = null;
+            var message = "[Traydio][ManagedBass] Metadata read failed: ManagedBass.Tags native library not found. " + ex;
+            Console.Error.WriteLine(message);
+            System.Diagnostics.Trace.WriteLine(message);
+        }
+        catch (Exception ex)
+        {
+            _nowPlaying = null;
+
+            if (IsTagsLoadFailure(ex))
+            {
+                var message = "[Traydio][ManagedBass] Metadata read failed: " + ex;
+                Console.Error.WriteLine(message);
+                System.Diagnostics.Trace.WriteLine(message);
+            }
+        }
+    }
+
+    private static bool IsTagsLoadFailure(Exception ex)
+    {
+        if (ex is DllNotFoundException)
+        {
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(ex.Message)
+            && ex.Message.Contains("tags", StringComparison.OrdinalIgnoreCase)
+            && ex.Message.Contains("unable to load dll", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return ex.InnerException is not null && IsTagsLoadFailure(ex.InnerException);
     }
 
     private void StopAndFreeCurrentStream_NoLock()

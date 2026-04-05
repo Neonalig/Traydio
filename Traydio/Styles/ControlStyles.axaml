@@ -25,6 +25,18 @@
         <Setter Property="TextWrapping" Value="Wrap"/>
     </Style>
 
+    <Style Selector="TextBox /template/ ContentPresenter#PART_WatermarkPresenter">
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="TextAlignment" Value="Center"/>
+    </Style>
+
+    <Style Selector="TextBox /template/ TextBlock#PART_WatermarkPresenter">
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="TextAlignment" Value="Center"/>
+    </Style>
+
     <Style Selector="TextBlock.error-text">
         <Setter Property="Foreground" Value="{DynamicResource StatusErrorBrush}"/>
     </Style>

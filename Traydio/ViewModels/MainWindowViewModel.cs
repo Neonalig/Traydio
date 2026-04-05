@@ -1,4 +1,5 @@
-﻿using Avalonia.Threading;
+﻿using System;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Traydio.Commands;
@@ -36,9 +37,6 @@ public partial class MainWindowViewModel : ViewModelBase
     private int _footerVolume = 60;
 
     [ObservableProperty]
-    private string _playPauseIcon = "[PLAY]";
-
-    [ObservableProperty]
     private string _playbackTimeText = "00:00";
 
     [ObservableProperty]
@@ -49,6 +47,15 @@ public partial class MainWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _mediaErrorText = string.Empty;
+
+    [ObservableProperty]
+    private string _mediaCenterText = "No station";
+
+    [ObservableProperty]
+    private bool _hasMediaError;
+
+    [ObservableProperty]
+    private string _footerVolumeText = "60%";
 
     [ObservableProperty]
     private double _mediaControlsOpacity = 1.0;
@@ -114,6 +121,8 @@ public partial class MainWindowViewModel : ViewModelBase
 
     partial void OnFooterVolumeChanged(int value)
     {
+        FooterVolumeText = $"{value}%";
+
         if (_suppressVolumeDispatch)
         {
             return;
@@ -129,11 +138,11 @@ public partial class MainWindowViewModel : ViewModelBase
             IsMediaLoading = state.IsLoading;
             IsMediaPlaying = state.IsPlaying;
             IsMediaMuted = state.IsMuted;
-            PlayPauseIcon = state.IsPlaying ? "[PAUSE]" : "[PLAY]";
 
             _suppressVolumeDispatch = true;
             FooterVolume = state.Volume;
             _suppressVolumeDispatch = false;
+            FooterVolumeText = $"{state.Volume}%";
 
             var position = state.Position;
             var duration = state.Duration;
@@ -152,6 +161,19 @@ public partial class MainWindowViewModel : ViewModelBase
             MediaErrorText = string.IsNullOrWhiteSpace(state.LastError)
                 ? string.Empty
                 : state.LastError;
+            HasMediaError = !string.IsNullOrWhiteSpace(MediaErrorText);
+
+            if (HasMediaError && MediaErrorText.Contains("tags", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.Error.WriteLine($"[Traydio][ManagedBass] Metadata/status error: {MediaErrorText}");
+                System.Diagnostics.Trace.WriteLine($"[Traydio][ManagedBass] Metadata/status error: {MediaErrorText}");
+            }
+
+            MediaCenterText = HasMediaError
+                ? MediaErrorText
+                : !string.IsNullOrWhiteSpace(state.NowPlaying)
+                    ? state.NowPlaying
+                    : CurrentStationText;
 
             IsMediaBarVisible = state.IsLoading || !string.IsNullOrWhiteSpace(state.CurrentStationName);
             MediaControlsOpacity = state.IsLoading ? 0.55 : 1.0;

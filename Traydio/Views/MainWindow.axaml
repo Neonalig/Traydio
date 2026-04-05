@@ -1,6 +1,8 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:Traydio.ViewModels"
+        xmlns:conv="using:Traydio.Converters"
+        xmlns:imaging="clr-namespace:Avalonia.Media.Imaging;assembly=Avalonia.Base"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
@@ -10,6 +12,20 @@
         Width="1100"
         Height="760"
         Title="Traydio">
+    <Window.Resources>
+        <imaging:Bitmap x:Key="PlayIcon">avares://Traydio/Assets/Icons9x/play.ico</imaging:Bitmap>
+        <imaging:Bitmap x:Key="PauseIcon">avares://Traydio/Assets/Icons9x/pause.ico</imaging:Bitmap>
+        <imaging:Bitmap x:Key="VolumeIcon">avares://Traydio/Assets/Icons9x/volume.ico</imaging:Bitmap>
+        <imaging:Bitmap x:Key="MuteIcon">avares://Traydio/Assets/Icons9x/mute.ico</imaging:Bitmap>
+
+        <conv:BooleanToImageConverter x:Key="PlayPauseIconConverter"
+                                      TrueImage="{StaticResource PauseIcon}"
+                                      FalseImage="{StaticResource PlayIcon}"/>
+        <conv:BooleanToImageConverter x:Key="VolumeMuteIconConverter"
+                                      TrueImage="{StaticResource MuteIcon}"
+                                      FalseImage="{StaticResource VolumeIcon}"/>
+    </Window.Resources>
+
     <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="6">
         <Border Grid.Row="0" Classes="toolbar-frame" Margin="0">
             <Grid RowDefinitions="Auto,Auto" RowSpacing="6">
@@ -68,35 +84,34 @@
                 <TextBlock Text="Playback Console" Classes="group-title"/>
             </Border>
             <Border Grid.Row="1" Classes="group-frame" Margin="0,-8,0,0">
-                <Grid RowDefinitions="Auto,Auto" RowSpacing="8" Opacity="{Binding MediaControlsOpacity}">
-                    <Grid Grid.Row="0" ColumnDefinitions="Auto,Auto,Auto,*,Auto" ColumnSpacing="8">
-                        <Button Grid.Column="0" Classes="command-button" Command="{Binding TogglePlayPauseCommand}">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Image Source="/Assets/Icons9x/play.ico" Classes="icon-small"/>
-                                <TextBlock Text="{Binding PlayPauseIcon}" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <Button Grid.Column="1" Classes="command-button" Command="{Binding ToggleMuteCommand}">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Image Source="/Assets/Icons9x/mute.ico" Classes="icon-small"/>
-                                <TextBlock Text="Mute" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="{Binding PlaybackTimeText}" Classes="subtle-text"/>
-                        <TextBlock Grid.Column="3" VerticalAlignment="Center" Text="{Binding CurrentStationText}" FontWeight="SemiBold"/>
-                        <ProgressBar Grid.Column="4" Width="130" IsIndeterminate="True" IsVisible="{Binding IsMediaLoading}"/>
+                <Grid ColumnDefinitions="Auto,Auto,*,Auto,*,Auto" ColumnSpacing="8" Opacity="{Binding MediaControlsOpacity}">
+                    <Button Grid.Column="0" Classes="icon-only" Command="{Binding TogglePlayPauseCommand}">
+                        <Image Source="{Binding IsMediaPlaying, Converter={StaticResource PlayPauseIconConverter}}" Classes="icon-small"/>
+                    </Button>
+
+                    <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{Binding PlaybackTimeText}" Classes="subtle-text"/>
+
+                    <Grid Grid.Column="2">
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="{Binding MediaCenterText}"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding !HasMediaError}"/>
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="{Binding MediaCenterText}"
+                                   TextWrapping="Wrap"
+                                   Classes="error-text"
+                                   IsVisible="{Binding HasMediaError}"/>
                     </Grid>
 
-                    <Grid Grid.Row="1" ColumnDefinitions="Auto,*,*" ColumnSpacing="8">
-                        <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                            <Image Source="/Assets/Icons9x/volume.ico" Classes="icon-small"/>
-                            <TextBlock Text="Volume"/>
-                        </StackPanel>
-                        <Slider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding FooterVolume}"/>
-                        <StackPanel Grid.Column="2" Spacing="2">
-                            <TextBlock Text="{Binding NowPlayingText}" Classes="helper-text"/>
-                            <TextBlock Text="{Binding MediaErrorText}" Classes="error-text" TextWrapping="Wrap"/>
-                        </StackPanel>
+                    <ProgressBar Grid.Column="3" Width="110" IsIndeterminate="True" IsVisible="{Binding IsMediaLoading}"/>
+
+                    <Grid Grid.Column="4" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6" VerticalAlignment="Center">
+                        <Button Grid.Column="0" Classes="icon-only" Command="{Binding ToggleMuteCommand}">
+                            <Image Source="{Binding IsMediaMuted, Converter={StaticResource VolumeMuteIconConverter}}" Classes="icon-small"/>
+                        </Button>
+                        <Slider Grid.Column="1" Minimum="0" Maximum="100" Width="120" Value="{Binding FooterVolume}"/>
+                        <TextBlock Grid.Column="2" VerticalAlignment="Center" Text="{Binding FooterVolumeText}" Classes="subtle-text"/>
                     </Grid>
                 </Grid>
             </Border>
