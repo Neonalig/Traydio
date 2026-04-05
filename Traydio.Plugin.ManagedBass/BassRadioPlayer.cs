@@ -21,6 +21,8 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
 
     private int _streamHandle;
     private bool _isInitialized;
+    private bool _isMetadataSupported = true;
+    private bool _hasLoggedMetadataUnavailable;
     private bool _isMuted;
     private int _volume = 100;
 
@@ -256,6 +258,8 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
         TryLoadPlugin("libbassopus.so");
         TryLoadPlugin("libbassopus.dylib");
 
+        _isMetadataSupported = DetectTagsNativeLibraryAvailability();
+
         _isInitialized = true;
     }
 
@@ -321,7 +325,7 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
 
     private void UpdateNowPlaying_NoLock()
     {
-        if (_streamHandle == 0)
+        if (_streamHandle == 0 || !_isMetadataSupported)
         {
             _nowPlaying = null;
             return;
@@ -332,24 +336,48 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
             var tag = BassTags.Read(_streamHandle, "%IFV1(%ARTI - )%TITL");
             _nowPlaying = string.IsNullOrWhiteSpace(tag) ? null : tag;
         }
-        catch (DllNotFoundException ex)
+        catch (Exception ex) when (IsTagsLoadFailure(ex))
         {
             _nowPlaying = null;
-            var message = "[Traydio][ManagedBass] Metadata read failed: ManagedBass.Tags native library not found. " + ex;
-            Console.Error.WriteLine(message);
-            System.Diagnostics.Trace.WriteLine(message);
+            _isMetadataSupported = false;
+            LogMetadataUnavailable("[Traydio][ManagedBass] Metadata read disabled because tags.dll is unavailable. " + ex);
+        }
+        catch
+        {
+            _nowPlaying = null;
+        }
+    }
+
+    private bool DetectTagsNativeLibraryAvailability()
+    {
+        try
+        {
+            if (!NativeLibrary.TryLoad("tags", out var handle))
+            {
+                LogMetadataUnavailable("[Traydio][ManagedBass] tags.dll not found. Playback will continue without metadata.");
+                return false;
+            }
+
+            NativeLibrary.Free(handle);
+            return true;
         }
         catch (Exception ex)
         {
-            _nowPlaying = null;
-
-            if (IsTagsLoadFailure(ex))
-            {
-                var message = "[Traydio][ManagedBass] Metadata read failed: " + ex;
-                Console.Error.WriteLine(message);
-                System.Diagnostics.Trace.WriteLine(message);
-            }
+            LogMetadataUnavailable("[Traydio][ManagedBass] tags.dll probe failed. Playback will continue without metadata. " + ex.Message);
+            return false;
         }
+    }
+
+    private void LogMetadataUnavailable(string message)
+    {
+        if (_hasLoggedMetadataUnavailable)
+        {
+            return;
+        }
+
+        _hasLoggedMetadataUnavailable = true;
+        Console.Error.WriteLine(message);
+        System.Diagnostics.Trace.WriteLine(message);
     }
 
     private static bool IsTagsLoadFailure(Exception ex)

@@ -143,6 +143,14 @@ public partial class BassPluginSettingsView : UserControl
             "Downloading bassopus24.zip...");
     }
 
+    private async void OnDownloadBassTagsClick(object? sender, RoutedEventArgs e)
+    {
+        await DownloadNativeFileAsync(
+            BassPluginSettings.BassTagsDownloadUrl,
+            "tags.dll",
+            "Downloading tags24.zip...");
+    }
+
     private async System.Threading.Tasks.Task DownloadNativeFileAsync(string archiveUrl, string dllName, string downloadingMessage)
     {
         var folderPath = _folderPathBox.Text?.Trim();
