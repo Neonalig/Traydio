@@ -7,7 +7,7 @@
              DragDrop.DragOver="OnDragOver"
              DragDrop.Drop="OnDrop">
 
-    <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10" Margin="8">
+    <Grid RowDefinitions="Auto,*" RowSpacing="10" Margin="8">
         <StackPanel Orientation="Horizontal" Spacing="8">
             <Button x:Name="AddStationButton" Content="Add Station" MinWidth="120">
                 <Button.Flyout>
@@ -45,11 +45,6 @@
             </StackPanel>
         </Grid>
 
-        <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-            <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Volume"/>
-            <Slider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding Volume}"/>
-            <Button Grid.Column="2" Content="Apply" Command="{Binding ApplyVolumeCommand}"/>
-        </Grid>
     </Grid>
 </UserControl>
 

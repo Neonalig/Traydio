@@ -23,9 +23,6 @@ public partial class StationManagerPageViewModel : ViewModelBase
     private RadioStation? _selectedStation;
 
     [ObservableProperty]
-    private int _volume;
-
-    [ObservableProperty]
     private string _newStationName = string.Empty;
 
     [ObservableProperty]
@@ -57,8 +54,6 @@ public partial class StationManagerPageViewModel : ViewModelBase
     {
         _stationRepository = stationRepository;
         _commandDispatcher = commandDispatcher;
-
-        _volume = _stationRepository.Volume;
         _stationRepository.Changed += (_, _) => RefreshStations();
         RefreshStations();
     }
@@ -115,16 +110,6 @@ public partial class StationManagerPageViewModel : ViewModelBase
         _commandDispatcher.Dispatch(new AppCommand { Kind = AppCommandKind.Pause });
     }
 
-    [RelayCommand]
-    private void ApplyVolume()
-    {
-        _commandDispatcher.Dispatch(new AppCommand
-        {
-            Kind = AppCommandKind.SetVolume,
-            Value = Volume,
-        });
-    }
-
     private void RefreshStations()
     {
         void Update()
@@ -134,8 +119,6 @@ public partial class StationManagerPageViewModel : ViewModelBase
             {
                 Stations.Add(station);
             }
-
-            Volume = _stationRepository.Volume;
         }
 
         if (Dispatcher.UIThread.CheckAccess())

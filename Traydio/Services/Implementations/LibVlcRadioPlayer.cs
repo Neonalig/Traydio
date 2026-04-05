@@ -241,7 +241,12 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
 
         _mediaPlayer.VolumeChanged += (_, e) =>
         {
-            _volume = Math.Clamp((int)Math.Round(e.Volume), 0, 100);
+            var reported = e.Volume;
+            // Some backends report 0..1 while others report 0..100.
+            var normalized = reported <= 1.0f
+                ? (int)Math.Round(reported * 100.0f)
+                : (int)Math.Round(reported);
+            _volume = Math.Clamp(normalized, 0, 100);
             PublishState();
         };
 
