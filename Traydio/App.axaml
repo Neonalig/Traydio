@@ -10,6 +10,8 @@
     </Application.DataTemplates>
   
     <Application.Styles>
-        <FluentTheme />
+        <ClassicTheme />
+        <StyleInclude Source="avares://Traydio/Styles/ThemeTokens.axaml"/>
+        <StyleInclude Source="avares://Traydio/Styles/ControlStyles.axaml"/>
     </Application.Styles>
 </Application>

@@ -4,9 +4,9 @@
              x:Class="Traydio.Views.SettingsPage"
              x:DataType="vm:SettingsPageViewModel">
 
-    <Border BorderBrush="#445" BorderThickness="1" Padding="12" CornerRadius="8" Margin="8">
+    <Border Classes="surface-card" Margin="0">
         <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*,Auto,Auto" RowSpacing="8" ColumnSpacing="8">
-            <TextBlock Grid.Row="0" Grid.ColumnSpan="4" Text="Communication Settings" FontWeight="SemiBold" FontSize="16"/>
+            <TextBlock Grid.Row="0" Grid.ColumnSpan="4" Text="Communication Settings" Classes="section-title"/>
 
             <CheckBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Content="Enable named pipe relay" IsChecked="{Binding EnableNamedPipeRelay}"/>
             <CheckBox Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" Content="Enable loopback relay" IsChecked="{Binding EnableLoopbackRelay}"/>
@@ -24,10 +24,10 @@
             <CheckBox Grid.Row="4" Grid.Column="3" IsEnabled="False" IsChecked="{Binding IsProtocolRegistered}"/>
 
             <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="4" Orientation="Horizontal" Spacing="8">
-                <Button Content="Save" Command="{Binding SaveCommand}"/>
-                <Button Content="Install Protocol Handler" Command="{Binding InstallProtocolCommand}"/>
-                <Button Content="Uninstall Protocol Handler" Command="{Binding UninstallProtocolCommand}"/>
-                <TextBlock VerticalAlignment="Center" Text="{Binding Status}"/>
+                <Button Classes="command-button" Content="Save" Command="{Binding SaveCommand}"/>
+                <Button Classes="command-button" Content="Install Protocol Handler" Command="{Binding InstallProtocolCommand}"/>
+                <Button Classes="command-button" Content="Uninstall Protocol Handler" Command="{Binding UninstallProtocolCommand}"/>
+                <TextBlock VerticalAlignment="Center" Text="{Binding Status}" Classes="accent-text"/>
             </StackPanel>
         </Grid>
     </Border>

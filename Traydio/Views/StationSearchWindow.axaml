@@ -11,44 +11,55 @@
         <KeyBinding Gesture="Enter" Command="{Binding SearchCommand}" />
     </UserControl.KeyBindings>
 
-    <Grid Margin="12" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="8">
-        <Grid Grid.Row="0" ColumnDefinitions="2*,2*,Auto,Auto,Auto" ColumnSpacing="8">
-            <ComboBox Grid.Column="0"
-                      ItemsSource="{Binding Providers}"
-                      SelectedItem="{Binding SelectedProvider}"
-                      DisplayMemberBinding="{Binding DisplayName}"/>
-            <TextBox Grid.Column="1" Watermark="Search query" Text="{Binding Query}"/>
-            <Button Grid.Column="2" Content="Search" Command="{Binding SearchCommand}"/>
-            <TextBox Grid.Column="3" Width="180" Watermark="Filter results" Text="{Binding FilterText}"/>
-            <Button Grid.Column="4" Content="Apply Filter" Command="{Binding ApplyFilterCommand}"/>
-        </Grid>
+    <Grid Margin="0" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="8">
+        <TextBlock Grid.Row="0" Text="Station Search" Classes="section-title"/>
 
-        <Grid Grid.Row="1" ColumnDefinitions="Auto,*" ColumnSpacing="8">
-            <Button Grid.Column="0" Content="Open Plugin Manager" Command="{Binding OpenPluginManagerWindowCommand}"/>
-            <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="Manage plugin install/disable from the dedicated plugin management window." Opacity="0.75"/>
-        </Grid>
+        <Border Grid.Row="1" Classes="surface-card" Margin="0">
+            <Grid ColumnDefinitions="2*,2*,Auto,Auto,Auto" ColumnSpacing="8">
+                <ComboBox Grid.Column="0"
+                          ItemsSource="{Binding Providers}"
+                          SelectedItem="{Binding SelectedProvider}"
+                          DisplayMemberBinding="{Binding DisplayName}"/>
+                <TextBox Grid.Column="1" Classes="search-input" Watermark="Search query" Text="{Binding Query}"/>
+                <Button Grid.Column="2" Classes="command-button" Content="Search" Command="{Binding SearchCommand}"/>
+                <TextBox Grid.Column="3" Width="180" Watermark="Filter results" Text="{Binding FilterText}"/>
+                <Button Grid.Column="4" Classes="command-button" Content="Apply Filter" Command="{Binding ApplyFilterCommand}"/>
+            </Grid>
+        </Border>
 
-        <ListBox Grid.Row="2" ItemsSource="{Binding Results}" SelectedItem="{Binding SelectedResult}">
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <Grid ColumnDefinitions="3*,5*" ColumnSpacing="8">
-                        <StackPanel>
-                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                            <TextBlock Text="{Binding Country}" Opacity="0.75"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="1">
-                            <TextBlock Text="{Binding StreamUrl}" TextWrapping="Wrap"/>
-                            <TextBlock Text="{Binding Description}" Opacity="0.75" TextWrapping="Wrap"/>
-                        </StackPanel>
-                    </Grid>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+        <Border Grid.Row="2" Classes="surface-card" Margin="0">
+            <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8">
+                <Grid Grid.Row="0" ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                    <Button Grid.Column="0" Classes="command-button" Content="Open Plugin Manager" Command="{Binding OpenPluginManagerWindowCommand}"/>
+                    <TextBlock Grid.Column="1"
+                               VerticalAlignment="Center"
+                               Text="Manage plugin install and enable/disable state from the dedicated plugin window."
+                               Classes="subtle-text"/>
+                </Grid>
 
-        <Grid Grid.Row="3" ColumnDefinitions="Auto,*" ColumnSpacing="8">
-            <Button Grid.Column="0" Content="Add Selected Station" Command="{Binding AddSelectedStationCommand}"/>
-            <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{Binding Status}"/>
-        </Grid>
+                <ListBox Grid.Row="1" Classes="list-surface" ItemsSource="{Binding Results}" SelectedItem="{Binding SelectedResult}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid ColumnDefinitions="3*,5*" ColumnSpacing="8">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding Country}" Classes="subtle-text"/>
+                                </StackPanel>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="{Binding StreamUrl}" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding Description}" Classes="subtle-text" TextWrapping="Wrap"/>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <Grid Grid.Row="2" ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                    <Button Grid.Column="0" Classes="command-button" Content="Add Selected Station" Command="{Binding AddSelectedStationCommand}"/>
+                    <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{Binding Status}" Classes="accent-text"/>
+                </Grid>
+            </Grid>
+        </Border>
     </Grid>
 </UserControl>
 

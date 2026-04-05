@@ -7,41 +7,45 @@
              DragDrop.DragOver="OnDragOver"
              DragDrop.Drop="OnDrop">
 
-    <Grid RowDefinitions="Auto,*" RowSpacing="10" Margin="8">
-        <StackPanel Orientation="Horizontal" Spacing="8">
-            <Button x:Name="AddStationButton" Content="Add Station" MinWidth="120">
-                <Button.Flyout>
-                    <Flyout Placement="Bottom" IsOpen="{Binding IsAddFlyoutOpen, Mode=TwoWay}">
-                        <StackPanel Width="360" Spacing="8" Margin="8">
-                            <TextBlock Text="Add Station" FontWeight="SemiBold"/>
-                            <TextBox Watermark="Station name" Text="{Binding NewStationName}"/>
-                            <TextBox Watermark="Stream URL" Text="{Binding NewStationUrl}"/>
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <Button Content="Add" Command="{Binding AddStationCommand}"/>
-                                <Button Content="Find More" Command="{Binding FindMoreStationsCommand}"/>
-                            </StackPanel>
-                        </StackPanel>
-                    </Flyout>
-                </Button.Flyout>
-            </Button>
-        </StackPanel>
+    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="10" Margin="0">
+        <TextBlock Grid.Row="0" Text="Station Library" Classes="section-title"/>
 
-        <Grid Grid.Row="1" RowDefinitions="*,Auto" RowSpacing="8">
-            <ListBox Grid.Row="0" ItemsSource="{Binding Stations}" SelectedItem="{Binding SelectedStation}">
+        <Border Grid.Row="1" Classes="surface-card" Margin="0">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button x:Name="AddStationButton" Classes="command-button" Content="Add Station" MinWidth="120">
+                    <Button.Flyout>
+                        <Flyout Placement="Bottom" IsOpen="{Binding IsAddFlyoutOpen, Mode=TwoWay}">
+                            <StackPanel Width="360" Spacing="8" Margin="8">
+                                <TextBlock Text="Add Station" FontWeight="SemiBold"/>
+                                <TextBox Watermark="Station name" Text="{Binding NewStationName}"/>
+                                <TextBox Watermark="Stream URL" Text="{Binding NewStationUrl}"/>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Classes="command-button" Content="Add" Command="{Binding AddStationCommand}"/>
+                                    <Button Classes="command-button" Content="Find More" Command="{Binding FindMoreStationsCommand}"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="2" RowDefinitions="*,Auto" RowSpacing="8">
+            <ListBox Grid.Row="0" Classes="list-surface" ItemsSource="{Binding Stations}" SelectedItem="{Binding SelectedStation}">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel>
                             <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                            <TextBlock Text="{Binding StreamUrl}" Opacity="0.75"/>
+                            <TextBlock Text="{Binding StreamUrl}" Classes="subtle-text"/>
                         </StackPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
 
             <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
-                <Button Content="Play Selected" Command="{Binding PlaySelectedStationCommand}"/>
-                <Button Content="Pause" Command="{Binding PauseCommand}"/>
-                <Button Content="Remove Selected" Command="{Binding RemoveSelectedStationCommand}"/>
+                <Button Classes="command-button" Content="Play Selected" Command="{Binding PlaySelectedStationCommand}"/>
+                <Button Classes="command-button" Content="Pause" Command="{Binding PauseCommand}"/>
+                <Button Classes="command-button" Content="Remove Selected" Command="{Binding RemoveSelectedStationCommand}"/>
             </StackPanel>
         </Grid>
 
