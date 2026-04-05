@@ -1,5 +1,8 @@
 ﻿using Avalonia;
 using System;
+using Traydio.Common;
+
+[assembly: GenerateViewLocator("Traydio", "ViewLocator", ServiceProviderPropertyName = "Services")]
 
 namespace Traydio;
 
