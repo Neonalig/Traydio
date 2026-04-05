@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using Traydio.Common;
@@ -282,7 +284,7 @@ public partial class StationManagerPage : UserControl
         viewModel.PlayStationCommand.Execute(station);
     }
 
-    private void OnPlayStationClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void OnPlayStationClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not StationManagerPageViewModel viewModel)
         {
@@ -297,7 +299,7 @@ public partial class StationManagerPage : UserControl
         viewModel.PlayStationCommand.Execute(station);
     }
 
-    private void OnRemoveStationClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void OnRemoveStationClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not StationManagerPageViewModel viewModel)
         {
@@ -312,26 +314,46 @@ public partial class StationManagerPage : UserControl
         viewModel.RemoveStationCommand.Execute(station);
     }
 
-    private void OnCopyStationNameClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void OnCopyStationNameClick(object? sender, RoutedEventArgs e)
         => CopyStationFieldAsync(sender, station => station.Name).ForgetWithErrorHandling("Copy station name", showDialog: true);
 
-    private void OnCopyStationLinkClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void OnCopyStationLinkClick(object? sender, RoutedEventArgs e)
         => CopyStationFieldAsync(sender, station => station.StreamUrl).ForgetWithErrorHandling("Copy station link", showDialog: true);
 
-    private void OnCopyStationIdClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void OnCopyStationIdClick(object? sender, RoutedEventArgs e)
         => CopyStationFieldAsync(sender, station => station.Station.Id).ForgetWithErrorHandling("Copy station id", showDialog: true);
 
-    private void OnCopyPlayCommandClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void OnCopyPlayCommandClick(object? sender, RoutedEventArgs e)
         => CopyStationFieldAsync(sender, station => "station " + station.Station.Id).ForgetWithErrorHandling("Copy station play command", showDialog: true);
 
-    private void OnOpenStationLinkClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void OnOpenStationLinkClick(object? sender, RoutedEventArgs e)
         => OpenStationLinkAsync(sender).ForgetWithErrorHandling("Open station link", showDialog: true);
 
-    private void OnExportM3UClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void OnExportM3UClick(object? sender, RoutedEventArgs e)
     {
+        ExportM3UAsync(sender).ForgetWithErrorHandling("Export m3u playlist", showDialog: true);
     }
 
-    private void OnPlayFromContextClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void OnStationContextMenuOpened(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not ContextMenu contextMenu)
+        {
+            return;
+        }
+
+        var exportMenuItem = contextMenu.FindControl<MenuItem>("ExportM3UMenuItem");
+        if (exportMenuItem is null)
+        {
+            return;
+        }
+
+        var exportCount = GetStationsForExport(exportMenuItem).Length;
+        exportMenuItem.Header = exportCount > 1
+            ? "Export Stations as M3U Playlist..."
+            : "Export Station as M3U Playlist...";
+    }
+
+    private void OnPlayFromContextClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not StationManagerPageViewModel viewModel)
         {
@@ -347,7 +369,7 @@ public partial class StationManagerPage : UserControl
         viewModel.PlayStationCommand.Execute(station);
     }
 
-    private void OnDeleteStationClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void OnDeleteStationClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not StationManagerPageViewModel viewModel)
         {
@@ -363,10 +385,10 @@ public partial class StationManagerPage : UserControl
         viewModel.RemoveStationCommand.Execute(station);
     }
 
-    private void OnSetStationIconClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void OnSetStationIconClick(object? sender, RoutedEventArgs e)
         => SetStationIconAsync(sender).ForgetWithErrorHandling("Set station icon", showDialog: true);
 
-    private void OnClearStationIconClick(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
+    private void OnClearStationIconClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not StationManagerPageViewModel viewModel)
         {
@@ -469,6 +491,154 @@ public partial class StationManagerPage : UserControl
         }
 
         viewModel.SetStationIconPath(station, selectedPath);
+    }
+
+    private async Task ExportM3UAsync(object? sender)
+    {
+        var stations = GetStationsForExport(sender);
+        if (stations.Length == 0)
+        {
+            return;
+        }
+
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel?.StorageProvider is null)
+        {
+            return;
+        }
+
+        var selectedStation = TryGetStationItem(sender);
+        var suggestedName = BuildSuggestedPlaylistName(selectedStation, stations.Length);
+
+        var targetFile = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = "Export M3U playlist",
+            SuggestedFileName = suggestedName,
+            DefaultExtension = "m3u",
+            ShowOverwritePrompt = true,
+            FileTypeChoices =
+            [
+                new FilePickerFileType("M3U playlist")
+                {
+                    Patterns = ["*.m3u"],
+                },
+                new FilePickerFileType("M3U8 playlist")
+                {
+                    Patterns = ["*.m3u8"],
+                },
+            ],
+        }).ConfigureAwait(true);
+
+        if (targetFile is null)
+        {
+            return;
+        }
+
+        var localPath = targetFile.TryGetLocalPath();
+        var extension = localPath is null
+            ? ".m3u"
+            : Path.GetExtension(localPath);
+        if (!string.Equals(extension, ".m3u8", StringComparison.OrdinalIgnoreCase))
+        {
+            extension = ".m3u";
+        }
+
+        var playlistText = BuildM3UPlaylist(stations);
+        var encoding = string.Equals(extension, ".m3u8", StringComparison.OrdinalIgnoreCase)
+            ? new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)
+            : new UTF8Encoding(encoderShouldEmitUTF8Identifier: true);
+
+        await using var stream = await targetFile.OpenWriteAsync().ConfigureAwait(true);
+        if (stream.CanSeek)
+        {
+            stream.Position = 0;
+            stream.SetLength(0);
+        }
+
+        await using var writer = new StreamWriter(stream, encoding, leaveOpen: false);
+        await writer.WriteAsync(playlistText).ConfigureAwait(true);
+        await writer.FlushAsync().ConfigureAwait(true);
+    }
+
+    private StationManagerPageViewModel.StationItem[] GetStationsForExport(object? sender)
+    {
+        var list = this.FindControl<ListBox>("StationsList");
+        var selectedStations = list?.SelectedItems?
+            .OfType<StationManagerPageViewModel.StationItem>()
+            .ToArray() ?? [];
+
+        var contextStation = TryGetStationItem(sender);
+        if (selectedStations.Length > 1)
+        {
+            if (contextStation is null)
+            {
+                return selectedStations;
+            }
+
+            var isContextStationSelected = selectedStations.Any(item =>
+                ReferenceEquals(item, contextStation)
+                || string.Equals(item.Station.Id, contextStation.Station.Id, StringComparison.OrdinalIgnoreCase));
+
+            if (isContextStationSelected)
+            {
+                return selectedStations;
+            }
+        }
+
+        if (contextStation is not null)
+        {
+            return [contextStation];
+        }
+
+        return selectedStations;
+    }
+
+    private static string BuildSuggestedPlaylistName(StationManagerPageViewModel.StationItem? station, int count)
+    {
+        if (count > 1)
+        {
+            return "stations.m3u";
+        }
+
+        var baseName = station?.Name;
+        if (string.IsNullOrWhiteSpace(baseName))
+        {
+            baseName = "station";
+        }
+
+        foreach (var invalid in Path.GetInvalidFileNameChars())
+        {
+            baseName = baseName.Replace(invalid, '_');
+        }
+
+        return baseName + ".m3u";
+    }
+
+    private static string BuildM3UPlaylist(IEnumerable<StationManagerPageViewModel.StationItem> stations)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine("#EXTM3U");
+
+        foreach (var station in stations)
+        {
+            var streamUrl = station.StreamUrl.Trim();
+            if (string.IsNullOrWhiteSpace(streamUrl) || !Uri.TryCreate(streamUrl, UriKind.Absolute, out _))
+            {
+                continue;
+            }
+
+            var displayName = station.Name;
+            if (string.IsNullOrWhiteSpace(displayName))
+            {
+                displayName = station.Station.Id;
+            }
+
+            displayName = displayName.Replace('\r', ' ').Replace('\n', ' ');
+            builder.AppendLine("#EXTINF:-1," + displayName);
+            builder.AppendLine(streamUrl);
+        }
+
+        return builder.ToString();
     }
 
     private StationManagerPageViewModel.StationItem? TryGetStationItem(object? sender)

@@ -12,8 +12,8 @@ namespace Traydio.ViewModels;
 [ViewModelFor(typeof(MainWindow))]
 public partial class MainWindowViewModel : ViewModelBase
 {
-    private const int MediaMarqueeMaxChars = 52;
-    private const int MediaMarqueeHoldTicks = 8;
+    private const int _MEDIA_MARQUEE_MAX_CHARS = 52;
+    private const int _MEDIA_MARQUEE_HOLD_TICKS = 8;
 
     private readonly INavigationService _navigationService;
     private readonly IAppCommandDispatcher _commandDispatcher;
@@ -214,8 +214,10 @@ public partial class MainWindowViewModel : ViewModelBase
                 ? "No station"
                 : state.CurrentStationName;
 
-            var normalizedNowPlaying = NormalizeNowPlaying(state.NowPlaying);
-            NowPlayingText = normalizedNowPlaying ?? string.Empty;
+            var normalizedNowPlaying = NormalizeNowPlaying(state.NowPlaying) ?? string.Empty;
+            if (normalizedNowPlaying == "<***, expected! ***")
+                normalizedNowPlaying = string.Empty;
+            NowPlayingText = normalizedNowPlaying;
 
             MediaErrorText = string.IsNullOrWhiteSpace(state.LastError)
                 ? string.Empty
@@ -266,7 +268,7 @@ public partial class MainWindowViewModel : ViewModelBase
         _mediaMarqueeHoldCounter = 0;
         _mediaMarqueeAtEnd = false;
 
-        if (_mediaMarqueeSourceText.Length <= MediaMarqueeMaxChars)
+        if (_mediaMarqueeSourceText.Length <= _MEDIA_MARQUEE_MAX_CHARS)
         {
             _mediaMarqueeTimer.Stop();
             MediaCenterDisplayText = _mediaMarqueeSourceText;
@@ -279,16 +281,16 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private void TickMediaMarquee()
     {
-        if (_mediaMarqueeSourceText.Length <= MediaMarqueeMaxChars)
+        if (_mediaMarqueeSourceText.Length <= _MEDIA_MARQUEE_MAX_CHARS)
         {
             _mediaMarqueeTimer.Stop();
             MediaCenterDisplayText = _mediaMarqueeSourceText;
             return;
         }
 
-        var maxOffset = _mediaMarqueeSourceText.Length - MediaMarqueeMaxChars;
+        var maxOffset = _mediaMarqueeSourceText.Length - _MEDIA_MARQUEE_MAX_CHARS;
 
-        if (_mediaMarqueeHoldCounter < MediaMarqueeHoldTicks)
+        if (_mediaMarqueeHoldCounter < _MEDIA_MARQUEE_HOLD_TICKS)
         {
             _mediaMarqueeHoldCounter++;
             return;
@@ -323,13 +325,13 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private static string SliceMediaMarqueeWindow(string text, int offset)
     {
-        if (text.Length <= MediaMarqueeMaxChars)
+        if (text.Length <= _MEDIA_MARQUEE_MAX_CHARS)
         {
             return text;
         }
 
-        var safeOffset = Math.Clamp(offset, 0, text.Length - MediaMarqueeMaxChars);
-        return text.Substring(safeOffset, MediaMarqueeMaxChars);
+        var safeOffset = Math.Clamp(offset, 0, text.Length - _MEDIA_MARQUEE_MAX_CHARS);
+        return text.Substring(safeOffset, _MEDIA_MARQUEE_MAX_CHARS);
     }
 
     private static string? NormalizeNowPlaying(string? nowPlaying)

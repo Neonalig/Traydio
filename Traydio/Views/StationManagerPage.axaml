@@ -51,7 +51,7 @@
                                         HorizontalAlignment="Stretch"
                                         Background="Transparent">
                                     <Border.ContextMenu>
-                                        <ContextMenu>
+                                        <ContextMenu Opened="OnStationContextMenuOpened">
                                             <MenuItem Header="Play" Click="OnPlayStationClick"/>
                                             <MenuItem Header="Delete" Click="OnRemoveStationClick"/>
                                             <Separator/>
@@ -64,7 +64,7 @@
                                             <MenuItem Header="Copy Play Command" Click="OnCopyPlayCommandClick"/>
                                             <Separator/>
                                             <MenuItem Header="Open Stream Link" Click="OnOpenStationLinkClick"/>
-                                            <MenuItem Header="Export M3U Playlist" Click="OnExportM3UClick"/>
+                                            <MenuItem x:Name="ExportM3UMenuItem" Header="Export Station as M3U Playlist..." Click="OnExportM3UClick"/>
                                         </ContextMenu>
                                     </Border.ContextMenu>
                                     <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
