@@ -20,6 +20,8 @@ public interface IStationRepository
 
     int Volume { get; set; }
 
+    string? RadioPlayerEngineId { get; set; }
+
     string? AudioOutputDeviceId { get; set; }
 
     CommunicationBridgeSettings Communication { get; }

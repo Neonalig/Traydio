@@ -16,6 +16,7 @@ public partial class SettingsPageViewModel : ViewModelBase
     private readonly IStationRepository _stationRepository;
     private readonly IProtocolRegistrationService _protocolRegistrationService;
     private readonly IRadioPlayer _radioPlayer;
+    private readonly IPluginManager _pluginManager;
 
     [ObservableProperty]
     private bool _enableNamedPipeRelay;
@@ -47,20 +48,30 @@ public partial class SettingsPageViewModel : ViewModelBase
     [ObservableProperty]
     private AudioOutputDeviceOption? _selectedAudioOutputDevice;
 
+    [ObservableProperty]
+    private IReadOnlyList<RadioPlayerEngineOption> _radioPlayerEngines = [];
+
+    [ObservableProperty]
+    private RadioPlayerEngineOption? _selectedRadioPlayerEngine;
+
     public SettingsPageViewModel(
         IStationRepository stationRepository,
         IProtocolRegistrationService protocolRegistrationService,
-        IRadioPlayer radioPlayer)
+        IRadioPlayer radioPlayer,
+        IPluginManager pluginManager)
     {
         _stationRepository = stationRepository;
         _protocolRegistrationService = protocolRegistrationService;
         _radioPlayer = radioPlayer;
+        _pluginManager = pluginManager;
         Refresh();
     }
 
     [RelayCommand]
     private void Save()
     {
+        var previousEngineId = _stationRepository.RadioPlayerEngineId;
+
         _stationRepository.SaveCommunicationSettings(new CommunicationBridgeSettings
         {
             EnableNamedPipeRelay = EnableNamedPipeRelay,
@@ -74,8 +85,14 @@ public partial class SettingsPageViewModel : ViewModelBase
         _stationRepository.AudioOutputDeviceId = SelectedAudioOutputDevice?.Id;
         _radioPlayer.SetAudioOutputDevice(_stationRepository.AudioOutputDeviceId);
 
+        _stationRepository.RadioPlayerEngineId = SelectedRadioPlayerEngine?.Id;
+
         RefreshProtocolRegistration();
-        Status = "Settings saved.";
+
+        var engineChanged = !string.Equals(previousEngineId, _stationRepository.RadioPlayerEngineId, StringComparison.OrdinalIgnoreCase);
+        Status = engineChanged
+            ? "Settings saved. Restart Traydio to apply the new playback engine."
+            : "Settings saved.";
     }
 
     [RelayCommand]
@@ -114,6 +131,12 @@ public partial class SettingsPageViewModel : ViewModelBase
         LoopbackPort = _stationRepository.Communication.LoopbackPort;
         EnableProtocolUrlRelay = _stationRepository.Communication.EnableProtocolUrlRelay;
         ProtocolScheme = _stationRepository.Communication.ProtocolScheme;
+
+        RadioPlayerEngines = BuildRadioPlayerEngineOptions();
+        SelectedRadioPlayerEngine = RadioPlayerEngines.FirstOrDefault(option =>
+            string.Equals(option.Id, _stationRepository.RadioPlayerEngineId, StringComparison.OrdinalIgnoreCase))
+            ?? RadioPlayerEngines.FirstOrDefault();
+
         AudioOutputDevices = BuildAudioOutputOptions();
         SelectedAudioOutputDevice = AudioOutputDevices.FirstOrDefault(option =>
             string.Equals(option.Id, _stationRepository.AudioOutputDeviceId, StringComparison.Ordinal))
@@ -145,7 +168,20 @@ public partial class SettingsPageViewModel : ViewModelBase
 
         return options;
     }
+
+    private IReadOnlyList<RadioPlayerEngineOption> BuildRadioPlayerEngineOptions()
+    {
+        return _pluginManager.GetPlugins()
+            .SelectMany(plugin => plugin.Capabilities.OfType<IRadioPlayerEngineCapability>())
+            .GroupBy(capability => capability.EngineId, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .OrderBy(capability => capability.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .Select(capability => new RadioPlayerEngineOption(capability.EngineId, capability.DisplayName))
+            .ToArray();
+    }
 }
 
 public sealed record AudioOutputDeviceOption(string? Id, string Name);
+
+public sealed record RadioPlayerEngineOption(string Id, string Name);
 

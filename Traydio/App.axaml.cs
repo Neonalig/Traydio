@@ -29,14 +29,15 @@ public class App : Application
             // More info: https://docs.avaloniaui.net/docs/guides/development-guides/data-validation#manage-validationplugins
             DisableAvaloniaDataAnnotationValidation();
 
+            var pluginManager = Program.Services.GetRequiredService<IPluginManager>();
+            pluginManager.Start();
+
             var commandDispatcher = Program.Services.GetRequiredService<IAppCommandDispatcher>();
             commandDispatcher.Initialize(desktop);
 
             var relayCoordinator = Program.Services.GetRequiredService<ICommandRelayCoordinator>();
             relayCoordinator.StartPrimaryRelay();
 
-            var pluginManager = Program.Services.GetRequiredService<IPluginManager>();
-            pluginManager.Start();
 
             var trayController = Program.Services.GetRequiredService<ITrayController>();
             trayController.Initialize(desktop);

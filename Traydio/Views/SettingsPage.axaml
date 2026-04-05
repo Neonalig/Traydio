@@ -55,9 +55,20 @@
                 <TextBlock Text="Playback" Classes="group-title"/>
             </Border>
             <Border Grid.Row="1" Classes="group-frame" Margin="0,-8,0,0">
-                <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="Auto,*" RowSpacing="8" ColumnSpacing="8">
-                    <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Audio output device"/>
+                <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*" RowSpacing="8" ColumnSpacing="8">
+                    <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Playback engine"/>
                     <ComboBox Grid.Row="0" Grid.Column="1"
+                              ItemsSource="{Binding RadioPlayerEngines}"
+                              SelectedItem="{Binding SelectedRadioPlayerEngine}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:RadioPlayerEngineOption">
+                                <TextBlock Text="{Binding Name}"/>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="Audio output device"/>
+                    <ComboBox Grid.Row="1" Grid.Column="1"
                               ItemsSource="{Binding AudioOutputDevices}"
                               SelectedItem="{Binding SelectedAudioOutputDevice}">
                         <ComboBox.ItemTemplate>
@@ -67,8 +78,8 @@
                         </ComboBox.ItemTemplate>
                     </ComboBox>
 
-                    <TextBlock Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
-                               Text="Use System default unless you want to force a specific playback endpoint."
+                    <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2"
+                               Text="Engine changes apply after restart. Use System default unless you want to force a specific playback endpoint."
                                Classes="helper-text"/>
                 </Grid>
             </Border>

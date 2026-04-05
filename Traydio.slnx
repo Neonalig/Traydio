@@ -1,6 +1,8 @@
 <Solution>
   <Project Path="Traydio.Common/Traydio.Common.csproj" />
   <Project Path="Traydio.Plugin.FmStreamOrg/Traydio.Plugin.FmStreamOrg.csproj" />
+  <Project Path="Traydio.Plugin.LibVlc/Traydio.Plugin.LibVlc.csproj" />
+  <Project Path="Traydio.Plugin.ManagedBass/Traydio.Plugin.ManagedBass.csproj" />
   <Project Path="Traydio.Plugin.StreamUrlLink/Traydio.Plugin.StreamUrlLink.csproj" />
   <Project Path="Traydio.SourceGenerator.Sample/Traydio.SourceGenerator.Sample.csproj" />
   <Project Path="Traydio.SourceGenerator.Tests/Traydio.SourceGenerator.Tests.csproj" />

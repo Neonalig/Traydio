@@ -16,6 +16,7 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
 
     private FileSystemWatcher? _watcher;
     private string? _pluginDirectory;
+    private bool _isStarted;
 
     public event EventHandler? PluginsChanged;
 
@@ -63,6 +64,12 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
 
     public void Start()
     {
+        if (_isStarted)
+        {
+            return;
+        }
+
+        _isStarted = true;
         EnsurePluginDirectory();
         ReloadPlugins();
 
@@ -80,6 +87,13 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
 
     public void Stop()
     {
+        if (!_isStarted)
+        {
+            return;
+        }
+
+        _isStarted = false;
+
         if (_watcher is not null)
         {
             _watcher.Dispose();

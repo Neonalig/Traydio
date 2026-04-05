@@ -32,6 +32,8 @@ public sealed class RadioSettings
 
     public int Volume { get; set; } = 60;
 
+    public string? RadioPlayerEngineId { get; set; }
+
     public string? AudioOutputDeviceId { get; set; }
 
     public CommunicationBridgeSettings Communication { get; set; } = new();

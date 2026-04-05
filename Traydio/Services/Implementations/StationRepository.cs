@@ -112,6 +112,26 @@ public sealed class StationRepository : IStationRepository
         }
     }
 
+    public string? RadioPlayerEngineId
+    {
+        get => _settings.RadioPlayerEngineId;
+        set
+        {
+            var normalized = string.IsNullOrWhiteSpace(value)
+                ? null
+                : value.Trim();
+
+            if (string.Equals(_settings.RadioPlayerEngineId, normalized, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _settings.RadioPlayerEngineId = normalized;
+            Save();
+            RaiseChanged();
+        }
+    }
+
     public string? AudioOutputDeviceId
     {
         get => _settings.AudioOutputDeviceId;
@@ -207,6 +227,11 @@ public sealed class StationRepository : IStationRepository
             if (string.IsNullOrWhiteSpace(settings.AudioOutputDeviceId))
             {
                 settings.AudioOutputDeviceId = null;
+            }
+
+            if (string.IsNullOrWhiteSpace(settings.RadioPlayerEngineId))
+            {
+                settings.RadioPlayerEngineId = null;
             }
 
             return settings;

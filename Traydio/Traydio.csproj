@@ -19,12 +19,22 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Compile Remove="Models\RadioStation.cs" />
+        <Compile Remove="Services\IRadioPlayer.cs" />
+        <Compile Remove="Services\RadioPlayerState.cs" />
+        <Compile Remove="Services\RadioAudioOutputDevice.cs" />
+        <Compile Remove="Services\Implementations\LibVlcRadioPlayer.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
         <AvaloniaResource Include="Assets\**"/>
     </ItemGroup>
 
     <ItemGroup>
         <ProjectReference Include="..\Traydio.Common\Traydio.Common.csproj" />
         <ProjectReference Include="..\Traydio.Plugin.FmStreamOrg\Traydio.Plugin.FmStreamOrg.csproj" />
+        <ProjectReference Include="..\Traydio.Plugin.LibVlc\Traydio.Plugin.LibVlc.csproj" />
+        <ProjectReference Include="..\Traydio.Plugin.ManagedBass\Traydio.Plugin.ManagedBass.csproj" />
         <ProjectReference Include="..\Traydio.Plugin.StreamUrlLink\Traydio.Plugin.StreamUrlLink.csproj" />
         <ProjectReference Include="..\Traydio.SourceGenerator\Traydio.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
     </ItemGroup>
@@ -40,8 +50,6 @@
         </PackageReference>
         <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.1"/>
         <PackageReference Include="JetBrains.Annotations" Version="2025.2.4" />
-        <PackageReference Include="LibVLCSharp" Version="3.9.4"/>
         <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.8"/>
-        <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.21"/>
     </ItemGroup>
 </Project>
