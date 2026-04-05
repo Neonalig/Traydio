@@ -64,7 +64,7 @@ sealed class Program
         var services = new ServiceCollection();
 
         services.AddSingleton<IStationRepository, StationRepository>();
-        services.AddSingleton<IRadioPlayer, LibVlcRadioPlayer>();
+        services.AddSingleton<IRadioPlayer>(_ => new LibVlcRadioPlayer());
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IWindowManager, WindowManager>();
         services.AddSingleton<IAppCommandDispatcher, AppCommandDispatcher>();

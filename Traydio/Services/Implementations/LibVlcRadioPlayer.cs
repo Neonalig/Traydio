@@ -1,325 +1,417 @@
 ﻿using System;
+using System.Threading;
 using LibVLCSharp.Shared;
 using Traydio.Models;
 
 namespace Traydio.Services;
 
+/// <summary>
+/// Internet radio player backed by LibVLCSharp.
+/// </summary>
 public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
 {
-    private static readonly string[] _libVlcArguments =
-    [
-        "--network-caching=1500",
-        "--live-caching=1500",
-        "--clock-jitter=0",
-        "--clock-synchro=0",
-        "--http-reconnect",
-        "--no-video"
-    ];
-
-    private static readonly string[] _mediaOptions =
-    [
-        ":network-caching=1500",
-        ":live-caching=1500",
-        ":clock-jitter=0",
-        ":clock-synchro=0",
-        ":http-reconnect=true",
-        ":no-video"
-    ];
-
     private readonly LibVLC _libVlc;
     private readonly MediaPlayer _mediaPlayer;
-    private Media? _currentMedia;
+    private readonly Lock _sync = new();
 
-    private bool _isLoading;
-    private bool _isPaused;
-    private int _volume;
-    private TimeSpan _position;
-    private TimeSpan? _duration;
-    private string? _currentStationName;
-    private string? _nowPlaying;
+    private RadioStation? _currentStation;
     private string? _lastError;
+    private string? _nowPlaying;
+    private bool _isLoading;
+    private bool _disposed;
 
+    /// <inheritdoc />
     public event EventHandler<RadioPlayerState>? StateChanged;
 
-    public LibVlcRadioPlayer(IStationRepository stationRepository)
-    {
-        Core.Initialize();
-        _libVlc = new LibVLC(_libVlcArguments);
-        _mediaPlayer = new MediaPlayer(_libVlc);
-
-        HookMediaPlayerEvents();
-        SetVolume(stationRepository.Volume);
-        PublishState();
-    }
-
+    /// <inheritdoc />
     public bool IsPlaying => _mediaPlayer.IsPlaying;
 
+    /// <inheritdoc />
     public bool IsMuted => _mediaPlayer.Mute;
 
-    public RadioPlayerState State => new()
-    {
-        IsPlaying = IsPlaying,
-        IsPaused = _isPaused,
-        IsLoading = _isLoading,
-        IsMuted = IsMuted,
-        Volume = _volume,
-        Position = _position,
-        Duration = _duration,
-        CurrentStationName = _currentStationName,
-        NowPlaying = _nowPlaying,
-        LastError = _lastError,
-    };
+    /// <inheritdoc />
+    public RadioPlayerState State => CreateState();
 
-    public void Play(RadioStation station)
+    /// <summary>
+    /// Creates a new radio player instance.
+    /// </summary>
+    /// <param name="vlcOptions">Optional VLC startup options.</param>
+    public LibVlcRadioPlayer(params string[] vlcOptions)
     {
-        try
-        {
-            _currentMedia?.Dispose();
-            _currentMedia = new Media(_libVlc, new Uri(station.StreamUrl));
-            ApplyMediaWorkarounds(_currentMedia);
-            _currentStationName = station.Name;
-            _nowPlaying = null;
-            _lastError = null;
-            _isLoading = true;
-            _isPaused = false;
-            _position = TimeSpan.Zero;
-            _duration = null;
-            PublishState();
+        Core.Initialize();
 
-            _mediaPlayer.Play(_currentMedia);
-        }
-        catch (Exception ex)
-        {
-            _lastError = ex.Message;
-            _isLoading = false;
-            Console.Error.WriteLine($"[Traydio][LibVLC][Play] {ex}");
-            Console.WriteLine($"[Traydio][LibVLC][Play] {ex.Message}");
-            PublishState();
-        }
+        _libVlc = vlcOptions is { Length: > 0 }
+            ? new LibVLC(vlcOptions)
+            : new LibVLC(
+                "--no-video",
+                "--input-repeat=0",
+                "--network-caching=1000",
+                "--file-caching=1000",
+                "--live-caching=1000",
+                "--no-snapshot-preview"
+            );
+
+        _mediaPlayer = new MediaPlayer(_libVlc);
+
+        HookEvents();
+        RaiseStateChanged();
     }
 
+    /// <inheritdoc />
+    public void Play(RadioStation station)
+    {
+        ArgumentNullException.ThrowIfNull(station);
+
+        ThrowIfDisposed();
+
+        lock (_sync)
+        {
+            _currentStation = station;
+            _lastError = null;
+            _nowPlaying = null;
+            _isLoading = true;
+
+            using var media = new Media(_libVlc, new Uri(station.StreamUrl));
+
+            media.MetaChanged += OnMediaMetaChanged;
+            media.ParsedChanged += OnMediaParsedChanged;
+
+            var started = _mediaPlayer.Play(media);
+
+            if (!started)
+            {
+                _isLoading = false;
+                _lastError = $"Failed to start playback for '{station.Name}'.";
+            }
+        }
+
+        RaiseStateChanged();
+    }
+
+    /// <inheritdoc />
     public void Pause()
     {
-        try
+        ThrowIfDisposed();
+
+        lock (_sync)
         {
             if (_mediaPlayer.CanPause)
             {
                 _mediaPlayer.Pause();
             }
         }
-        catch (Exception ex)
-        {
-            _lastError = ex.Message;
-            Console.Error.WriteLine($"[Traydio][LibVLC][Pause] {ex}");
-            Console.WriteLine($"[Traydio][LibVLC][Pause] {ex.Message}");
-            PublishState();
-        }
+
+        RaiseStateChanged();
     }
 
+    /// <inheritdoc />
     public void TogglePause()
     {
-        try
+        ThrowIfDisposed();
+
+        lock (_sync)
         {
             if (_mediaPlayer.IsPlaying)
             {
-                _mediaPlayer.Pause();
+                if (_mediaPlayer.CanPause)
+                {
+                    _mediaPlayer.Pause();
+                }
+                else
+                {
+                    _mediaPlayer.Stop();
+                }
+            }
+            else if (_currentStation is not null)
+            {
+                Play(_currentStation);
                 return;
             }
+        }
 
-            _mediaPlayer.Play();
-        }
-        catch (Exception ex)
-        {
-            _lastError = ex.Message;
-            Console.Error.WriteLine($"[Traydio][LibVLC][TogglePause] {ex}");
-            Console.WriteLine($"[Traydio][LibVLC][TogglePause] {ex.Message}");
-            PublishState();
-        }
+        RaiseStateChanged();
     }
 
+    /// <inheritdoc />
     public void Stop()
     {
-        try
+        ThrowIfDisposed();
+
+        lock (_sync)
         {
-            _mediaPlayer.Stop();
             _isLoading = false;
-            _isPaused = false;
-            _position = TimeSpan.Zero;
-            _duration = null;
-            _nowPlaying = null;
-            PublishState();
+            _mediaPlayer.Stop();
         }
-        catch (Exception ex)
-        {
-            _lastError = ex.Message;
-            Console.Error.WriteLine($"[Traydio][LibVLC][Stop] {ex}");
-            Console.WriteLine($"[Traydio][LibVLC][Stop] {ex.Message}");
-            PublishState();
-        }
+
+        RaiseStateChanged();
     }
 
+    /// <inheritdoc />
     public void SetVolume(int volume)
     {
-        try
+        ThrowIfDisposed();
+
+        var clamped = Math.Clamp(volume, 0, 100);
+
+        lock (_sync)
         {
-            _volume = Math.Clamp(volume, 0, 100);
-            _mediaPlayer.Volume = _volume;
-            PublishState();
+            _mediaPlayer.Volume = clamped;
         }
-        catch (Exception ex)
-        {
-            _lastError = ex.Message;
-            Console.Error.WriteLine($"[Traydio][LibVLC][SetVolume] {ex}");
-            Console.WriteLine($"[Traydio][LibVLC][SetVolume] {ex.Message}");
-            PublishState();
-        }
+
+        RaiseStateChanged();
     }
 
+    /// <inheritdoc />
     public void ToggleMute()
     {
-        try
+        ThrowIfDisposed();
+
+        lock (_sync)
         {
             _mediaPlayer.Mute = !_mediaPlayer.Mute;
-            PublishState();
         }
-        catch (Exception ex)
-        {
-            _lastError = ex.Message;
-            Console.Error.WriteLine($"[Traydio][LibVLC][ToggleMute] {ex}");
-            Console.WriteLine($"[Traydio][LibVLC][ToggleMute] {ex.Message}");
-            PublishState();
-        }
+
+        RaiseStateChanged();
     }
 
     public void Dispose()
     {
-        _currentMedia?.Dispose();
+        if (_disposed)
+        {
+            return;
+        }
+
+        _disposed = true;
+
+        UnhookEvents();
         _mediaPlayer.Dispose();
         _libVlc.Dispose();
     }
 
-    private void HookMediaPlayerEvents()
+    private void HookEvents()
     {
-        _mediaPlayer.Opening += (_, _) =>
+        _mediaPlayer.Opening += OnOpening;
+        _mediaPlayer.Buffering += OnBuffering;
+        _mediaPlayer.Playing += OnPlaying;
+        _mediaPlayer.Paused += OnPaused;
+        _mediaPlayer.Stopped += OnStopped;
+        _mediaPlayer.EndReached += OnEndReached;
+        _mediaPlayer.EncounteredError += OnEncounteredError;
+        _mediaPlayer.VolumeChanged += OnVolumeChanged;
+        _mediaPlayer.MediaChanged += OnMediaChanged;
+        _mediaPlayer.TimeChanged += OnTimeChanged;
+        _mediaPlayer.LengthChanged += OnLengthChanged;
+        _mediaPlayer.Muted += OnMuted;
+        _mediaPlayer.Unmuted += OnUnmuted;
+    }
+
+    private void UnhookEvents()
+    {
+        _mediaPlayer.Opening -= OnOpening;
+        _mediaPlayer.Buffering -= OnBuffering;
+        _mediaPlayer.Playing -= OnPlaying;
+        _mediaPlayer.Paused -= OnPaused;
+        _mediaPlayer.Stopped -= OnStopped;
+        _mediaPlayer.EndReached -= OnEndReached;
+        _mediaPlayer.EncounteredError -= OnEncounteredError;
+        _mediaPlayer.VolumeChanged -= OnVolumeChanged;
+        _mediaPlayer.MediaChanged -= OnMediaChanged;
+        _mediaPlayer.TimeChanged -= OnTimeChanged;
+        _mediaPlayer.LengthChanged -= OnLengthChanged;
+        _mediaPlayer.Muted -= OnMuted;
+        _mediaPlayer.Unmuted -= OnUnmuted;
+    }
+
+    private void OnOpening(object? sender, EventArgs e)
+    {
+        lock (_sync)
         {
             _isLoading = true;
-            _isPaused = false;
             _lastError = null;
-            PublishState();
-        };
+        }
 
-        _mediaPlayer.Buffering += (_, e) =>
+        RaiseStateChanged();
+    }
+
+    private void OnBuffering(object? sender, MediaPlayerBufferingEventArgs e)
+    {
+        lock (_sync)
         {
-            _isLoading = e.Cache < 100 && !_mediaPlayer.IsPlaying;
-            PublishState();
-        };
+            _isLoading = e.Cache < 100f && !_mediaPlayer.IsPlaying;
+        }
 
-        _mediaPlayer.Playing += (_, _) =>
+        RaiseStateChanged();
+    }
+
+    private void OnPlaying(object? sender, EventArgs e)
+    {
+        lock (_sync)
         {
             _isLoading = false;
-            _isPaused = false;
+            UpdateNowPlayingFromMedia();
+        }
+
+        RaiseStateChanged();
+    }
+
+    private void OnPaused(object? sender, EventArgs e)
+    {
+        lock (_sync)
+        {
+            _isLoading = false;
+        }
+
+        RaiseStateChanged();
+    }
+
+    private void OnStopped(object? sender, EventArgs e)
+    {
+        lock (_sync)
+        {
+            _isLoading = false;
+        }
+
+        RaiseStateChanged();
+    }
+
+    private void OnEndReached(object? sender, EventArgs e)
+    {
+        lock (_sync)
+        {
+            _isLoading = false;
+        }
+
+        RaiseStateChanged();
+    }
+
+    private void OnEncounteredError(object? sender, EventArgs e)
+    {
+        lock (_sync)
+        {
+            _isLoading = false;
+            _lastError = _currentStation is null
+                ? "Playback error."
+                : $"Playback error while streaming '{_currentStation.Name}'.";
+        }
+
+        RaiseStateChanged();
+    }
+
+    private void OnVolumeChanged(object? sender, MediaPlayerVolumeChangedEventArgs e) => RaiseStateChanged();
+
+    private void OnMediaChanged(object? sender, MediaPlayerMediaChangedEventArgs e)
+    {
+        lock (_sync)
+        {
+            _nowPlaying = null;
             _lastError = null;
+        }
+
+        // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
+        if (e.Media is not null)
+        {
+            e.Media.MetaChanged += OnMediaMetaChanged;
+            e.Media.ParsedChanged += OnMediaParsedChanged;
+        }
+
+        RaiseStateChanged();
+    }
+
+    private void OnTimeChanged(object? sender, MediaPlayerTimeChangedEventArgs e) => RaiseStateChanged();
+
+    private void OnLengthChanged(object? sender, MediaPlayerLengthChangedEventArgs e) => RaiseStateChanged();
+
+    private void OnMuted(object? sender, EventArgs e) => RaiseStateChanged();
+
+    private void OnUnmuted(object? sender, EventArgs e) => RaiseStateChanged();
+
+    private void OnMediaMetaChanged(object? sender, MediaMetaChangedEventArgs e)
+    {
+        lock (_sync)
+        {
             UpdateNowPlayingFromMedia();
-            PublishState();
-        };
+        }
 
-        _mediaPlayer.Paused += (_, _) =>
-        {
-            _isLoading = false;
-            _isPaused = true;
-            PublishState();
-        };
+        RaiseStateChanged();
+    }
 
-        _mediaPlayer.Stopped += (_, _) =>
+    private void OnMediaParsedChanged(object? sender, MediaParsedChangedEventArgs e)
+    {
+        lock (_sync)
         {
-            _isLoading = false;
-            _isPaused = false;
-            _position = TimeSpan.Zero;
-            _duration = null;
-            PublishState();
-        };
-
-        _mediaPlayer.EndReached += (_, _) =>
-        {
-            _isLoading = false;
-            _isPaused = false;
-            _position = TimeSpan.Zero;
-            PublishState();
-        };
-
-        _mediaPlayer.TimeChanged += (_, e) =>
-        {
-            _position = TimeSpan.FromMilliseconds(e.Time);
             UpdateNowPlayingFromMedia();
-            PublishState();
-        };
+        }
 
-        _mediaPlayer.LengthChanged += (_, e) =>
-        {
-            _duration = e.Length > 0 ? TimeSpan.FromMilliseconds(e.Length) : null;
-            PublishState();
-        };
-
-        _mediaPlayer.VolumeChanged += (_, e) =>
-        {
-            var reported = e.Volume;
-            // Some backends report 0..1 while others report 0..100.
-            var normalized = reported <= 1.0f
-                ? (int)Math.Round(reported * 100.0f)
-                : (int)Math.Round(reported);
-            _volume = Math.Clamp(normalized, 0, 100);
-            PublishState();
-        };
-
-        _mediaPlayer.EncounteredError += (_, _) =>
-        {
-            _isLoading = false;
-            _lastError = "Playback error from media backend.";
-            Console.Error.WriteLine("[Traydio][LibVLC] EncounteredError event.");
-            Console.WriteLine("[Traydio][LibVLC] EncounteredError event.");
-            PublishState();
-        };
+        RaiseStateChanged();
     }
 
     private void UpdateNowPlayingFromMedia()
     {
-        try
+        var media = _mediaPlayer.Media;
+        if (media is null)
         {
-            if (_currentMedia is null)
-            {
-                return;
-            }
-
-            var nowPlaying = _currentMedia.Meta(MetadataType.NowPlaying);
-            if (!string.IsNullOrWhiteSpace(nowPlaying))
-            {
-                _nowPlaying = nowPlaying;
-                return;
-            }
-
-            var title = _currentMedia.Meta(MetadataType.Title);
-            if (!string.IsNullOrWhiteSpace(title))
-            {
-                _nowPlaying = title;
-            }
+            return;
         }
-        catch (Exception ex)
-        {
-            Console.Error.WriteLine($"[Traydio][LibVLC][Metadata] {ex}");
-            Console.WriteLine($"[Traydio][LibVLC][Metadata] {ex.Message}");
-        }
+
+        var title = media.Meta(MetadataType.Title);
+        var nowPlaying = media.Meta(MetadataType.NowPlaying);
+        var artist = media.Meta(MetadataType.Artist);
+
+        _nowPlaying =
+            FirstNonBlank(nowPlaying, title) ??
+            (string.IsNullOrWhiteSpace(artist) ? null : artist);
     }
 
-    private void PublishState()
+    private RadioPlayerState CreateState()
     {
-        StateChanged?.Invoke(this, State);
+        var isPlaying = _mediaPlayer.IsPlaying;
+        var state = _mediaPlayer.State;
+        var volume = _mediaPlayer.Volume;
+        var isMuted = _mediaPlayer.Mute;
+
+        var time = _mediaPlayer.Time;
+        var length = _mediaPlayer.Length;
+
+        return new RadioPlayerState
+        {
+            IsPlaying = isPlaying,
+            IsPaused = state == VLCState.Paused,
+            IsLoading = _isLoading || state == VLCState.Opening || state == VLCState.Buffering,
+            IsMuted = isMuted,
+            Volume = Math.Clamp(volume, 0, 100),
+            Position = time > 0 ? TimeSpan.FromMilliseconds(time) : TimeSpan.Zero,
+            Duration = length > 0 ? TimeSpan.FromMilliseconds(length) : null,
+            CurrentStationName = _currentStation?.Name,
+            NowPlaying = _nowPlaying,
+            LastError = _lastError
+        };
     }
 
-    private static void ApplyMediaWorkarounds(Media media)
+    private void RaiseStateChanged()
     {
-        foreach (var option in _mediaOptions)
+        if (_disposed)
         {
-            media.AddOption(option);
+            return;
         }
+
+        StateChanged?.Invoke(this, CreateState());
+    }
+
+    private void ThrowIfDisposed()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+    }
+
+    private static string? FirstNonBlank(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                return value;
+            }
+        }
+
+        return null;
     }
 }
