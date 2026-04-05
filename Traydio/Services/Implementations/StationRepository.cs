@@ -182,6 +182,11 @@ public sealed class StationRepository : IStationRepository
                 .Select(id => id.Trim())
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList(),
+            PendingDeletePluginPaths = settings.PendingDeletePluginPaths
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Select(path => path.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList(),
         };
 
         Save();
@@ -258,6 +263,13 @@ public sealed class StationRepository : IStationRepository
             {
                 settings.StationDiscoveryPlugins.PluginDirectory = "Plugins";
             }
+
+            settings.StationDiscoveryPlugins.PendingDeletePluginPaths ??= [];
+            settings.StationDiscoveryPlugins.PendingDeletePluginPaths = settings.StationDiscoveryPlugins.PendingDeletePluginPaths
+                .Where(path => !string.IsNullOrWhiteSpace(path))
+                .Select(path => path.Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
 
             if (string.IsNullOrWhiteSpace(settings.AudioOutputDeviceId))
             {

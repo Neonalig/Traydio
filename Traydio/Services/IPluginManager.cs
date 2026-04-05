@@ -30,4 +30,5 @@ public sealed record PluginInventoryItem(
     Version Version,
     bool HasSettings,
     bool IsEnabled,
-    bool CanUninstall);
+    bool CanUninstall,
+    bool IsPendingDelete);

@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Linq;
 using Avalonia.Controls;
+using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
@@ -99,6 +101,22 @@ public partial class PluginManagementPage : UserControl
         await ShowViewModelStatusDialogAsync(viewModel, "Plugin upgrade");
     }
 
+    private async void OnInstallCandidateClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not PluginManagementWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        if (sender is not Control { DataContext: PluginManagementWindowViewModel.PluginCandidateItem candidate })
+        {
+            return;
+        }
+
+        viewModel.InstallCandidate(candidate);
+        await ShowViewModelStatusDialogAsync(viewModel, "Plugin install");
+    }
+
     private async void OnInstalledCheckboxClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not PluginManagementWindowViewModel viewModel)
@@ -170,10 +188,9 @@ public partial class PluginManagementPage : UserControl
 
     private async Task ConfirmAndRemovePluginAsync(PluginManagementWindowViewModel viewModel, PluginManagementWindowViewModel.InstalledPluginItem pluginItem)
     {
-        var verb = pluginItem.CanUninstall ? "uninstall" : "disable";
         var choice = await ShowYesNoCancelDialogAsync(
-            $"Confirm {verb}",
-            $"{(pluginItem.CanUninstall ? "Uninstall" : "Disable")} plugin '{pluginItem.DisplayName}'?");
+            "Confirm uninstall",
+            $"Uninstall plugin '{pluginItem.DisplayName}'?\n\nIf the file is currently locked, it will be marked for delete on restart and disabled now.");
 
         if (choice != UserChoice.Yes)
         {
@@ -182,6 +199,35 @@ public partial class PluginManagementPage : UserControl
 
         viewModel.RemoveInstalledPlugin(pluginItem);
         await ShowViewModelStatusDialogAsync(viewModel, "Plugin remove");
+    }
+
+    private async void OnRestartAppClick(object? sender, RoutedEventArgs e)
+    {
+        var choice = await ShowYesNoCancelDialogAsync(
+            "Restart required",
+            "Restart Traydio now to complete pending plugin deletions?");
+        if (choice != UserChoice.Yes)
+        {
+            return;
+        }
+
+        var processPath = Environment.ProcessPath;
+        if (string.IsNullOrWhiteSpace(processPath))
+        {
+            await ShowInfoDialogAsync("Restart app", "Could not determine application path for restart.");
+            return;
+        }
+
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = processPath,
+            UseShellExecute = true,
+        });
+
+        if (Avalonia.Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime lifetime)
+        {
+            lifetime.Shutdown();
+        }
     }
 
     private async void OnCandidateListDoubleTapped(object? sender, TappedEventArgs e)

@@ -9,7 +9,7 @@
     <Grid Margin="0" RowDefinitions="Auto,*" RowSpacing="6">
 
         <Border Grid.Row="0" Classes="status-strip" Margin="0">
-            <TextBlock Text="Double-click candidates to install and installed entries to disable/enable. Use Uninstall (or Delete key) on installed plugins to remove/disable them. You can also drop plugin DLLs from File Explorer onto either list." Classes="helper-text"/>
+            <TextBlock Text="Double-click candidates to install and installed entries to disable/enable. Uninstall (or Delete key) removes plugins. If a plugin file is locked, it is marked for delete on restart." Classes="helper-text"/>
         </Border>
 
         <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="0" Margin="4,0,4,4">
@@ -18,7 +18,7 @@
             </Border>
             <Border Grid.Row="1" Classes="group-frame" Margin="0,-8,0,0">
                 <Grid RowDefinitions="Auto,*,*" RowSpacing="10">
-                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
+                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="8">
                         <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Plugin install folder"/>
                         <TextBox Grid.Column="1" Text="{Binding PluginDirectory}"/>
                         <Button Grid.Column="2" Classes="command-button" Click="OnChangePluginDirectoryClick">
@@ -32,6 +32,12 @@
                                 <Image Source="/Assets/Icons9x/refresh.ico" Classes="icon-small"/>
                                 <TextBlock Text="Refresh" VerticalAlignment="Center"/>
                             </StackPanel>
+                        </Button>
+                        <Button Grid.Column="4"
+                                Classes="command-button"
+                                IsVisible="{Binding HasPendingDeletes}"
+                                Click="OnRestartAppClick">
+                            <TextBlock Text="Restart App" VerticalAlignment="Center"/>
                         </Button>
                     </Grid>
 
@@ -58,6 +64,10 @@
                                         <StackPanel Grid.Column="2" Spacing="2" IsEnabled="{Binding IsEnabled}">
                                             <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
                                             <TextBlock Text="{Binding VersionText, StringFormat='v{0}'}" Classes="subtle-text"/>
+                                            <TextBlock Text="Marked for delete on restart"
+                                                       Foreground="IndianRed"
+                                                       FontWeight="SemiBold"
+                                                       IsVisible="{Binding IsPendingDelete}"/>
                                         </StackPanel>
                                         <Button Grid.Column="3"
                                                 Classes="command-button"
@@ -71,6 +81,7 @@
                                         </Button>
                                         <Button Grid.Column="4"
                                                 Classes="command-button"
+                                                IsVisible="{Binding !IsPendingDelete}"
                                                 Click="OnUninstallPluginClick">
                                             <TextBlock Text="Uninstall" VerticalAlignment="Center"/>
                                         </Button>
@@ -93,7 +104,7 @@
                                  DragDrop.Drop="OnCandidateListDrop">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
                                         <Image Source="/Assets/Icons9x/plugins.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
                                         <StackPanel Grid.Column="1">
                                             <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"/>
@@ -102,6 +113,14 @@
                                             <TextBlock Text="{Binding Path}" Classes="subtle-text" TextWrapping="Wrap"/>
                                         </StackPanel>
                                         <Button Grid.Column="2"
+                                                Classes="command-button"
+                                                Click="OnInstallCandidateClick">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <Image Source="/Assets/Icons9x/add.ico" Classes="icon-small"/>
+                                                <TextBlock Text="Install" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+                                        <Button Grid.Column="3"
                                                 Classes="command-button"
                                                 IsVisible="{Binding IsUpgrade}"
                                                 Click="OnUpgradeCandidateClick">

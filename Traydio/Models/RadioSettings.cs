@@ -7,6 +7,8 @@ public sealed class StationDiscoveryPluginSettings
     public string PluginDirectory { get; set; } = "Plugins";
 
     public List<string> DisabledPluginIds { get; set; } = [];
+
+    public List<string> PendingDeletePluginPaths { get; set; } = [];
 }
 
 public sealed class CommunicationBridgeSettings

@@ -40,6 +40,9 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
     [ObservableProperty]
     private string _status = string.Empty;
 
+    [ObservableProperty]
+    private bool _hasPendingDeletes;
+
     public PluginManagementWindowViewModel(IPluginManager pluginManager, IStationRepository stationRepository, IWindowManager windowManager)
     {
         _pluginManager = pluginManager;
@@ -71,8 +74,11 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
                     plugin.AssemblyName,
                     plugin.Version,
                     plugin.IsEnabled,
-                    plugin.CanUninstall));
+                    plugin.CanUninstall,
+                    plugin.IsPendingDelete));
             }
+
+            HasPendingDeletes = InstalledPlugins.Any(item => item.IsPendingDelete);
 
             PluginDirectory = _stationRepository.StationDiscoveryPlugins.PluginDirectory;
 
@@ -168,6 +174,7 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         {
             PluginDirectory = string.IsNullOrWhiteSpace(PluginDirectory) ? settings.PluginDirectory : PluginDirectory.Trim(),
             DisabledPluginIds = settings.DisabledPluginIds,
+            PendingDeletePluginPaths = settings.PendingDeletePluginPaths,
         });
 
         Status = "Plugin directory saved.";
@@ -292,10 +299,13 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
 
         if (_pluginManager.RemovePlugin(pluginItem.Id, out var error))
         {
-            Status = pluginItem.CanUninstall
-                ? $"Plugin '{pluginItem.DisplayName}' uninstalled."
-                : $"Plugin '{pluginItem.DisplayName}' disabled.";
             Refresh();
+
+            var refreshed = InstalledPlugins.FirstOrDefault(item =>
+                string.Equals(item.Id, pluginItem.Id, StringComparison.OrdinalIgnoreCase));
+            Status = refreshed?.IsPendingDelete == true
+                ? $"Plugin '{pluginItem.DisplayName}' is marked for delete on restart and has been disabled."
+                : $"Plugin '{pluginItem.DisplayName}' uninstalled.";
             return true;
         }
 
@@ -346,6 +356,7 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             {
                 PluginDirectory = targetPath,
                 DisabledPluginIds = settings.DisabledPluginIds,
+                PendingDeletePluginPaths = settings.PendingDeletePluginPaths,
             });
 
             PluginDirectory = targetPath;
@@ -513,7 +524,7 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             .Where(path => Path.GetFileName(path).Contains("Plugin", StringComparison.OrdinalIgnoreCase));
     }
 
-    public sealed class InstalledPluginItem(string id, string displayName, bool hasSettings, string assemblyName, Version version, bool isEnabled, bool canUninstall)
+    public sealed class InstalledPluginItem(string id, string displayName, bool hasSettings, string assemblyName, Version version, bool isEnabled, bool canUninstall, bool isPendingDelete)
     {
         public string Id { get; } = id;
 
@@ -530,6 +541,8 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         public bool IsEnabled { get; } = isEnabled;
 
         public bool CanUninstall { get; } = canUninstall;
+
+        public bool IsPendingDelete { get; } = isPendingDelete;
     }
 
     public sealed class PluginCandidateItem(

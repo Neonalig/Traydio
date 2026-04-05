@@ -37,7 +37,8 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
                 item.Version,
                 item.HasSettings,
                 item.IsEnabled,
-                item.CanUninstall))
+                item.CanUninstall,
+                item.IsPendingDelete))
             .ToArray();
     }
 
@@ -77,6 +78,7 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
             }
 
             File.Copy(sourceFullPath, targetFullPath, overwrite: true);
+            RemovePendingDeletePath(targetFullPath);
             ReloadPlugins();
             ReEnableInstalledAssembly(installedAssemblyName);
             return true;
@@ -124,35 +126,37 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
             return false;
         }
 
-        if (!descriptor.CanUninstall || string.IsNullOrWhiteSpace(descriptor.SourcePath))
+        if (string.IsNullOrWhiteSpace(descriptor.SourcePath))
         {
-            // Built-in/referenced plugins cannot be deleted from disk, so remove means disable.
-            Console.Error.WriteLine($"[Traydio][PluginManager] Remove fallback-to-disable pluginId={pluginId}");
-            return SetPluginEnabled(pluginId, enabled: false, out error);
+            error = "Plugin cannot be uninstalled because no plugin file path is available.";
+            Console.Error.WriteLine($"[Traydio][PluginManager] Remove failed pluginId={pluginId}: {error}");
+            return false;
         }
+
+        var pluginPath = descriptor.SourcePath;
 
         try
         {
-            var settings = stationRepository.StationDiscoveryPlugins;
-            settings.DisabledPluginIds.RemoveAll(id => string.Equals(id, pluginId, StringComparison.OrdinalIgnoreCase));
-            stationRepository.SaveStationDiscoveryPluginSettings(settings);
-
-            File.Delete(descriptor.SourcePath);
+            TryDeletePluginFileNow(pluginPath);
+            RemovePendingDeletePath(pluginPath);
+            RemoveDisabledPluginId(pluginId);
             ReloadPlugins();
-            Console.Error.WriteLine($"[Traydio][PluginManager] Remove succeeded pluginId={pluginId} path={descriptor.SourcePath}");
+            Console.Error.WriteLine($"[Traydio][PluginManager] Remove succeeded pluginId={pluginId} path={pluginPath}");
             return true;
         }
         catch (IOException ex)
         {
-            error = "Plugin file is currently locked and could not be removed.";
-            Console.Error.WriteLine($"[Traydio][PluginManager] Remove IO failure pluginId={pluginId} path={descriptor.SourcePath}: {ex}");
-            return false;
+            QueuePluginForDeleteOnRestart(pluginId, pluginPath);
+            ReloadPlugins();
+            Console.Error.WriteLine($"[Traydio][PluginManager] Remove deferred (IO) pluginId={pluginId} path={pluginPath}: {ex}");
+            return true;
         }
         catch (UnauthorizedAccessException ex)
         {
-            error = "Access denied while removing plugin file.";
-            Console.Error.WriteLine($"[Traydio][PluginManager] Remove access denied pluginId={pluginId} path={descriptor.SourcePath}: {ex}");
-            return false;
+            QueuePluginForDeleteOnRestart(pluginId, pluginPath);
+            ReloadPlugins();
+            Console.Error.WriteLine($"[Traydio][PluginManager] Remove deferred (access denied) pluginId={pluginId} path={pluginPath}: {ex}");
+            return true;
         }
     }
 
@@ -202,6 +206,7 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
 
         _isStarted = true;
         EnsurePluginDirectory();
+        ProcessPendingDeletesBeforeLoad();
         ReloadPlugins();
 
         _watcher = new FileSystemWatcher(_pluginDirectory!, "*.dll")
@@ -264,8 +269,10 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
         LoadPluginsFromBaseDirectory();
 
         var disabled = stationRepository.StationDiscoveryPlugins.DisabledPluginIds;
+        var pendingDeletePaths = stationRepository.StationDiscoveryPlugins.PendingDeletePluginPaths;
         foreach (var item in _inventory)
         {
+            item.IsPendingDelete = IsPendingDelete(item, pendingDeletePaths);
             item.IsEnabled = !disabled.Contains(item.Id, StringComparer.OrdinalIgnoreCase);
             if (item.IsEnabled)
             {
@@ -333,7 +340,7 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
             }
 
             _loadedPlugins[pluginPath] = new LoadedPlugin(loadContext, plugins);
-            var canUninstall = IsPathUnderConfiguredPluginDirectory(pluginPath);
+            var canUninstall = true;
             foreach (var plugin in plugins)
             {
                 AddIfNotExists(plugin, assembly, pluginPath, canUninstall);
@@ -396,8 +403,16 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
 
     private void AddIfNotExists(ITraydioPlugin plugin, Assembly sourceAssembly, string? sourcePath, bool canUninstall)
     {
-        if (_inventory.Any(p => string.Equals(p.Id, plugin.Id, StringComparison.OrdinalIgnoreCase)))
+        var existing = _inventory.FirstOrDefault(p => string.Equals(p.Id, plugin.Id, StringComparison.OrdinalIgnoreCase));
+        if (existing is not null)
         {
+            if (string.IsNullOrWhiteSpace(existing.SourcePath) && !string.IsNullOrWhiteSpace(sourcePath))
+            {
+                // Keep existing plugin type preference but retain uninstall path for this ID.
+                existing.SourcePath = sourcePath;
+                existing.CanUninstall = canUninstall;
+            }
+
             return;
         }
 
@@ -413,6 +428,102 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
             SourcePath = sourcePath,
             CanUninstall = canUninstall,
         });
+    }
+
+    private void TryDeletePluginFileNow(string pluginPath)
+    {
+        var normalized = Path.GetFullPath(pluginPath);
+        if (!File.Exists(normalized))
+        {
+            return;
+        }
+
+        File.Delete(normalized);
+    }
+
+    private void QueuePluginForDeleteOnRestart(string pluginId, string pluginPath)
+    {
+        var settings = stationRepository.StationDiscoveryPlugins;
+        var normalized = Path.GetFullPath(pluginPath);
+
+        if (!settings.PendingDeletePluginPaths.Contains(normalized, StringComparer.OrdinalIgnoreCase))
+        {
+            settings.PendingDeletePluginPaths.Add(normalized);
+        }
+
+        if (!settings.DisabledPluginIds.Contains(pluginId, StringComparer.OrdinalIgnoreCase))
+        {
+            settings.DisabledPluginIds.Add(pluginId);
+        }
+
+        stationRepository.SaveStationDiscoveryPluginSettings(settings);
+        Console.Error.WriteLine($"[Traydio][PluginManager] Remove queued for restart pluginId={pluginId} path={normalized}");
+    }
+
+    private void RemovePendingDeletePath(string pluginPath)
+    {
+        var settings = stationRepository.StationDiscoveryPlugins;
+        var normalized = Path.GetFullPath(pluginPath);
+        if (settings.PendingDeletePluginPaths.RemoveAll(path => string.Equals(path, normalized, StringComparison.OrdinalIgnoreCase)) > 0)
+        {
+            stationRepository.SaveStationDiscoveryPluginSettings(settings);
+        }
+    }
+
+    private void RemoveDisabledPluginId(string pluginId)
+    {
+        var settings = stationRepository.StationDiscoveryPlugins;
+        if (settings.DisabledPluginIds.RemoveAll(id => string.Equals(id, pluginId, StringComparison.OrdinalIgnoreCase)) > 0)
+        {
+            stationRepository.SaveStationDiscoveryPluginSettings(settings);
+        }
+    }
+
+    private void ProcessPendingDeletesBeforeLoad()
+    {
+        var settings = stationRepository.StationDiscoveryPlugins;
+        if (settings.PendingDeletePluginPaths.Count == 0)
+        {
+            return;
+        }
+
+        var remaining = new List<string>();
+        foreach (var path in settings.PendingDeletePluginPaths)
+        {
+            try
+            {
+                var normalized = Path.GetFullPath(path);
+                if (File.Exists(normalized))
+                {
+                    File.Delete(normalized);
+                    Console.Error.WriteLine($"[Traydio][PluginManager] Pending delete succeeded path={normalized}");
+                }
+                else
+                {
+                    Console.Error.WriteLine($"[Traydio][PluginManager] Pending delete skipped (missing file) path={normalized}");
+                }
+            }
+            catch (Exception ex)
+            {
+                remaining.Add(path);
+                Console.Error.WriteLine($"[Traydio][PluginManager] Pending delete failed path={path}: {ex}");
+            }
+        }
+
+        settings.PendingDeletePluginPaths = remaining;
+        stationRepository.SaveStationDiscoveryPluginSettings(settings);
+    }
+
+    private static bool IsPendingDelete(PluginDescriptor descriptor, IReadOnlyList<string> pendingDeletePaths)
+    {
+        if (!string.IsNullOrWhiteSpace(descriptor.SourcePath) &&
+            pendingDeletePaths.Contains(descriptor.SourcePath, StringComparer.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return pendingDeletePaths.Any(path =>
+            string.Equals(Path.GetFileNameWithoutExtension(path), descriptor.AssemblyName, StringComparison.OrdinalIgnoreCase));
     }
 
     private sealed class PluginDescriptor
@@ -431,9 +542,11 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
 
         public bool IsEnabled { get; set; }
 
-        public string? SourcePath { get; init; }
+        public string? SourcePath { get; set; }
 
-        public bool CanUninstall { get; init; }
+        public bool CanUninstall { get; set; }
+
+        public bool IsPendingDelete { get; set; }
     }
 
     private sealed class LoadedPlugin(PluginLoadContext context, IReadOnlyList<ITraydioPlugin> plugins)
