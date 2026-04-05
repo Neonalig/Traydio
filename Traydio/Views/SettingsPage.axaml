@@ -21,7 +21,7 @@
             <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Text="Protocol scheme"/>
             <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding ProtocolScheme}"/>
             <TextBlock Grid.Row="4" Grid.Column="2" VerticalAlignment="Center" Text="Registered"/>
-            <TextBlock Grid.Row="4" Grid.Column="3" Text="{Binding IsProtocolRegistered}"/>
+            <CheckBox Grid.Row="4" Grid.Column="3" IsEnabled="False" IsChecked="{Binding IsProtocolRegistered}"/>
 
             <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="4" Orientation="Horizontal" Spacing="8">
                 <Button Content="Save" Command="{Binding SaveCommand}"/>
