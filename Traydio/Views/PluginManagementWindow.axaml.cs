@@ -204,8 +204,8 @@ public partial class PluginManagementPage : UserControl
     private async void OnRestartAppClick(object? sender, RoutedEventArgs e)
     {
         var choice = await ShowYesNoCancelDialogAsync(
-            "Restart required",
-            "Restart Traydio now to complete pending plugin deletions?");
+            "Restart app",
+            "Restart Traydio now?\n\nUse this after changing native plugin dependency paths so new DLLs are loaded.");
         if (choice != UserChoice.Yes)
         {
             return;

@@ -4,27 +4,37 @@
     <Grid Margin="12" RowDefinitions="Auto,Auto,Auto,Auto,Auto,*" RowSpacing="10">
         <TextBlock Grid.Row="0" Text="ManagedBass Runtime" FontSize="18" FontWeight="SemiBold"/>
 
-        <TextBlock Grid.Row="1"
-                   Text="Choose a folder for BASS native files. Download bass.dll, bassopus.dll, and tags.dll for your current architecture. tags.dll enables metadata parsing."
-                   TextWrapping="Wrap"/>
-
-        <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
-            <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Native folder"/>
-            <TextBox x:Name="FolderPathBox" Grid.Column="1" Watermark="C:\\Tools\\BASS"/>
-            <Button Grid.Column="2" Click="OnBrowseClick">Browse...</Button>
-            <Button Grid.Column="3" Click="OnSavePathClick">Save Path</Button>
+        <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="8">
+            <Image x:Name="BassStatusIcon" Grid.Column="0" Width="16" Height="16" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="bass.dll"/>
+            <TextBox x:Name="BassPathBox" Grid.Column="2" Watermark="C:\Tools\BASS\bass.dll"/>
+            <Button Grid.Column="3" Click="OnBrowseBassClick">Browse...</Button>
+            <Button Grid.Column="4" Click="OnDownloadBassClick">Auto-download</Button>
         </Grid>
 
-        <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="8">
+            <Image x:Name="BassOpusStatusIcon" Grid.Column="0" Width="16" Height="16" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="bassopus.dll"/>
+            <TextBox x:Name="BassOpusPathBox" Grid.Column="2" Watermark="C:\Tools\BASS\bassopus.dll"/>
+            <Button Grid.Column="3" Click="OnBrowseBassOpusClick">Browse...</Button>
+            <Button Grid.Column="4" Click="OnDownloadBassOpusClick">Auto-download</Button>
+        </Grid>
+
+        <Grid Grid.Row="3" ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="8">
+            <Image x:Name="TagsStatusIcon" Grid.Column="0" Width="16" Height="16" VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="tags.dll"/>
+            <TextBox x:Name="TagsPathBox" Grid.Column="2" Watermark="C:\Tools\BASS\tags.dll"/>
+            <Button Grid.Column="3" Click="OnBrowseTagsClick">Browse...</Button>
+            <Button Grid.Column="4" Click="OnDownloadTagsClick">Auto-download</Button>
+        </Grid>
+
+        <Grid Grid.Row="4" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
             <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Output device index"/>
             <ComboBox x:Name="OutputDeviceComboBox" Grid.Column="1"/>
             <Button Grid.Column="2" Click="OnSaveOutputDeviceClick">Save Output</Button>
         </Grid>
 
-        <StackPanel Grid.Row="4" Orientation="Horizontal" Spacing="8">
-            <Button Click="OnDownloadClick">Download bass.dll</Button>
-            <Button Click="OnDownloadBassOpusClick">Download bassopus.dll</Button>
-            <Button Click="OnDownloadBassTagsClick">Download tags.dll</Button>
+        <StackPanel Grid.Row="5" Orientation="Horizontal" Spacing="8">
             <TextBlock x:Name="StatusText" VerticalAlignment="Center" TextWrapping="Wrap"/>
         </StackPanel>
     </Grid>

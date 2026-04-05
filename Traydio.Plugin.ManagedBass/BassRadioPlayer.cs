@@ -18,11 +18,14 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
     private readonly Lock _gate = new();
     private readonly string? _nativeLibraryFolder;
     private readonly int? _preferredOutputDeviceIndex;
+    private readonly string? _bassOpusDllPath;
+    private readonly string? _tagsDllPath;
 
     private int _streamHandle;
     private bool _isInitialized;
     private bool _isMetadataSupported = true;
     private bool _hasLoggedMetadataUnavailable;
+    private IntPtr _tagsLibraryHandle;
     private bool _isMuted;
     private int _volume = 100;
 
@@ -65,7 +68,11 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
         }
     }
 
-    public BassRadioPlayer(string? nativeLibraryFolder = null, int? preferredOutputDeviceIndex = null)
+    public BassRadioPlayer(
+        string? nativeLibraryFolder = null,
+        int? preferredOutputDeviceIndex = null,
+        string? bassOpusDllPath = null,
+        string? tagsDllPath = null)
     {
         _nativeLibraryFolder = string.IsNullOrWhiteSpace(nativeLibraryFolder)
             ? null
@@ -74,6 +81,14 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
         _preferredOutputDeviceIndex = preferredOutputDeviceIndex is >= 0
             ? preferredOutputDeviceIndex
             : null;
+
+        _bassOpusDllPath = string.IsNullOrWhiteSpace(bassOpusDllPath)
+            ? null
+            : bassOpusDllPath.Trim();
+
+        _tagsDllPath = string.IsNullOrWhiteSpace(tagsDllPath)
+            ? null
+            : tagsDllPath.Trim();
 
         InitializeBass();
         RaiseStateChanged();
@@ -226,6 +241,12 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
                 Bass.Free();
                 _isInitialized = false;
             }
+
+            if (_tagsLibraryHandle != IntPtr.Zero)
+            {
+                NativeLibrary.Free(_tagsLibraryHandle);
+                _tagsLibraryHandle = IntPtr.Zero;
+            }
         }
     }
 
@@ -251,6 +272,11 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
         Bass.NetBufferLength = 5000;
         Bass.NetPreBuffer = 15;
         Bass.NetPlaylist = 1;
+
+        if (!string.IsNullOrWhiteSpace(_bassOpusDllPath))
+        {
+            TryLoadPlugin(_bassOpusDllPath);
+        }
 
         // Optional: load Opus plugin if shipped.
         TryLoadPlugin("bassopus");
@@ -352,6 +378,13 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
     {
         try
         {
+            if (!string.IsNullOrWhiteSpace(_tagsDllPath)
+                && File.Exists(_tagsDllPath)
+                && NativeLibrary.TryLoad(_tagsDllPath, out _tagsLibraryHandle))
+            {
+                return true;
+            }
+
             if (!NativeLibrary.TryLoad("tags", out var handle))
             {
                 LogMetadataUnavailable("[Traydio][ManagedBass] tags.dll not found. Playback will continue without metadata.");

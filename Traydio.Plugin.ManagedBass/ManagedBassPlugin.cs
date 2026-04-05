@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using Microsoft.Extensions.DependencyInjection;
 using JetBrains.Annotations;
 using Traydio.Common;
@@ -37,19 +38,31 @@ public sealed class ManagedBassPlugin : ITraydioPlugin
             var settings = settingsProvider?.GetPluginSettings(PluginId);
 
             string? nativeFolder = null;
+            string? bassDllPath = null;
+            string? bassOpusDllPath = null;
+            string? tagsDllPath = null;
             string? outputDeviceIndexText = null;
 
             if (settings is not null)
             {
+                settings.TryGetValue(BassPluginSettings.BassDllPathKey, out bassDllPath);
+                settings.TryGetValue(BassPluginSettings.BassOpusDllPathKey, out bassOpusDllPath);
+                settings.TryGetValue(BassPluginSettings.TagsDllPathKey, out tagsDllPath);
                 settings.TryGetValue(BassPluginSettings.NativeLibraryFolderKey, out nativeFolder);
                 settings.TryGetValue(BassPluginSettings.OutputDeviceIndexKey, out outputDeviceIndexText);
+            }
+
+            if (!string.IsNullOrWhiteSpace(bassDllPath)
+                && string.Equals(Path.GetExtension(bassDllPath), ".dll", StringComparison.OrdinalIgnoreCase))
+            {
+                nativeFolder = Path.GetDirectoryName(bassDllPath);
             }
 
             var outputDeviceIndex = int.TryParse(outputDeviceIndexText, out var parsedOutputDeviceIndex)
                 ? parsedOutputDeviceIndex
                 : (int?)null;
 
-            return new BassRadioPlayer(nativeFolder, outputDeviceIndex);
+            return new BassRadioPlayer(nativeFolder, outputDeviceIndex, bassOpusDllPath, tagsDllPath);
         }
     }
 
