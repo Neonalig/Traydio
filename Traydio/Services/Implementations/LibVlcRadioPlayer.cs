@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using LibVLCSharp.Shared;
 using Traydio.Models;
@@ -13,12 +15,15 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
     private readonly LibVLC _libVlc;
     private readonly MediaPlayer _mediaPlayer;
     private readonly Lock _sync = new();
+    private Media? _currentMedia;
 
     private RadioStation? _currentStation;
     private string? _lastError;
     private string? _nowPlaying;
     private bool _isLoading;
     private bool _disposed;
+    private int _requestedVolume = 60;
+    private string? _requestedAudioOutputDeviceId;
 
     /// <inheritdoc />
     public event EventHandler<RadioPlayerState>? StateChanged;
@@ -48,7 +53,8 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
                 "--network-caching=1000",
                 "--file-caching=1000",
                 "--live-caching=1000",
-                "--no-snapshot-preview"
+                "--no-snapshot-preview",
+                "--verbose=2"
             );
 
         _mediaPlayer = new MediaPlayer(_libVlc);
@@ -71,10 +77,19 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
             _nowPlaying = null;
             _isLoading = true;
 
-            using var media = new Media(_libVlc, new Uri(station.StreamUrl));
+            _mediaPlayer.Stop();
 
-            media.MetaChanged += OnMediaMetaChanged;
-            media.ParsedChanged += OnMediaParsedChanged;
+            var oldMedia = _currentMedia;
+            _currentMedia = null;
+            if (oldMedia is not null)
+            {
+                DetachMediaEvents(oldMedia);
+                oldMedia.Dispose();
+            }
+
+            var media = new Media(_libVlc, new Uri(station.StreamUrl));
+            AttachMediaEvents(media);
+            _currentMedia = media;
 
             var started = _mediaPlayer.Play(media);
 
@@ -82,6 +97,9 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
             {
                 _isLoading = false;
                 _lastError = $"Failed to start playback for '{station.Name}'.";
+                DetachMediaEvents(media);
+                media.Dispose();
+                _currentMedia = null;
             }
         }
 
@@ -141,6 +159,7 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
         {
             _isLoading = false;
             _mediaPlayer.Stop();
+            ReleaseCurrentMedia();
         }
 
         RaiseStateChanged();
@@ -155,6 +174,7 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
 
         lock (_sync)
         {
+            _requestedVolume = clamped;
             _mediaPlayer.Volume = clamped;
         }
 
@@ -174,6 +194,50 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
         RaiseStateChanged();
     }
 
+    /// <inheritdoc />
+    public IReadOnlyList<RadioAudioOutputDevice> GetAudioOutputDevices()
+    {
+        ThrowIfDisposed();
+
+        lock (_sync)
+        {
+            var devices = _mediaPlayer.AudioOutputDeviceEnum;
+            // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
+            if (devices is null)
+            {
+                return [];
+            }
+
+            return devices
+                .Where(static device => !string.IsNullOrWhiteSpace(device.DeviceIdentifier))
+                .Select(static device => new RadioAudioOutputDevice(
+                    device.DeviceIdentifier,
+                    string.IsNullOrWhiteSpace(device.Description)
+                        ? device.DeviceIdentifier
+                        : device.Description))
+                .DistinctBy(static device => device.Id)
+                .ToList();
+        }
+    }
+
+    /// <inheritdoc />
+    public void SetAudioOutputDevice(string? deviceId)
+    {
+        ThrowIfDisposed();
+
+        var normalized = string.IsNullOrWhiteSpace(deviceId)
+            ? null
+            : deviceId.Trim();
+
+        lock (_sync)
+        {
+            _requestedAudioOutputDeviceId = normalized;
+            _mediaPlayer.SetOutputDevice(null!, normalized);
+        }
+
+        RaiseStateChanged();
+    }
+
     public void Dispose()
     {
         if (_disposed)
@@ -184,12 +248,15 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
         _disposed = true;
 
         UnhookEvents();
+        _libVlc.Log -= OnLibVlcLog;
+        ReleaseCurrentMedia();
         _mediaPlayer.Dispose();
         _libVlc.Dispose();
     }
 
     private void HookEvents()
     {
+        _libVlc.Log += OnLibVlcLog;
         _mediaPlayer.Opening += OnOpening;
         _mediaPlayer.Buffering += OnBuffering;
         _mediaPlayer.Playing += OnPlaying;
@@ -248,6 +315,8 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
         lock (_sync)
         {
             _isLoading = false;
+            _mediaPlayer.Volume = _requestedVolume;
+            _mediaPlayer.SetOutputDevice(null!, _requestedAudioOutputDeviceId);
             UpdateNowPlayingFromMedia();
         }
 
@@ -307,11 +376,36 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
             _lastError = null;
         }
 
-        // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
-        if (e.Media is not null)
+        RaiseStateChanged();
+    }
+
+    private void OnLibVlcLog(object? sender, LogEventArgs e)
+    {
+        var formatted = string.IsNullOrWhiteSpace(e.FormattedLog)
+            ? $"[{e.Level}] {e.Module}: {e.Message}"
+            : e.FormattedLog.Trim();
+
+        Console.Error.WriteLine($"[Traydio][LibVLC] {formatted}");
+
+        if (e.Level is not (LogLevel.Warning or LogLevel.Error))
         {
-            e.Media.MetaChanged += OnMediaMetaChanged;
-            e.Media.ParsedChanged += OnMediaParsedChanged;
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(e.Message))
+        {
+            return;
+        }
+
+        var message = e.Message.Trim();
+        if (!LooksLikeAudioError(message, e.Module))
+        {
+            return;
+        }
+
+        lock (_sync)
+        {
+            _lastError = $"LibVLC audio output error: {message}";
         }
 
         RaiseStateChanged();
@@ -400,6 +494,42 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
     private void ThrowIfDisposed()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+    }
+
+    private void AttachMediaEvents(Media media)
+    {
+        media.MetaChanged += OnMediaMetaChanged;
+        media.ParsedChanged += OnMediaParsedChanged;
+    }
+
+    private void DetachMediaEvents(Media media)
+    {
+        media.MetaChanged -= OnMediaMetaChanged;
+        media.ParsedChanged -= OnMediaParsedChanged;
+    }
+
+    private void ReleaseCurrentMedia()
+    {
+        var media = _currentMedia;
+        _currentMedia = null;
+        if (media is null)
+        {
+            return;
+        }
+
+        DetachMediaEvents(media);
+        media.Dispose();
+    }
+
+    private static bool LooksLikeAudioError(string message, string? module)
+    {
+        var haystack = (module + " " + message).ToLowerInvariant();
+        return haystack.Contains("audio")
+               || haystack.Contains("aout")
+               || haystack.Contains("wasapi")
+               || haystack.Contains("directsound")
+               || haystack.Contains("mmdevice")
+               || haystack.Contains("device");
     }
 
     private static string? FirstNonBlank(params string?[] values)

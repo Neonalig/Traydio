@@ -1,5 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using Traydio.Models;
 using Traydio.Services;
 using Traydio.Common;
@@ -12,6 +15,7 @@ public partial class SettingsPageViewModel : ViewModelBase
 {
     private readonly IStationRepository _stationRepository;
     private readonly IProtocolRegistrationService _protocolRegistrationService;
+    private readonly IRadioPlayer _radioPlayer;
 
     [ObservableProperty]
     private bool _enableNamedPipeRelay;
@@ -37,10 +41,20 @@ public partial class SettingsPageViewModel : ViewModelBase
     [ObservableProperty]
     private string _status = string.Empty;
 
-    public SettingsPageViewModel(IStationRepository stationRepository, IProtocolRegistrationService protocolRegistrationService)
+    [ObservableProperty]
+    private IReadOnlyList<AudioOutputDeviceOption> _audioOutputDevices = [];
+
+    [ObservableProperty]
+    private AudioOutputDeviceOption? _selectedAudioOutputDevice;
+
+    public SettingsPageViewModel(
+        IStationRepository stationRepository,
+        IProtocolRegistrationService protocolRegistrationService,
+        IRadioPlayer radioPlayer)
     {
         _stationRepository = stationRepository;
         _protocolRegistrationService = protocolRegistrationService;
+        _radioPlayer = radioPlayer;
         Refresh();
     }
 
@@ -56,6 +70,9 @@ public partial class SettingsPageViewModel : ViewModelBase
             EnableProtocolUrlRelay = EnableProtocolUrlRelay,
             ProtocolScheme = ProtocolScheme,
         });
+
+        _stationRepository.AudioOutputDeviceId = SelectedAudioOutputDevice?.Id;
+        _radioPlayer.SetAudioOutputDevice(_stationRepository.AudioOutputDeviceId);
 
         RefreshProtocolRegistration();
         Status = "Settings saved.";
@@ -97,6 +114,10 @@ public partial class SettingsPageViewModel : ViewModelBase
         LoopbackPort = _stationRepository.Communication.LoopbackPort;
         EnableProtocolUrlRelay = _stationRepository.Communication.EnableProtocolUrlRelay;
         ProtocolScheme = _stationRepository.Communication.ProtocolScheme;
+        AudioOutputDevices = BuildAudioOutputOptions();
+        SelectedAudioOutputDevice = AudioOutputDevices.FirstOrDefault(option =>
+            string.Equals(option.Id, _stationRepository.AudioOutputDeviceId, StringComparison.Ordinal))
+            ?? AudioOutputDevices.FirstOrDefault();
         RefreshProtocolRegistration();
     }
 
@@ -104,5 +125,27 @@ public partial class SettingsPageViewModel : ViewModelBase
     {
         IsProtocolRegistered = _protocolRegistrationService.IsRegistered(ProtocolScheme.Trim().ToLowerInvariant());
     }
+
+    private IReadOnlyList<AudioOutputDeviceOption> BuildAudioOutputOptions()
+    {
+        var options = new List<AudioOutputDeviceOption>
+        {
+            new(null, "System default"),
+        };
+
+        foreach (var device in _radioPlayer.GetAudioOutputDevices())
+        {
+            if (options.Any(option => string.Equals(option.Id, device.Id, StringComparison.Ordinal)))
+            {
+                continue;
+            }
+
+            options.Add(new AudioOutputDeviceOption(device.Id, device.Name));
+        }
+
+        return options;
+    }
 }
+
+public sealed record AudioOutputDeviceOption(string? Id, string Name);
 

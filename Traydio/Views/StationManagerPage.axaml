@@ -12,7 +12,7 @@
             <StackPanel Orientation="Horizontal" Spacing="6">
                 <Button x:Name="AddStationButton" Classes="toolbar-button">
                     <Button.Flyout>
-                        <Flyout Placement="Bottom" IsOpen="{Binding IsAddFlyoutOpen, Mode=TwoWay}">
+                        <Flyout Placement="Bottom">
                             <StackPanel Width="380" Spacing="8" Margin="8">
                                 <TextBlock Text="Add Station" FontWeight="SemiBold"/>
                                 <TextBlock Text="Enter a readable station name and a direct stream URL." Classes="helper-text"/>

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Traydio.Models;
 
 namespace Traydio.Services;
@@ -24,5 +25,9 @@ public interface IRadioPlayer
     void SetVolume(int volume);
 
     void ToggleMute();
+
+    IReadOnlyList<RadioAudioOutputDevice> GetAudioOutputDevices();
+
+    void SetAudioOutputDevice(string? deviceId);
 }
 

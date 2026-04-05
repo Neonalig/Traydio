@@ -112,6 +112,26 @@ public sealed class StationRepository : IStationRepository
         }
     }
 
+    public string? AudioOutputDeviceId
+    {
+        get => _settings.AudioOutputDeviceId;
+        set
+        {
+            var normalized = string.IsNullOrWhiteSpace(value)
+                ? null
+                : value.Trim();
+
+            if (string.Equals(_settings.AudioOutputDeviceId, normalized, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            _settings.AudioOutputDeviceId = normalized;
+            Save();
+            RaiseChanged();
+        }
+    }
+
     public CommunicationBridgeSettings Communication => _settings.Communication;
 
     public StationDiscoveryPluginSettings StationDiscoveryPlugins => _settings.StationDiscoveryPlugins;
@@ -182,6 +202,11 @@ public sealed class StationRepository : IStationRepository
             if (string.IsNullOrWhiteSpace(settings.StationDiscoveryPlugins.PluginDirectory))
             {
                 settings.StationDiscoveryPlugins.PluginDirectory = "Plugins";
+            }
+
+            if (string.IsNullOrWhiteSpace(settings.AudioOutputDeviceId))
+            {
+                settings.AudioOutputDeviceId = null;
             }
 
             return settings;
