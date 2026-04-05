@@ -95,10 +95,12 @@
 
                     <Grid Grid.Row="1" ColumnDefinitions="*,*,Auto,Auto,Auto,Auto" ColumnSpacing="8">
                         <TextBox Grid.Column="0"
+                                 Classes="input-standard"
                                  Watermark="Station name"
                                  Text="{Binding NewStationName}"
                                  IsEnabled="{Binding IsStationEditorEnabled}"/>
                         <TextBox Grid.Column="1"
+                                 Classes="input-standard"
                                  Watermark="Stream URL"
                                  Text="{Binding NewStationUrl}"
                                  IsEnabled="{Binding IsStationEditorEnabled}"/>

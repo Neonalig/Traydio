@@ -199,5 +199,26 @@
         <Setter Property="Padding" Value="4,2"/>
         <Setter Property="MinHeight" Value="22"/>
     </Style>
+
+    <Style Selector="TextBox.input-standard">
+        <Setter Property="Padding" Value="8,4"/>
+        <Setter Property="TextAlignment" Value="Left"/>
+        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+
+    <Style Selector="TextBox.input-standard /template/ ContentPresenter#PART_WatermarkPresenter">
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="8,0,8,0"/>
+        <Setter Property="TextAlignment" Value="Left"/>
+    </Style>
+
+    <Style Selector="TextBox.input-standard /template/ TextBlock#PART_WatermarkPresenter">
+        <Setter Property="HorizontalAlignment" Value="Left"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="Margin" Value="8,0,8,0"/>
+        <Setter Property="TextAlignment" Value="Left"/>
+    </Style>
 </Styles>
 

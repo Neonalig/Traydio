@@ -18,14 +18,14 @@
                           ItemsSource="{Binding Providers}"
                           SelectedItem="{Binding SelectedProvider}"
                           DisplayMemberBinding="{Binding DisplayName}"/>
-                <TextBox Grid.Column="1" Watermark="Search query" Text="{Binding Query}"/>
+                <TextBox Grid.Column="1" Classes="input-standard" Watermark="Search query" Text="{Binding Query}"/>
                 <Button Grid.Column="2" Classes="command-button" Command="{Binding SearchCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <Image Source="/Assets/Icons9x/search.ico" Classes="icon-small"/>
                         <TextBlock Text="Search" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
-                <TextBox Grid.Column="3" Width="180" Watermark="Filter results" Text="{Binding FilterText}"/>
+                <TextBox Grid.Column="3" Classes="input-standard" Width="180" Watermark="Filter results" Text="{Binding FilterText}"/>
                 <Button Grid.Column="4" Classes="command-button" Command="{Binding ApplyFilterCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="6">
                         <Image Source="/Assets/Icons9x/refresh.ico" Classes="icon-small"/>

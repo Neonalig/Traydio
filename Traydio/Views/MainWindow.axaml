@@ -9,6 +9,8 @@
         x:Class="Traydio.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/Icons9x/stations.ico"
+        MinWidth="700"
+        MinHeight="760"
         Width="1100"
         Height="760"
         Title="Traydio - Internet Radio Control Center"
