@@ -1,0 +1,52 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Traydio.ViewModels"
+             x:Class="Traydio.Views.StationManagerPage"
+             x:DataType="vm:StationManagerPageViewModel">
+
+    <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10" Margin="8">
+        <StackPanel Orientation="Horizontal" Spacing="8">
+            <Button Content="Add Station" MinWidth="120">
+                <Button.Flyout>
+                    <Flyout Placement="Bottom">
+                        <StackPanel Width="360" Spacing="8" Margin="8">
+                            <TextBlock Text="Add Station" FontWeight="SemiBold"/>
+                            <TextBox Watermark="Station name" Text="{Binding NewStationName}"/>
+                            <TextBox Watermark="Stream URL" Text="{Binding NewStationUrl}"/>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Content="Add" Command="{Binding AddStationCommand}"/>
+                                <Button Content="Find More" Command="{Binding FindMoreStationsCommand}"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </Flyout>
+                </Button.Flyout>
+            </Button>
+        </StackPanel>
+
+        <Grid Grid.Row="1" RowDefinitions="*,Auto" RowSpacing="8">
+            <ListBox Grid.Row="0" ItemsSource="{Binding Stations}" SelectedItem="{Binding SelectedStation}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel>
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding StreamUrl}" Opacity="0.75"/>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
+                <Button Content="Play Selected" Command="{Binding PlaySelectedStationCommand}"/>
+                <Button Content="Pause" Command="{Binding PauseCommand}"/>
+                <Button Content="Remove Selected" Command="{Binding RemoveSelectedStationCommand}"/>
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+            <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Volume"/>
+            <Slider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding Volume}"/>
+            <Button Grid.Column="2" Content="Apply" Command="{Binding ApplyVolumeCommand}"/>
+        </Grid>
+    </Grid>
+</UserControl>
+

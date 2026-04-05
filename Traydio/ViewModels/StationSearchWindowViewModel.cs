@@ -14,7 +14,7 @@ using Traydio.Views;
 
 namespace Traydio.ViewModels;
 
-[ViewModelFor(typeof(StationSearchWindow))]
+[ViewModelFor(typeof(StationSearchPage))]
 public partial class StationSearchWindowViewModel : ViewModelBase
 {
     private readonly IStationDiscoveryService _stationDiscoveryService;
@@ -84,7 +84,7 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         {
             var request = new StationSearchRequest
             {
-                Query = Query,
+                Query = string.IsNullOrWhiteSpace(Query) ? "popular" : Query,
                 Limit = 200,
             };
 
@@ -110,7 +110,9 @@ public partial class StationSearchWindowViewModel : ViewModelBase
                 await Dispatcher.UIThread.InvokeAsync(() => Results.Add(station));
             }
 
-            Status = $"Found {_lastSearchResults.Count} station(s), showing {shown}.";
+            Status = string.IsNullOrWhiteSpace(Query)
+                ? $"Showing popular stations ({shown}/{_lastSearchResults.Count})."
+                : $"Found {_lastSearchResults.Count} station(s), showing {shown}.";
         }
         catch (OperationCanceledException)
         {
@@ -234,6 +236,11 @@ public partial class StationSearchWindowViewModel : ViewModelBase
             }
 
             SelectedProvider ??= Providers.FirstOrDefault();
+
+            if (SelectedProvider is not null && _lastSearchResults.Count == 0 && !IsBusy)
+            {
+                _ = SearchAsync();
+            }
         }
 
         if (Dispatcher.UIThread.CheckAccess())

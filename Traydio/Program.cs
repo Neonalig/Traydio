@@ -66,6 +66,7 @@ sealed class Program
 
         services.AddSingleton<IStationRepository, StationRepository>();
         services.AddSingleton<IRadioPlayer, LibVlcRadioPlayer>();
+        services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IWindowManager, WindowManager>();
         services.AddSingleton<IAppCommandDispatcher, AppCommandDispatcher>();
         services.AddSingleton<ICommandTextRouter, CommandTextRouter>();
@@ -90,11 +91,11 @@ sealed class Program
         services.AddSingleton<ITrayController, TrayController>();
 
         services.AddTransient<MainWindowViewModel>();
+        services.AddTransient<StationManagerPageViewModel>();
+        services.AddTransient<SettingsPageViewModel>();
         services.AddTransient<PluginManagementWindowViewModel>();
         services.AddTransient<StationSearchWindowViewModel>();
         services.AddTransient<MainWindow>();
-        services.AddTransient<PluginManagementWindow>();
-        services.AddTransient<StationSearchWindow>();
 
         return services;
     }

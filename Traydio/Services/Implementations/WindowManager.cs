@@ -4,13 +4,11 @@ using Traydio.Views;
 
 namespace Traydio.Services;
 
-public sealed class WindowManager(IServiceProvider serviceProvider) : IWindowManager
+public sealed class WindowManager(IServiceProvider serviceProvider, INavigationService navigationService) : IWindowManager
 {
     private MainWindow? _mainWindow;
-    private StationSearchWindow? _stationSearchWindow;
-    private PluginManagementWindow? _pluginManagementWindow;
 
-    public void ShowStationManager()
+    public void ShowMainWindow()
     {
         if (_mainWindow is { IsVisible: true })
         {
@@ -23,30 +21,28 @@ public sealed class WindowManager(IServiceProvider serviceProvider) : IWindowMan
         _mainWindow.Show();
     }
 
+    public void ShowStationManager()
+    {
+        ShowMainWindow();
+        navigationService.Navigate(AppPage.Stations);
+    }
+
     public void ShowStationSearch()
     {
-        if (_stationSearchWindow is { IsVisible: true })
-        {
-            _stationSearchWindow.Activate();
-            return;
-        }
-
-        _stationSearchWindow = serviceProvider.GetRequiredService<StationSearchWindow>();
-        _stationSearchWindow.Closed += (_, _) => _stationSearchWindow = null;
-        _stationSearchWindow.Show();
+        ShowMainWindow();
+        navigationService.Navigate(AppPage.Search);
     }
 
     public void ShowPluginManager()
     {
-        if (_pluginManagementWindow is { IsVisible: true })
-        {
-            _pluginManagementWindow.Activate();
-            return;
-        }
+        ShowMainWindow();
+        navigationService.Navigate(AppPage.Plugins);
+    }
 
-        _pluginManagementWindow = serviceProvider.GetRequiredService<PluginManagementWindow>();
-        _pluginManagementWindow.Closed += (_, _) => _pluginManagementWindow = null;
-        _pluginManagementWindow.Show();
+    public void ShowSettings()
+    {
+        ShowMainWindow();
+        navigationService.Navigate(AppPage.Settings);
     }
 }
 

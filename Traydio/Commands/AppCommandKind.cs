@@ -12,6 +12,7 @@ public enum AppCommandKind
     OpenStationManager,
     OpenStationSearch,
     OpenPluginManager,
+    OpenSettings,
     ToggleMuteOrOpenStationManager,
     Exit,
 }

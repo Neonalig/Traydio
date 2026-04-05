@@ -1,14 +1,15 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:Traydio.ViewModels"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d"
-        x:Class="Traydio.Views.StationSearchWindow"
-        x:DataType="vm:StationSearchWindowViewModel"
-        Width="980"
-        Height="680"
-        Title="Traydio - Station Search">
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Traydio.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="Traydio.Views.StationSearchPage"
+             x:DataType="vm:StationSearchWindowViewModel">
+
+    <UserControl.KeyBindings>
+        <KeyBinding Gesture="Enter" Command="{Binding SearchCommand}" />
+    </UserControl.KeyBindings>
 
     <Grid Margin="12" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="8">
         <Grid Grid.Row="0" ColumnDefinitions="2*,2*,Auto,Auto,Auto" ColumnSpacing="8">
@@ -49,5 +50,5 @@
             <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{Binding Status}"/>
         </Grid>
     </Grid>
-</Window>
+</UserControl>
 

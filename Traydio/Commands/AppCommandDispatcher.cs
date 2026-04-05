@@ -55,6 +55,9 @@ public sealed class AppCommandDispatcher(
             case AppCommandKind.OpenPluginManager:
                 windowManager.ShowPluginManager();
                 break;
+            case AppCommandKind.OpenSettings:
+                windowManager.ShowSettings();
+                break;
             case AppCommandKind.ToggleMuteOrOpenStationManager:
                 if (radioPlayer.IsPlaying)
                 {

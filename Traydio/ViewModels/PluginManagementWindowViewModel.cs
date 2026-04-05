@@ -13,7 +13,7 @@ using Traydio.Views;
 
 namespace Traydio.ViewModels;
 
-[ViewModelFor(typeof(PluginManagementWindow))]
+[ViewModelFor(typeof(PluginManagementPage))]
 public partial class PluginManagementWindowViewModel : ViewModelBase
 {
     private readonly IPluginManager _pluginManager;

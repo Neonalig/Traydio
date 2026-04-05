@@ -5,19 +5,18 @@ using Traydio.ViewModels;
 
 namespace Traydio.Views;
 
-[ViewFor(typeof(StationSearchWindowViewModel))]
-public partial class StationSearchPage : UserControl
+[ViewFor(typeof(SettingsPageViewModel))]
+public partial class SettingsPage : UserControl
 {
-    public StationSearchPage()
+    public SettingsPage()
     {
         AvaloniaXamlLoader.Load(this);
     }
 
-    public StationSearchPage(StationSearchWindowViewModel viewModel)
+    public SettingsPage(SettingsPageViewModel viewModel)
         : this()
     {
         DataContext = viewModel;
     }
-
 }
 

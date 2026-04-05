@@ -1,14 +1,11 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:vm="using:Traydio.ViewModels"
-        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d"
-        x:Class="Traydio.Views.PluginManagementWindow"
-        x:DataType="vm:PluginManagementWindowViewModel"
-        Width="900"
-        Height="640"
-        Title="Traydio - Plugin Management">
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Traydio.ViewModels"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             x:Class="Traydio.Views.PluginManagementPage"
+             x:DataType="vm:PluginManagementWindowViewModel">
 
     <Grid Margin="12" RowDefinitions="Auto,Auto,*,*,Auto" RowSpacing="8">
         <TextBlock Grid.Row="0" Text="Plugin Management" FontWeight="SemiBold" FontSize="18"/>
@@ -56,5 +53,5 @@
 
         <TextBlock Grid.Row="4" Text="{Binding Status}"/>
     </Grid>
-</Window>
+</UserControl>
 

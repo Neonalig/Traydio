@@ -3,79 +3,47 @@
         xmlns:vm="using:Traydio.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        mc:Ignorable="d"
         x:Class="Traydio.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/internet-radio.ico"
-        Width="860"
-        Height="700"
-        Title="Traydio - Station Manager">
+        Width="1100"
+        Height="760"
+        Title="Traydio">
 
-    <Grid RowDefinitions="Auto,Auto,*,Auto,Auto" ColumnDefinitions="*" Margin="12" RowSpacing="10">
-        <TextBlock Grid.Row="0" Text="Manage stations and playback" FontSize="18" FontWeight="SemiBold"/>
-
-        <Grid Grid.Row="1" ColumnDefinitions="2*,3*,Auto,Auto" ColumnSpacing="8">
-            <TextBox Grid.Column="0" Watermark="Station name" Text="{Binding StationName}"/>
-            <TextBox Grid.Column="1" Watermark="Stream URL" Text="{Binding StationUrl}"/>
-            <Button Grid.Column="2" Content="Add" Command="{Binding AddStationCommand}" MinWidth="90"/>
-            <Button Grid.Column="3" Content="Find More" Command="{Binding OpenStationSearchCommand}" MinWidth="110"/>
-        </Grid>
-
-        <Grid Grid.Row="2" ColumnDefinitions="*" RowDefinitions="*,Auto" RowSpacing="8">
-            <ListBox Grid.Row="0"
-                     ItemsSource="{Binding Stations}"
-                     SelectedItem="{Binding SelectedStation}">
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <StackPanel>
-                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                            <TextBlock Text="{Binding StreamUrl}" Opacity="0.7"/>
-                        </StackPanel>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-
-            <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8">
-                <Button Content="Play Selected" Command="{Binding PlaySelectedStationCommand}"/>
-                <Button Content="Pause" Command="{Binding PauseCommand}"/>
-                <Button Content="Remove Selected" Command="{Binding RemoveSelectedStationCommand}"/>
-            </StackPanel>
-        </Grid>
-
-        <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
-            <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Volume"/>
-            <Slider Grid.Column="1" Minimum="0" Maximum="100" Value="{Binding Volume}"/>
-            <Button Grid.Column="2" Content="Apply" Command="{Binding ApplyVolumeCommand}"/>
-        </Grid>
-
-        <Border Grid.Row="4" BorderBrush="#445" BorderThickness="1" Padding="10" CornerRadius="6">
-            <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*,Auto,Auto" RowSpacing="8" ColumnSpacing="8">
-                <TextBlock Grid.Row="0" Grid.ColumnSpan="4" Text="Communication Settings" FontWeight="SemiBold"/>
-
-                <CheckBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Content="Enable named pipe relay" IsChecked="{Binding EnableNamedPipeRelay}"/>
-                <CheckBox Grid.Row="1" Grid.Column="2" Grid.ColumnSpan="2" Content="Enable loopback relay" IsChecked="{Binding EnableLoopbackRelay}"/>
-
-                <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Text="Loopback host"/>
-                <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding LoopbackHost}"/>
-                <TextBlock Grid.Row="2" Grid.Column="2" VerticalAlignment="Center" Text="Port"/>
-                <NumericUpDown Grid.Row="2" Grid.Column="3" Minimum="1" Maximum="65535" Value="{Binding LoopbackPort}"/>
-
-                <CheckBox Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" Content="Enable protocol URL bridge" IsChecked="{Binding EnableProtocolUrlRelay}"/>
-
-                <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Text="Protocol scheme"/>
-                <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding ProtocolScheme}"/>
-                <TextBlock Grid.Row="4" Grid.Column="2" VerticalAlignment="Center" Text="Registered"/>
-                <TextBlock Grid.Row="4" Grid.Column="3" Text="{Binding IsProtocolRegistered}"/>
-
-                <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="4" Orientation="Horizontal" Spacing="8">
-                    <Button Content="Save Communication Settings" Command="{Binding ApplyCommunicationSettingsCommand}"/>
-                    <Button Content="Install Protocol Handler" Command="{Binding InstallProtocolHandlerCommand}"/>
-                    <Button Content="Uninstall Protocol Handler" Command="{Binding UninstallProtocolHandlerCommand}"/>
-                    <Button Content="Plugin Manager" Command="{Binding OpenPluginManagerCommand}"/>
-                    <TextBlock VerticalAlignment="Center" Text="{Binding SettingsStatus}"/>
+    <Grid RowDefinitions="Auto,*" Margin="12" RowSpacing="12">
+        <WrapPanel Grid.Row="0" Orientation="Horizontal" ItemWidth="240" ItemHeight="120" HorizontalAlignment="Center">
+            <Button Command="{Binding OpenStationsCommand}" Margin="6">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
+                    <TextBlock Text="[STATIONS]" FontSize="16" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Stations Manager" FontWeight="SemiBold" HorizontalAlignment="Center"/>
                 </StackPanel>
-            </Grid>
+            </Button>
+
+            <Button Command="{Binding OpenSearchCommand}" Margin="6">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
+                    <TextBlock Text="[SEARCH]" FontSize="16" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Add Stations Search" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+
+            <Button Command="{Binding OpenPluginsCommand}" Margin="6">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
+                    <TextBlock Text="[PLUGINS]" FontSize="16" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Plugins" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+
+            <Button Command="{Binding OpenSettingsCommand}" Margin="6">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="6">
+                    <TextBlock Text="[SETTINGS]" FontSize="16" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Settings" FontWeight="SemiBold" HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Button>
+        </WrapPanel>
+
+        <Border Grid.Row="1" BorderBrush="#445" BorderThickness="1" CornerRadius="8" Padding="8">
+            <ContentControl Content="{Binding CurrentPageViewModel}"/>
         </Border>
     </Grid>
-
 </Window>

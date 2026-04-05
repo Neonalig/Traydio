@@ -9,14 +9,14 @@ using Traydio.ViewModels;
 namespace Traydio.Views;
 
 [ViewFor(typeof(PluginManagementWindowViewModel))]
-public partial class PluginManagementWindow : Window
+public partial class PluginManagementPage : UserControl
 {
-    public PluginManagementWindow()
+    public PluginManagementPage()
     {
         AvaloniaXamlLoader.Load(this);
     }
 
-    public PluginManagementWindow(PluginManagementWindowViewModel viewModel)
+    public PluginManagementPage(PluginManagementWindowViewModel viewModel)
         : this()
     {
         DataContext = viewModel;
@@ -29,7 +29,13 @@ public partial class PluginManagementWindow : Window
             return;
         }
 
-        var result = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel?.StorageProvider is null)
+        {
+            return;
+        }
+
+        var result = await topLevel.StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
         {
             AllowMultiple = false,
             Title = "Select plugin DLL",
