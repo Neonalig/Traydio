@@ -34,7 +34,7 @@ Command text is whitespace-separated and case-insensitive for the command keywor
 - `volume <0-100>`
 - `station <stationId>`
 
-![Commands window example](docs/images/commands.png)
+![Commands window example](images/commands.png)
 
 ### Semantics
 
@@ -133,7 +133,7 @@ Communication settings are persisted in `%LocalAppData%\Traydio\settings.json` u
 - `EnableProtocolUrlRelay`
 - `ProtocolScheme`
 
-![Example settings.json snippet](docs/images/settings-json-communication.png)
+![Example settings.json snippet](images/settings-json-communication.png)
 
 ## Implementation references
 
