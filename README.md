@@ -150,7 +150,7 @@ For the retro desktop look and feel, Traydio uses [Classic.Avalonia.Theme](https
 Big appreciation to both projects and maintainers:
 
 - Avalonia UI: [Website](https://avaloniaui.net/) · [GitHub](https://github.com/AvaloniaUI/Avalonia) · [Docs](https://docs.avaloniaui.net/)
-- Classic.Avalonia.Theme: [NuGet](https://www.nuget.org/packages/Classic.Avalonia.Theme) · [GitHub](https://github.com/AvaloniaUI/AvaloniaClassic)
+- Classic.Avalonia.Theme: [NuGet](https://www.nuget.org/packages/Classic.Avalonia.Theme) · [GitHub](https://github.com/BAndysc/Classic.Avalonia)
 
 ## Legal Attribution
 
