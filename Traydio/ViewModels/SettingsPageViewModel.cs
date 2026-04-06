@@ -209,56 +209,70 @@ public partial class SettingsPageViewModel : ViewModelBase
     [RelayCommand]
     private void ResetNamedPipeRelaySetting()
     {
-        EnableNamedPipeRelay = true;
+        EnableNamedPipeRelay = _stationRepository.Communication.EnableNamedPipeRelay;
+        RefreshDirtyState();
     }
 
     [RelayCommand]
     private void ResetLoopbackRelaySetting()
     {
-        EnableLoopbackRelay = false;
+        EnableLoopbackRelay = _stationRepository.Communication.EnableLoopbackRelay;
+        RefreshDirtyState();
     }
 
     [RelayCommand]
     private void ResetLoopbackHostSetting()
     {
-        LoopbackHost = "127.0.0.1";
+        LoopbackHost = _stationRepository.Communication.LoopbackHost;
+        RefreshDirtyState();
     }
 
     [RelayCommand]
     private void ResetLoopbackPortSetting()
     {
-        LoopbackPort = 38473;
+        LoopbackPort = _stationRepository.Communication.LoopbackPort;
+        RefreshDirtyState();
     }
 
     [RelayCommand]
     private void ResetProtocolUrlRelaySetting()
     {
-        EnableProtocolUrlRelay = true;
+        EnableProtocolUrlRelay = _stationRepository.Communication.EnableProtocolUrlRelay;
+        RefreshDirtyState();
     }
 
     [RelayCommand]
     private void ResetProtocolSchemeSetting()
     {
-        ProtocolScheme = "traydio";
+        ProtocolScheme = _stationRepository.Communication.ProtocolScheme;
+        RefreshDirtyState();
     }
 
     [RelayCommand]
     private void ResetAudioOutputDeviceSetting()
     {
-        SelectedAudioOutputDevice = AudioOutputDevices.FirstOrDefault(option => option.Id is null) ?? AudioOutputDevices.FirstOrDefault();
+        SelectedAudioOutputDevice = AudioOutputDevices.FirstOrDefault(option =>
+                                        string.Equals(option.Id, _stationRepository.AudioOutputDeviceId, StringComparison.Ordinal))
+                                    ?? AudioOutputDevices.FirstOrDefault();
+        RefreshDirtyState();
     }
 
     [RelayCommand]
     private void ResetPlaybackEngineSetting()
     {
-        SelectedRadioPlayerEngine = RadioPlayerEngines.FirstOrDefault(option => string.IsNullOrWhiteSpace(option.Id)) ?? RadioPlayerEngines.FirstOrDefault();
+        SelectedRadioPlayerEngine = RadioPlayerEngines.FirstOrDefault(option =>
+                                        string.Equals(option.Id, _stationRepository.RadioPlayerEngineId, StringComparison.OrdinalIgnoreCase))
+                                    ?? RadioPlayerEngines.FirstOrDefault();
+        RefreshDirtyState();
     }
 
     [RelayCommand]
     private void ResetClassicThemeSetting()
     {
-        SelectedClassicTheme = ClassicThemes.FirstOrDefault(option => string.Equals(option.Key, "Default", StringComparison.OrdinalIgnoreCase))
+        SelectedClassicTheme = ClassicThemes.FirstOrDefault(option =>
+                                   string.Equals(option.Key, _stationRepository.ClassicThemeKey, StringComparison.OrdinalIgnoreCase))
                                ?? ClassicThemes.FirstOrDefault();
+        RefreshDirtyState();
     }
 
     [RelayCommand]
@@ -387,6 +401,7 @@ public partial class SettingsPageViewModel : ViewModelBase
 
         RefreshProtocolRegistration();
         RefreshWmicStatus();
+        RefreshDirtyState();
     }
 
     private void RefreshProtocolRegistration()

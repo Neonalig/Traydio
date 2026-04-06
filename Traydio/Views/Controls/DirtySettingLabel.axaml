@@ -1,0 +1,29 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Traydio.Views.Controls.DirtySettingLabel"
+             x:Name="Root">
+    <StackPanel Orientation="Horizontal" Spacing="0" VerticalAlignment="Center">
+        <ToolTip.Tip>
+            <StackPanel Spacing="2">
+                <TextBlock Text="{Binding #Root.LabelToolTip}" TextWrapping="Wrap"/>
+                <TextBlock Text="* unsaved changes"
+                           IsVisible="{Binding #Root.IsDirty}"
+                           FontWeight="Bold"/>
+            </StackPanel>
+        </ToolTip.Tip>
+
+        <TextBlock Text="{Binding #Root.LabelText}"
+                   IsVisible="{Binding !#Root.IsDirty}"
+                   VerticalAlignment="Center"/>
+        <TextBlock Text="{Binding #Root.LabelText}"
+                   IsVisible="{Binding #Root.IsDirty}"
+                   TextDecorations="Underline"
+                   VerticalAlignment="Center"/>
+        <TextBlock Text="*"
+                   IsVisible="{Binding #Root.IsDirty}"
+                   FontWeight="Bold"
+                   VerticalAlignment="Center"/>
+    </StackPanel>
+</UserControl>
+
+

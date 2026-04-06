@@ -1,11 +1,11 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Traydio.ViewModels"
+             xmlns:controls="using:Traydio.Views.Controls"
              x:Class="Traydio.Views.SettingsPage"
              x:DataType="vm:SettingsPageViewModel">
     <UserControl.Styles>
         <Style Selector="TextBlock.dirty-label">
-            <Setter Property="FontWeight" Value="Bold"/>
             <Setter Property="TextDecorations" Value="Underline"/>
         </Style>
     </UserControl.Styles>
@@ -23,45 +23,57 @@
             <Border Grid.Row="1" Classes="group-frame" Margin="0,-8,0,0">
                 <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto" RowSpacing="8" ColumnSpacing="8">
                     <CheckBox Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" IsChecked="{Binding EnableNamedPipeRelay}">
-                        <TextBlock Text="Enable named pipe relay" Classes.dirty-label="{Binding IsNamedPipeRelayDirty}"/>
+                        <controls:DirtySettingLabel LabelText="Enable named pipe relay"
+                                                    LabelToolTip="Use named pipes for local machine command relay"
+                                                    IsDirty="{Binding IsNamedPipeRelayDirty}"/>
                     </CheckBox>
                     <Button Grid.Row="0" Grid.Column="2"
                             Classes="icon-only"
-                            ToolTip.Tip="Reset to default"
+                            ToolTip.Tip="Revert this setting to saved value"
                             IsVisible="{Binding IsNamedPipeRelayDirty}"
                             Command="{Binding ResetNamedPipeRelaySettingCommand}">
-                        <Image Source="/Assets/Icons9x/reset_to_default.ico" Classes="icon-small"/>
+                        <Image Source="/Assets/Icons9x/undo.ico" Classes="icon-small"/>
                     </Button>
 
                     <CheckBox Grid.Row="0" Grid.Column="3" Grid.ColumnSpan="2" IsChecked="{Binding EnableLoopbackRelay}">
-                        <TextBlock Text="Enable loopback relay" Classes.dirty-label="{Binding IsLoopbackRelayDirty}"/>
+                        <controls:DirtySettingLabel LabelText="Enable loopback relay"
+                                                    LabelToolTip="Use loopback TCP command relay"
+                                                    IsDirty="{Binding IsLoopbackRelayDirty}"/>
                     </CheckBox>
                     <Button Grid.Row="0" Grid.Column="5"
                             Classes="icon-only"
-                            ToolTip.Tip="Reset to default"
+                            ToolTip.Tip="Revert this setting to saved value"
                             IsVisible="{Binding IsLoopbackRelayDirty}"
                             Command="{Binding ResetLoopbackRelaySettingCommand}">
-                        <Image Source="/Assets/Icons9x/reset_to_default.ico" Classes="icon-small"/>
+                        <Image Source="/Assets/Icons9x/undo.ico" Classes="icon-small"/>
                     </Button>
 
-                    <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="Loopback host" Classes.dirty-label="{Binding IsLoopbackHostDirty}"/>
+                    <controls:DirtySettingLabel Grid.Row="1"
+                                                Grid.Column="0"
+                                                LabelText="Loopback host"
+                                                LabelToolTip="Loopback host used for TCP relay"
+                                                IsDirty="{Binding IsLoopbackHostDirty}"/>
                     <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding LoopbackHost}"/>
                     <Button Grid.Row="1" Grid.Column="2"
                             Classes="icon-only"
-                            ToolTip.Tip="Reset to default"
+                            ToolTip.Tip="Revert this setting to saved value"
                             IsVisible="{Binding IsLoopbackHostDirty}"
                             Command="{Binding ResetLoopbackHostSettingCommand}">
-                        <Image Source="/Assets/Icons9x/reset_to_default.ico" Classes="icon-small"/>
+                        <Image Source="/Assets/Icons9x/undo.ico" Classes="icon-small"/>
                     </Button>
 
-                    <TextBlock Grid.Row="1" Grid.Column="3" VerticalAlignment="Center" Text="Port" Classes.dirty-label="{Binding IsLoopbackPortDirty}"/>
+                    <controls:DirtySettingLabel Grid.Row="1"
+                                                Grid.Column="3"
+                                                LabelText="Port"
+                                                LabelToolTip="Loopback TCP port used for relay"
+                                                IsDirty="{Binding IsLoopbackPortDirty}"/>
                     <NumericUpDown Grid.Row="1" Grid.Column="4" Minimum="1" Maximum="65535" Value="{Binding LoopbackPort}"/>
                     <Button Grid.Row="1" Grid.Column="5"
                             Classes="icon-only"
-                            ToolTip.Tip="Reset to default"
+                            ToolTip.Tip="Revert this setting to saved value"
                             IsVisible="{Binding IsLoopbackPortDirty}"
                             Command="{Binding ResetLoopbackPortSettingCommand}">
-                        <Image Source="/Assets/Icons9x/reset_to_default.ico" Classes="icon-small"/>
+                        <Image Source="/Assets/Icons9x/undo.ico" Classes="icon-small"/>
                     </Button>
 
                     <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="6" Text="Use named pipes for local machine reliability; use loopback when you need protocol compatibility over TCP." Classes="helper-text"/>
@@ -75,7 +87,11 @@
             </Border>
             <Border Grid.Row="1" Classes="group-frame" Margin="0,-8,0,0">
                 <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*,Auto,Auto" RowSpacing="8" ColumnSpacing="8">
-                    <TextBlock Grid.Row="0" Grid.Column="0" VerticalAlignment="Center" Text="Playback engine" Classes.dirty-label="{Binding IsRadioPlayerEngineDirty}"/>
+                    <controls:DirtySettingLabel Grid.Row="0"
+                                                Grid.Column="0"
+                                                LabelText="Playback engine"
+                                                LabelToolTip="Select the radio playback backend"
+                                                IsDirty="{Binding IsRadioPlayerEngineDirty}"/>
                     <ComboBox Grid.Row="0" Grid.Column="1"
                               ItemsSource="{Binding RadioPlayerEngines}"
                               SelectedItem="{Binding SelectedRadioPlayerEngine}">
@@ -87,13 +103,17 @@
                     </ComboBox>
                     <Button Grid.Row="0" Grid.Column="2"
                             Classes="icon-only"
-                            ToolTip.Tip="Reset to default"
+                            ToolTip.Tip="Revert this setting to saved value"
                             IsVisible="{Binding IsRadioPlayerEngineDirty}"
                             Command="{Binding ResetPlaybackEngineSettingCommand}">
-                        <Image Source="/Assets/Icons9x/reset_to_default.ico" Classes="icon-small"/>
+                        <Image Source="/Assets/Icons9x/undo.ico" Classes="icon-small"/>
                     </Button>
 
-                    <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="Audio output device" Classes.dirty-label="{Binding IsAudioOutputDeviceDirty}"/>
+                    <controls:DirtySettingLabel Grid.Row="1"
+                                                Grid.Column="0"
+                                                LabelText="Audio output device"
+                                                LabelToolTip="Select preferred audio output device"
+                                                IsDirty="{Binding IsAudioOutputDeviceDirty}"/>
                     <ComboBox Grid.Row="1" Grid.Column="1"
                               ItemsSource="{Binding AudioOutputDevices}"
                               SelectedItem="{Binding SelectedAudioOutputDevice}">
@@ -105,13 +125,17 @@
                     </ComboBox>
                     <Button Grid.Row="1" Grid.Column="2"
                             Classes="icon-only"
-                            ToolTip.Tip="Reset to default"
+                            ToolTip.Tip="Revert this setting to saved value"
                             IsVisible="{Binding IsAudioOutputDeviceDirty}"
                             Command="{Binding ResetAudioOutputDeviceSettingCommand}">
-                        <Image Source="/Assets/Icons9x/reset_to_default.ico" Classes="icon-small"/>
+                        <Image Source="/Assets/Icons9x/undo.ico" Classes="icon-small"/>
                     </Button>
 
-                    <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Text="Classic theme" Classes.dirty-label="{Binding IsClassicThemeDirty}"/>
+                    <controls:DirtySettingLabel Grid.Row="2"
+                                                Grid.Column="0"
+                                                LabelText="Classic theme"
+                                                LabelToolTip="Select the classic UI color theme"
+                                                IsDirty="{Binding IsClassicThemeDirty}"/>
                     <ComboBox Grid.Row="2" Grid.Column="1"
                               ItemsSource="{Binding ClassicThemes}"
                               SelectedItem="{Binding SelectedClassicTheme}">
@@ -123,10 +147,10 @@
                     </ComboBox>
                     <Button Grid.Row="2" Grid.Column="2"
                             Classes="icon-only"
-                            ToolTip.Tip="Reset to default"
+                            ToolTip.Tip="Revert this setting to saved value"
                             IsVisible="{Binding IsClassicThemeDirty}"
                             Command="{Binding ResetClassicThemeSettingCommand}">
-                        <Image Source="/Assets/Icons9x/reset_to_default.ico" Classes="icon-small"/>
+                        <Image Source="/Assets/Icons9x/undo.ico" Classes="icon-small"/>
                     </Button>
 
                     <Button Grid.Row="2"
@@ -154,14 +178,16 @@
             <Border Grid.Row="1" Classes="group-frame" Margin="0,-8,0,0">
                 <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*,Auto,Auto" RowSpacing="8" ColumnSpacing="8">
                     <CheckBox Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2" IsChecked="{Binding EnableProtocolUrlRelay}">
-                        <TextBlock Text="Enable protocol URL bridge" Classes.dirty-label="{Binding IsProtocolUrlRelayDirty}"/>
+                        <controls:DirtySettingLabel LabelText="Enable protocol URL bridge"
+                                                    LabelToolTip="Enable traydio:// command protocol bridge"
+                                                    IsDirty="{Binding IsProtocolUrlRelayDirty}"/>
                     </CheckBox>
                     <Button Grid.Row="0" Grid.Column="2"
                             Classes="icon-only"
-                            ToolTip.Tip="Reset to default"
+                            ToolTip.Tip="Revert this setting to saved value"
                             IsVisible="{Binding IsProtocolUrlRelayDirty}"
                             Command="{Binding ResetProtocolUrlRelaySettingCommand}">
-                        <Image Source="/Assets/Icons9x/reset_to_default.ico" Classes="icon-small"/>
+                        <Image Source="/Assets/Icons9x/undo.ico" Classes="icon-small"/>
                     </Button>
                     <Button Grid.Row="0"
                             Grid.Column="3"
@@ -177,14 +203,18 @@
                         </StackPanel>
                     </Button>
 
-                    <TextBlock Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" Text="Protocol scheme" Classes.dirty-label="{Binding IsProtocolSchemeDirty}"/>
+                    <controls:DirtySettingLabel Grid.Row="1"
+                                                Grid.Column="0"
+                                                LabelText="Protocol scheme"
+                                                LabelToolTip="Scheme name used for protocol registration"
+                                                IsDirty="{Binding IsProtocolSchemeDirty}"/>
                     <TextBox Grid.Row="1" Grid.Column="1" Classes="input-standard" Text="{Binding ProtocolScheme}"/>
                     <Button Grid.Row="1" Grid.Column="2"
                             Classes="icon-only"
-                            ToolTip.Tip="Reset to default"
+                            ToolTip.Tip="Revert this setting to saved value"
                             IsVisible="{Binding IsProtocolSchemeDirty}"
                             Command="{Binding ResetProtocolSchemeSettingCommand}">
-                        <Image Source="/Assets/Icons9x/reset_to_default.ico" Classes="icon-small"/>
+                        <Image Source="/Assets/Icons9x/undo.ico" Classes="icon-small"/>
                     </Button>
 
                     <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Text="Extended functionality"/>
@@ -204,11 +234,6 @@
                     <CheckBox Grid.Row="2" Grid.Column="3" IsEnabled="False" IsChecked="{Binding IsWmicInstalled}"/>
 
                     <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="4" Orientation="Horizontal" Spacing="4">
-                        <TextBlock Text="Status:" FontWeight="SemiBold"/>
-                        <TextBlock Text="{Binding Status}" Classes="accent-text"/>
-                    </StackPanel>
-
-                    <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="4" Orientation="Horizontal" Spacing="4">
                         <TextBlock Text="WMIC:" FontWeight="SemiBold"/>
                         <TextBlock Text="{Binding WmicStatus}" Classes="helper-text"/>
                     </StackPanel>
@@ -217,37 +242,43 @@
         </Grid>
 
         <Border Grid.Row="4" Classes="toolbar-frame" Margin="0">
-            <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
-                <Button Classes="toolbar-button"
-                        HorizontalContentAlignment="Center"
-                        VerticalContentAlignment="Center"
-                        Command="{Binding SaveCommand}"
-                        IsEnabled="{Binding HasUnsavedChanges}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Image Source="/Assets/Icons9x/save.ico" Classes="icon-small"/>
-                        <TextBlock Text="Save Settings" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-                <Button Classes="toolbar-button"
-                        HorizontalContentAlignment="Center"
-                        VerticalContentAlignment="Center"
-                        Command="{Binding DiscardChangesCommand}"
-                        IsEnabled="{Binding HasUnsavedChanges}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Image Source="/Assets/Icons9x/remove.ico" Classes="icon-small"/>
-                        <TextBlock Text="Discard" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-                <Button Classes="toolbar-button"
-                        HorizontalContentAlignment="Center"
-                        VerticalContentAlignment="Center"
-                        Command="{Binding ResetAllDefaultsCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Image Source="/Assets/Icons9x/reset_to_default.ico" Classes="icon-small"/>
-                        <TextBlock Text="Reset to Defaults" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-            </StackPanel>
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                <TextBlock Grid.Column="0"
+                           Text="{Binding Status}"
+                           Classes="accent-text"
+                           VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
+                    <Button Classes="toolbar-button"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center"
+                            Command="{Binding SaveCommand}"
+                            IsEnabled="{Binding HasUnsavedChanges}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Image Source="/Assets/Icons9x/save.ico" Classes="icon-small"/>
+                            <TextBlock Text="Save Settings" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="toolbar-button"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center"
+                            Command="{Binding DiscardChangesCommand}"
+                            IsEnabled="{Binding HasUnsavedChanges}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Image Source="/Assets/Icons9x/remove.ico" Classes="icon-small"/>
+                            <TextBlock Text="Discard" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="toolbar-button"
+                            HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center"
+                            Command="{Binding ResetAllDefaultsCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Image Source="/Assets/Icons9x/reset_to_default.ico" Classes="icon-small"/>
+                            <TextBlock Text="Reset to Defaults" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+            </Grid>
         </Border>
     </Grid>
 </UserControl>
