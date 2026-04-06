@@ -102,10 +102,6 @@ If you want to drive Traydio from custom tooling (Stream Deck actions, scripts, 
 
 That document defines supported command text, transport behavior, protocol URL mapping, and implementation references.
 
-## Documentation index
-
-- [`docs/README.md`](docs/README.md)
-
 ## Project layout (high level)
 
 - `Traydio/` - main tray app (Avalonia)
