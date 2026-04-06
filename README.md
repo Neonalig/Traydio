@@ -115,7 +115,52 @@ That document defines supported command text, transport behavior, protocol URL m
 - `Traydio.SourceGenerator.Tests/` - tests for source generator
 
 ## Additional Examples
-![Traydio settings window](docs/images/settings.png)
-![Traydio commands window](docs/images/commands.png)
-![Traydio about window](docs/images/about.png)
-![Traydio plugin settings window](docs/images/plugin-settings.png)
+
+A quick look at other UI surfaces in Traydio:
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="docs/images/settings.png" alt="Traydio settings window" width="420" />
+      <br />
+      <sub>Settings</sub>
+    </td>
+    <td align="center">
+      <img src="docs/images/commands.png" alt="Traydio commands window" width="420" />
+      <br />
+      <sub>Command Tester</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="docs/images/about.png" alt="Traydio about window" width="420" />
+      <br />
+      <sub>About</sub>
+    </td>
+    <td align="center">
+      <img src="docs/images/plugin-settings.png" alt="Traydio plugin settings window" width="420" />
+      <br />
+      <sub>Plugin Settings</sub>
+    </td>
+  </tr>
+</table>
+
+## Built with Avalonia + Classic Win9x Styling
+
+Traydio is built on [Avalonia UI](https://avaloniaui.net/), which has been excellent for building a modern desktop app with a clean XAML-based workflow and strong cross-platform foundations.
+
+For the retro desktop look and feel, Traydio uses [Classic.Avalonia.Theme](https://www.nuget.org/packages/Classic.Avalonia.Theme), an impressive theme project that recreates classic Win9x-era styling in Avalonia with a lot of detail and care.
+
+Big appreciation to both projects and maintainers:
+
+- Avalonia UI: [Website](https://avaloniaui.net/) · [GitHub](https://github.com/AvaloniaUI/Avalonia) · [Docs](https://docs.avaloniaui.net/)
+- Classic.Avalonia.Theme: [NuGet](https://www.nuget.org/packages/Classic.Avalonia.Theme) · [GitHub](https://github.com/AvaloniaUI/AvaloniaClassic)
+
+## Legal Attribution
+
+**Traydio** utilises iconography originally authored and owned by **Microsoft Corporation**.
+These assets, primarily sourced from Windows 95, 98, and 2000, have been adapted or modified for use within this application.
+
+All trademarks, service marks, and graphic assets are the property of their respective owners. Their inclusion does not imply endorsement by or affiliation with Microsoft.
+
+Source material provided by [trapd00r/win95-winxp_icons](https://github.com/trapd00r/win95-winxp_icons).
