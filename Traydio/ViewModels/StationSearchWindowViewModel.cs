@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -28,6 +29,8 @@ public partial class StationSearchWindowViewModel : ViewModelBase
 
     private CancellationTokenSource? _searchCancellation;
     private readonly List<DiscoveredStation> _lastSearchResults = [];
+    private readonly Dictionary<string, Dictionary<string, string>> _providerSearchOptionsByProviderId = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, string>? _activeProviderSearchOptions;
     private int _activePageIndex;
 
     public ObservableCollection<ProviderOption> Providers { get; } = [];
@@ -91,6 +94,12 @@ public partial class StationSearchWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _hasNextPage;
+
+    [ObservableProperty]
+    private object? _providerSearchSettingsView;
+
+    [ObservableProperty]
+    private bool _hasProviderSearchSettings;
 
     public int CurrentPage => _activePageIndex + 1;
 
@@ -206,6 +215,7 @@ public partial class StationSearchWindowViewModel : ViewModelBase
                 PreferHighQuality = SupportsHighQualityPreference ? PreferHighQuality : null,
                 Offset = SupportsPagination ? _activePageIndex * pageSize : 0,
                 Limit = pageSize,
+                ProviderOptions = BuildProviderOptionsSnapshot(),
             };
 
             _lastSearchResults.Clear();
@@ -422,6 +432,8 @@ public partial class StationSearchWindowViewModel : ViewModelBase
 
     partial void OnSelectedProviderChanged(ProviderOption? value)
     {
+        ConfigureProviderSearchSettingsView(value);
+
         UpdateSearchModes(value?.Features ?? StationSearchProviderFeatures.Basic);
         OnPropertyChanged(nameof(SupportsModes));
         OnPropertyChanged(nameof(SupportsCountryFilter));
@@ -445,6 +457,49 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         {
             SearchAsync().ForgetWithErrorHandling("Station provider switched search", showDialog: false);
         }
+    }
+
+    private IReadOnlyDictionary<string, string>? BuildProviderOptionsSnapshot()
+    {
+        if (_activeProviderSearchOptions is null || _activeProviderSearchOptions.Count == 0)
+        {
+            return null;
+        }
+
+        return new Dictionary<string, string>(_activeProviderSearchOptions, StringComparer.OrdinalIgnoreCase);
+    }
+
+    private void ConfigureProviderSearchSettingsView(ProviderOption? provider)
+    {
+        ProviderSearchSettingsView = null;
+        HasProviderSearchSettings = false;
+        _activeProviderSearchOptions = null;
+
+        if (provider is null)
+        {
+            return;
+        }
+
+        var plugin = _pluginManager.GetPlugins()
+            .FirstOrDefault(item => string.Equals(item.Id, provider.PluginId, StringComparison.OrdinalIgnoreCase));
+        var capability = plugin?.Capabilities
+            .OfType<IStationSearchSettingsCapability>()
+            .FirstOrDefault(item => string.Equals(item.ProviderId, provider.Id, StringComparison.OrdinalIgnoreCase));
+        if (capability is null)
+        {
+            return;
+        }
+
+        if (!_providerSearchOptionsByProviderId.TryGetValue(provider.Id, out var providerOptions))
+        {
+            providerOptions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            _providerSearchOptionsByProviderId[provider.Id] = providerOptions;
+        }
+
+        _activeProviderSearchOptions = providerOptions;
+        var accessor = new ProviderSearchSettingsAccessor(providerOptions);
+        ProviderSearchSettingsView = capability.CreateSearchSettingsView(accessor);
+        HasProviderSearchSettings = ProviderSearchSettingsView is Control;
     }
 
     private void UpdateSearchModes(StationSearchProviderFeatures features)
@@ -630,6 +685,7 @@ public partial class StationSearchWindowViewModel : ViewModelBase
             }
 
             SelectedProvider ??= Providers.FirstOrDefault();
+            ConfigureProviderSearchSettingsView(SelectedProvider);
 
             if (SelectedProvider is not null && _lastSearchResults.Count == 0 && !IsBusy)
             {
@@ -644,6 +700,33 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         }
 
         Dispatcher.UIThread.Post(Update);
+    }
+
+    private sealed class ProviderSearchSettingsAccessor(Dictionary<string, string> options) : IStationSearchSettingsAccessor
+    {
+        public string? GetValue(string key)
+        {
+            return options.TryGetValue(key, out var value)
+                ? value
+                : null;
+        }
+
+        public void SetValue(string key, string? value)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return;
+            }
+
+            var normalizedKey = key.Trim();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                options.Remove(normalizedKey);
+                return;
+            }
+
+            options[normalizedKey] = value.Trim();
+        }
     }
 
     partial void OnStatusChanged(string value)

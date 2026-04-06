@@ -22,6 +22,12 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
     public const string PLUGIN_ID = "plugin.radio-browser.info";
 
     private const string _USER_AGENT = "Traydio/2026";
+    private const string _OPTION_ORDER = "order";
+    private const string _OPTION_REVERSE = "reverse";
+    private const string _OPTION_EXACT_MATCH = "exactMatch";
+    private const string _OPTION_CODEC = "codec";
+    private const string _OPTION_MIN_BITRATE = "minBitrate";
+    private const string _OPTION_HIDE_BROKEN = "hideBroken";
 
     public static PluginInstallDisclaimer InstallDisclaimer { get; } = new()
     {
@@ -59,7 +65,7 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
     {
         _logger = logger;
         _settingsProvider = settingsProvider;
-        Capabilities = [new StationDiscoveryCapability(this), new SettingsCapability()];
+        Capabilities = [new StationDiscoveryCapability(this), new StationSearchSettingsCapability(), new SettingsCapability()];
     }
 
     public string Id => PLUGIN_ID;
@@ -119,9 +125,7 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
             }
 
             var genre = JoinValues(station.Tags, maxCount: 4);
-            var country = !string.IsNullOrWhiteSpace(station.Country)
-                ? station.Country
-                : station.CountryCode;
+            var country = station.CountryCode;
 
             yield return new DiscoveredStation
             {
@@ -138,6 +142,7 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
     {
         var stationService = _stationService.Value;
         var filter = BuildSearchFilter(request);
+        var exactMatch = GetOptionBool(request, _OPTION_EXACT_MATCH, defaultValue: false);
 
         if (request.Mode == StationSearchMode.Random)
         {
@@ -151,6 +156,11 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
             filter.Order = StationSortOrder.Votes;
             filter.Reverse = true;
             return (await stationService.FetchAsync(filter, cancellationToken)).ToArray();
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Query))
+        {
+            return (await stationService.FetchByNameAsync(request.Query.Trim(), exactMatch, filter, cancellationToken)).ToArray();
         }
 
         var advanced = BuildAdvancedSearch(request, filter);
@@ -169,15 +179,17 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
     {
         var filter = new StationSearchFilter
         {
-            HideBroken = true,
+            HideBroken = GetOptionBool(request, _OPTION_HIDE_BROKEN, defaultValue: true),
             Offset = Math.Max(0, request.Offset),
             Limit = Math.Clamp(request.Limit, 1, 500),
         };
 
-        if (TryParseSortOrder(request.Order, out var parsedOrder, out var reverse))
+        var rawOrder = GetOptionValue(request, _OPTION_ORDER) ?? request.Order;
+        if (TryParseSortOrder(rawOrder, out var parsedOrder, out var reverse))
         {
             filter.Order = parsedOrder;
-            filter.Reverse = reverse;
+            var explicitReverse = GetOptionBoolOrNull(request, _OPTION_REVERSE);
+            filter.Reverse = explicitReverse ?? reverse;
         }
 
         return filter;
@@ -191,20 +203,21 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
 
         var advanced = new AdvancedStationSearch
         {
-            Name = request.Query?.Trim() ?? string.Empty,
-            NameExact = false,
+            Name = request.Query.Trim(),
+            NameExact = GetOptionBool(request, _OPTION_EXACT_MATCH, defaultValue: false),
             Language = language,
-            LanguageExact = false,
+            LanguageExact = GetOptionBool(request, _OPTION_EXACT_MATCH, defaultValue: false),
             Tag = genre,
-            TagExact = false,
+            TagExact = GetOptionBool(request, _OPTION_EXACT_MATCH, defaultValue: false),
             TagList = SplitValues(genre),
             Offset = filter.Offset,
             Limit = filter.Limit,
             HideBroken = filter.HideBroken,
             Order = filter.Order,
             Reverse = filter.Reverse,
-            MinimumBitrate = request.PreferHighQuality == true ? 96 : 0,
+            MinimumBitrate = GetMinimumBitrate(request),
             MaximumBitrate = 1_000_000,
+            Codec = GetOptionValue(request, _OPTION_CODEC) ?? string.Empty,
         };
 
         if (country.Length == 2)
@@ -217,6 +230,53 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
         }
 
         return advanced;
+    }
+
+    private static int GetMinimumBitrate(StationSearchRequest request)
+    {
+        var configured = GetOptionInt(request, _OPTION_MIN_BITRATE);
+        if (configured.HasValue)
+        {
+            return Math.Clamp(configured.Value, 0, 1_000_000);
+        }
+
+        return request.PreferHighQuality == true ? 96 : 0;
+    }
+
+    private static string? GetOptionValue(StationSearchRequest request, string key)
+    {
+        if (request.ProviderOptions is null || !request.ProviderOptions.TryGetValue(key, out var value))
+        {
+            return null;
+        }
+
+        return string.IsNullOrWhiteSpace(value)
+            ? null
+            : value.Trim();
+    }
+
+    private static bool GetOptionBool(StationSearchRequest request, string key, bool defaultValue)
+    {
+        var raw = GetOptionValue(request, key);
+        return bool.TryParse(raw, out var parsed)
+            ? parsed
+            : defaultValue;
+    }
+
+    private static bool? GetOptionBoolOrNull(StationSearchRequest request, string key)
+    {
+        var raw = GetOptionValue(request, key);
+        return bool.TryParse(raw, out var parsed)
+            ? parsed
+            : null;
+    }
+
+    private static int? GetOptionInt(StationSearchRequest request, string key)
+    {
+        var raw = GetOptionValue(request, key);
+        return int.TryParse(raw, out var parsed)
+            ? parsed
+            : null;
     }
 
     private static bool TryParseSortOrder(string? rawOrder, out StationSortOrder order, out bool reverse)
@@ -366,6 +426,105 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
         {
             return new RadioBrowserPluginSettingsView(settingsAccessor);
         }
+    }
+
+    private sealed class StationSearchSettingsCapability : IStationSearchSettingsCapability
+    {
+        public string CapabilityId => "station-search-settings";
+
+        public string ProviderId => _providerId;
+
+        public object CreateSearchSettingsView(IStationSearchSettingsAccessor settingsAccessor)
+        {
+            return new SearchSettingsView(settingsAccessor);
+        }
+    }
+
+    private sealed class SearchSettingsView : UserControl
+    {
+        public SearchSettingsView(IStationSearchSettingsAccessor accessor)
+        {
+            var root = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitions("Auto,140,Auto,120,Auto,120,Auto,*"),
+                ColumnSpacing = 8,
+            };
+
+            root.Children.Add(new TextBlock { Text = "Provider options", VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
+
+            var orderCombo = new ComboBox
+            {
+                ItemsSource = new[]
+                {
+                    new Option("Votes", "Votes"),
+                    new Option("Name", "Name"),
+                    new Option("Bitrate", "Bitrate"),
+                    new Option("ClickCount", "ClickCount"),
+                    new Option("Random", "Random"),
+                },
+                SelectedValueBinding = new Avalonia.Data.Binding(nameof(Option.Value)),
+                DisplayMemberBinding = new Avalonia.Data.Binding(nameof(Option.Text)),
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+            };
+            orderCombo.SelectedValue = accessor.GetValue(_OPTION_ORDER) ?? "Votes";
+            orderCombo.SelectionChanged += (_, _) => accessor.SetValue(_OPTION_ORDER, orderCombo.SelectedValue?.ToString());
+            Grid.SetColumn(orderCombo, 1);
+            root.Children.Add(orderCombo);
+
+            var reverseToggle = new CheckBox
+            {
+                Content = "Descending",
+                IsChecked = bool.TryParse(accessor.GetValue(_OPTION_REVERSE), out var rev) ? rev : true,
+                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+            };
+            reverseToggle.IsCheckedChanged += (_, _) => accessor.SetValue(_OPTION_REVERSE, reverseToggle.IsChecked == true ? "true" : "false");
+            Grid.SetColumn(reverseToggle, 2);
+            root.Children.Add(reverseToggle);
+
+            var minBitrateBox = new TextBox
+            {
+                Watermark = "96",
+                Text = accessor.GetValue(_OPTION_MIN_BITRATE) ?? string.Empty,
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+            };
+            minBitrateBox.LostFocus += (_, _) => accessor.SetValue(_OPTION_MIN_BITRATE, minBitrateBox.Text);
+            Grid.SetColumn(minBitrateBox, 3);
+            root.Children.Add(minBitrateBox);
+
+            var exactMatch = new CheckBox
+            {
+                Content = "Exact",
+                IsChecked = bool.TryParse(accessor.GetValue(_OPTION_EXACT_MATCH), out var exact) && exact,
+                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+            };
+            exactMatch.IsCheckedChanged += (_, _) => accessor.SetValue(_OPTION_EXACT_MATCH, exactMatch.IsChecked == true ? "true" : "false");
+            Grid.SetColumn(exactMatch, 4);
+            root.Children.Add(exactMatch);
+
+            var hideBroken = new CheckBox
+            {
+                Content = "Hide broken",
+                IsChecked = !bool.TryParse(accessor.GetValue(_OPTION_HIDE_BROKEN), out var hide) || hide,
+                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
+            };
+            hideBroken.IsCheckedChanged += (_, _) => accessor.SetValue(_OPTION_HIDE_BROKEN, hideBroken.IsChecked == true ? "true" : "false");
+            Grid.SetColumn(hideBroken, 5);
+            root.Children.Add(hideBroken);
+
+            var codecBox = new TextBox
+            {
+                Watermark = "codec (mp3, aac)",
+                Text = accessor.GetValue(_OPTION_CODEC) ?? string.Empty,
+                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+            };
+            codecBox.LostFocus += (_, _) => accessor.SetValue(_OPTION_CODEC, codecBox.Text);
+            Grid.SetColumn(codecBox, 7);
+            root.Children.Add(codecBox);
+
+            Content = root;
+        }
+
+        private sealed record Option(string Value, string Text);
     }
 
     private sealed class RadioBrowserPluginSettingsView : UserControl

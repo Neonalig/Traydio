@@ -16,6 +16,20 @@ public interface IStationDiscoveryCapability : IPluginCapability
     IAsyncEnumerable<DiscoveredStation> SearchAsync(StationSearchRequest request, CancellationToken cancellationToken);
 }
 
+public interface IStationSearchSettingsCapability : IPluginCapability
+{
+    string ProviderId { get; }
+
+    object CreateSearchSettingsView(IStationSearchSettingsAccessor settingsAccessor);
+}
+
+public interface IStationSearchSettingsAccessor
+{
+    string? GetValue(string key);
+
+    void SetValue(string key, string? value);
+}
+
 public interface ITraydioPlugin
 {
     string Id { get; }
@@ -44,6 +58,8 @@ public sealed class StationSearchRequest
     public int Offset { get; init; }
 
     public int Limit { get; init; } = 100;
+
+    public IReadOnlyDictionary<string, string>? ProviderOptions { get; init; }
 }
 
 public enum StationSearchMode

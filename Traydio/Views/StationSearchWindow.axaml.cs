@@ -1,9 +1,12 @@
-﻿using Avalonia.Controls;
+﻿using System;
+using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Traydio.Common;
 using Traydio.ViewModels;
+using System.Threading.Tasks;
+using Traydio.Services;
 
 namespace Traydio.Views;
 
@@ -66,6 +69,69 @@ public partial class StationSearchPage : UserControl
         {
             viewModel.AddStationCommand.Execute(station);
         }
+    }
+
+    private void OnCopyResultNameClick(object? sender, RoutedEventArgs e)
+    {
+        CopyResultAsync(sender, static station => station.Name, "station name")
+            .ForgetWithErrorHandling("Copy station result name", showDialog: false);
+    }
+
+    private void OnCopyResultUrlClick(object? sender, RoutedEventArgs e)
+    {
+        CopyResultAsync(sender, static station => station.StreamUrl, "stream URL")
+            .ForgetWithErrorHandling("Copy station result URL", showDialog: false);
+    }
+
+    private void OnCopyResultNameUrlClick(object? sender, RoutedEventArgs e)
+    {
+        CopyResultAsync(sender, static station => station.Name + " - " + station.StreamUrl, "station entry")
+            .ForgetWithErrorHandling("Copy station result name+URL", showDialog: false);
+    }
+
+    private async Task CopyResultAsync(object? sender, Func<DiscoveredStation, string> selector, string label)
+    {
+        if (DataContext is not StationSearchWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        var station = TryGetStation(sender);
+        if (station is null)
+        {
+            viewModel.Status = "Select a station result first.";
+            return;
+        }
+
+        var value = selector(station);
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel?.Clipboard is null)
+        {
+            return;
+        }
+
+        await topLevel.Clipboard.SetTextAsync(value);
+        viewModel.Status = "Copied " + label + ": " + station.Name;
+    }
+
+    private static DiscoveredStation? TryGetStation(object? sender)
+    {
+        if (sender is Control { DataContext: DiscoveredStation station })
+        {
+            return station;
+        }
+
+        if (sender is ContextMenu { PlacementTarget.DataContext: DiscoveredStation placementStation })
+        {
+            return placementStation;
+        }
+
+        return null;
     }
 
 }

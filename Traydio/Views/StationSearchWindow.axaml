@@ -15,7 +15,7 @@
     <Grid Margin="0">
         <Grid IsEnabled="{Binding !IsBusy}" RowDefinitions="Auto,Auto,*" RowSpacing="6">
             <Border Grid.Row="0" Classes="toolbar-frame" Margin="0">
-                <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
                 <Grid Grid.Row="0" ColumnDefinitions="2*,1.2*,2.2*,Auto,1.6*,Auto" ColumnSpacing="8">
                     <ComboBox Grid.Column="0"
                               ItemsSource="{Binding Providers}"
@@ -85,6 +85,10 @@
                     </Button>
                     <TextBlock Grid.Column="6" VerticalAlignment="Center" Classes="subtle-text" Text="Pagination" IsVisible="{Binding SupportsPagination}"/>
                 </Grid>
+
+                <ContentControl Grid.Row="3"
+                                IsVisible="{Binding HasProviderSearchSettings}"
+                                Content="{Binding ProviderSearchSettingsView}"/>
                 </Grid>
             </Border>
 
@@ -116,13 +120,23 @@
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Grid ColumnDefinitions="Auto,3*,5*,Auto" ColumnSpacing="8">
+                                        <Grid.ContextMenu>
+                                            <ContextMenu>
+                                                <MenuItem Header="Copy Station Name" Click="OnCopyResultNameClick"/>
+                                                <MenuItem Header="Copy Stream URL" Click="OnCopyResultUrlClick"/>
+                                                <MenuItem Header="Copy Name + URL" Click="OnCopyResultNameUrlClick"/>
+                                            </ContextMenu>
+                                        </Grid.ContextMenu>
                                         <Image Source="/Assets/stations.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
                                         <StackPanel Grid.Column="1">
                                             <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
                                             <TextBlock Text="{Binding Country}" Classes="subtle-text"/>
                                         </StackPanel>
                                         <StackPanel Grid.Column="2">
-                                            <TextBlock Text="{Binding StreamUrl}" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding StreamUrl}"
+                                                       TextWrapping="NoWrap"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       ToolTip.Tip="{Binding StreamUrl}"/>
                                             <TextBlock Text="{Binding Description}" Classes="subtle-text" TextWrapping="Wrap"/>
                                         </StackPanel>
                                         <Button Grid.Column="3"
