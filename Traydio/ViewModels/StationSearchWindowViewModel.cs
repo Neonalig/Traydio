@@ -83,6 +83,7 @@ public partial class StationSearchWindowViewModel : ViewModelBase
     private string _status = string.Empty;
 
     [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(CancelSearchCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -178,8 +179,13 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         }
 
         if (_searchCancellation is not null)
+        {
             await _searchCancellation.CancelAsync();
-        _searchCancellation = new CancellationTokenSource();
+        }
+
+        var currentSearchCancellation = new CancellationTokenSource();
+        _searchCancellation = currentSearchCancellation;
+        CancelSearchCommand.NotifyCanExecuteChanged();
 
         IsBusy = true;
         HasPreviousPage = _activePageIndex > 0;
@@ -212,7 +218,7 @@ public partial class StationSearchWindowViewModel : ViewModelBase
 
             var shown = 0;
             await foreach (var station in _stationDiscoveryService
-                .SearchAsync(SelectedProvider.Id, request, _searchCancellation.Token)
+                .SearchAsync(SelectedProvider.Id, request, currentSearchCancellation.Token)
                                .ConfigureAwait(false))
             {
                 _lastSearchResults.Add(station);
@@ -241,7 +247,10 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         }
         catch (OperationCanceledException)
         {
-            Status = "Search canceled.";
+            if (ReferenceEquals(_searchCancellation, currentSearchCancellation))
+            {
+                Status = "Search canceled.";
+            }
         }
         catch (Exception ex)
         {
@@ -249,8 +258,31 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         }
         finally
         {
-            IsBusy = false;
+            if (ReferenceEquals(_searchCancellation, currentSearchCancellation))
+            {
+                IsBusy = false;
+                _searchCancellation.Dispose();
+                _searchCancellation = null;
+                CancelSearchCommand.NotifyCanExecuteChanged();
+            }
         }
+    }
+
+    private bool CanCancelSearch()
+    {
+        return IsBusy && _searchCancellation is not null;
+    }
+
+    [RelayCommand(CanExecute = nameof(CanCancelSearch))]
+    private async Task CancelSearchAsync()
+    {
+        if (_searchCancellation is null)
+        {
+            return;
+        }
+
+        Status = "Canceling search...";
+        await _searchCancellation.CancelAsync();
     }
 
     [RelayCommand]
@@ -408,6 +440,11 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         HasPreviousPage = false;
         HasNextPage = false;
         OnPropertyChanged(nameof(CurrentPage));
+
+        if (value is not null)
+        {
+            SearchAsync().ForgetWithErrorHandling("Station provider switched search", showDialog: false);
+        }
     }
 
     private void UpdateSearchModes(StationSearchProviderFeatures features)
