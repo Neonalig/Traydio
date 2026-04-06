@@ -4,6 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
+             x:Name="Root"
              x:Class="Traydio.Views.StationSearchPage"
              x:DataType="vm:StationSearchWindowViewModel">
 
@@ -87,7 +88,23 @@
         </Border>
 
         <Border Grid.Row="1" Classes="status-strip" Margin="0">
-            <TextBlock Text="Choose a provider view (Search/Featured/Random), apply optional provider filters, then page through results." Classes="helper-text"/>
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                <ProgressBar Grid.Column="0"
+                             Width="120"
+                             Height="6"
+                             IsIndeterminate="True"
+                             IsVisible="{Binding IsBusy}"
+                             VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="1"
+                           Text="{Binding Status}"
+                           Classes="helper-text"
+                           TextTrimming="CharacterEllipsis"
+                           VerticalAlignment="Center"/>
+                <TextBlock Grid.Column="2"
+                           Text="Choose a provider view (Search/Featured/Random), apply optional provider filters, then page through results."
+                           Classes="helper-text"
+                           VerticalAlignment="Center"/>
+            </Grid>
         </Border>
 
         <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="0" Margin="4,0,4,4">
@@ -95,21 +112,15 @@
                 <TextBlock Text="Search Results" Classes="group-title"/>
             </Border>
             <Border Grid.Row="1" Classes="group-frame" Margin="0,-8,0,0">
-                <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8">
-                    <Grid Grid.Row="0" ColumnDefinitions="Auto,*" ColumnSpacing="8">
-                        <Button Grid.Column="0" Classes="command-button" Command="{Binding OpenPluginManagerWindowCommand}">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Image Source="/Assets/plugins.ico" Classes="icon-small"/>
-                                <TextBlock Text="Open Plugin Manager" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                        <TextBlock Grid.Column="1" Text="Use plugin management if your preferred provider is missing or disabled." Classes="helper-text" VerticalAlignment="Center"/>
-                    </Grid>
-
-                    <ListBox Grid.Row="1" Classes="list-surface" ItemsSource="{Binding Results}" SelectedItem="{Binding SelectedResult}">
+                <Grid RowDefinitions="*" RowSpacing="8">
+                    <ListBox x:Name="ResultsList"
+                             Grid.Row="0"
+                             Classes="list-surface"
+                             ItemsSource="{Binding Results}"
+                             SelectedItem="{Binding SelectedResult}">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
-                                <Grid ColumnDefinitions="Auto,3*,5*" ColumnSpacing="8">
+                                <Grid ColumnDefinitions="Auto,3*,5*,Auto" ColumnSpacing="8">
                                     <Image Source="/Assets/stations.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
                                     <StackPanel Grid.Column="1">
                                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
@@ -119,19 +130,19 @@
                                         <TextBlock Text="{Binding StreamUrl}" TextWrapping="Wrap"/>
                                         <TextBlock Text="{Binding Description}" Classes="subtle-text" TextWrapping="Wrap"/>
                                     </StackPanel>
+                                    <Button Grid.Column="3"
+                                            Classes="command-button"
+                                            VerticalAlignment="Center"
+                                            Click="OnAddResultClick">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <Image Source="/Assets/add.ico" Classes="icon-small"/>
+                                            <TextBlock Text="Add" VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Button>
                                 </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
-
-                    <Grid Grid.Row="2" ColumnDefinitions="Auto" ColumnSpacing="8">
-                        <Button Grid.Column="0" Classes="command-button" Command="{Binding AddSelectedStationCommand}">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Image Source="/Assets/add.ico" Classes="icon-small"/>
-                                <TextBlock Text="Add Selected Station" VerticalAlignment="Center"/>
-                            </StackPanel>
-                        </Button>
-                    </Grid>
                 </Grid>
             </Border>
         </Grid>

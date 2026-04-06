@@ -3,6 +3,9 @@
   <Project Path="Traydio.Plugin.FmStreamOrg/Traydio.Plugin.FmStreamOrg.csproj" />
   <Project Path="Traydio.Plugin.LibVlc/Traydio.Plugin.LibVlc.csproj" />
   <Project Path="Traydio.Plugin.ManagedBass/Traydio.Plugin.ManagedBass.csproj" />
+  <Project Path="Traydio.Plugin.RadioBrowser/Traydio.Plugin.RadioBrowser.csproj" />
+  <Project Path="Traydio.Plugin.RadioDirectory/Traydio.Plugin.RadioDirectory.csproj" />
+  <Project Path="Traydio.Plugin.Shoutcast/Traydio.Plugin.Shoutcast.csproj" />
   <Project Path="Traydio.Plugin.StreamUrlLink/Traydio.Plugin.StreamUrlLink.csproj" />
   <Project Path="Traydio.SourceGenerator.Sample/Traydio.SourceGenerator.Sample.csproj" />
   <Project Path="Traydio.SourceGenerator.Tests/Traydio.SourceGenerator.Tests.csproj" />

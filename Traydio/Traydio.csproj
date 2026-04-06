@@ -35,6 +35,9 @@
         <ProjectReference Include="..\Traydio.Plugin.FmStreamOrg\Traydio.Plugin.FmStreamOrg.csproj" />
         <ProjectReference Include="..\Traydio.Plugin.LibVlc\Traydio.Plugin.LibVlc.csproj" />
         <ProjectReference Include="..\Traydio.Plugin.ManagedBass\Traydio.Plugin.ManagedBass.csproj" />
+        <ProjectReference Include="..\Traydio.Plugin.RadioBrowser\Traydio.Plugin.RadioBrowser.csproj" />
+        <ProjectReference Include="..\Traydio.Plugin.RadioDirectory\Traydio.Plugin.RadioDirectory.csproj" />
+        <ProjectReference Include="..\Traydio.Plugin.Shoutcast\Traydio.Plugin.Shoutcast.csproj" />
         <ProjectReference Include="..\Traydio.Plugin.StreamUrlLink\Traydio.Plugin.StreamUrlLink.csproj" />
         <ProjectReference Include="..\Traydio.SourceGenerator\Traydio.SourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false"/>
     </ItemGroup>
@@ -80,6 +83,18 @@
         <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
             <_Parameter1>Traydio.OfficialPluginAssemblyNameHash</_Parameter1>
             <_Parameter2>ff01a230df8408f1be752f89f85be597ed590001d15cc5f380f1c94af7399aca</_Parameter2>
+        </AssemblyAttribute>
+        <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+            <_Parameter1>Traydio.OfficialPluginAssemblyNameHash</_Parameter1>
+            <_Parameter2>f8238cb4a728863dfb231e626e4423b4d9c02b3f3d52afa655894267073306ac</_Parameter2>
+        </AssemblyAttribute>
+        <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+            <_Parameter1>Traydio.OfficialPluginAssemblyNameHash</_Parameter1>
+            <_Parameter2>175898a9fbb4ba33e29a9f2346cabd56675c8aa7af89fdaf9f8d58373327bd3d</_Parameter2>
+        </AssemblyAttribute>
+        <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+            <_Parameter1>Traydio.OfficialPluginAssemblyNameHash</_Parameter1>
+            <_Parameter2>775d13e41ba9d5bbb03527054cb1c8f4e965fb10a69e1f275f12bf69c110ab45</_Parameter2>
         </AssemblyAttribute>
     </ItemGroup>
 </Project>

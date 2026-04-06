@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Traydio.Commands;
 using Traydio.Common;
 using Traydio.Services;
 using Traydio.Views;
@@ -20,12 +19,12 @@ namespace Traydio.ViewModels;
 public partial class StationSearchWindowViewModel : ViewModelBase
 {
     private static readonly HttpClient _lookupHttpClient = new();
+    private const string _STATUS_OVERRIDE_ID = "station-search";
 
     private readonly IStationDiscoveryService _stationDiscoveryService;
     private readonly IPluginManager _pluginManager;
     private readonly IPluginInstallDisclaimerService _pluginInstallDisclaimerService;
     private readonly IStationRepository _stationRepository;
-    private readonly IAppCommandDispatcher _commandDispatcher;
 
     private CancellationTokenSource? _searchCancellation;
     private readonly List<DiscoveredStation> _lastSearchResults = [];
@@ -112,14 +111,12 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         IStationDiscoveryService stationDiscoveryService,
         IPluginManager pluginManager,
         IPluginInstallDisclaimerService pluginInstallDisclaimerService,
-        IStationRepository stationRepository,
-        IAppCommandDispatcher commandDispatcher)
+        IStationRepository stationRepository)
     {
         _stationDiscoveryService = stationDiscoveryService;
         _pluginManager = pluginManager;
         _pluginInstallDisclaimerService = pluginInstallDisclaimerService;
         _stationRepository = stationRepository;
-        _commandDispatcher = commandDispatcher;
 
         _pluginManager.PluginsChanged += (_, _) => RefreshProviders();
         InitializeLanguageOptions();
@@ -257,16 +254,17 @@ public partial class StationSearchWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void AddSelectedStation()
+    private void AddStation(DiscoveredStation? station)
     {
-        if (SelectedResult is null)
+        var target = station ?? SelectedResult;
+        if (target is null)
         {
             Status = "Select a station result first.";
             return;
         }
 
-        _stationRepository.AddStation(SelectedResult.Name, SelectedResult.StreamUrl);
-        Status = $"Added station '{SelectedResult.Name}'.";
+        _stationRepository.AddStation(target.Name, target.StreamUrl);
+        Status = $"Added station '{target.Name}'.";
     }
 
     [RelayCommand]
@@ -355,12 +353,6 @@ public partial class StationSearchWindowViewModel : ViewModelBase
 
             Status = $"Showing {Results.Count} filtered station(s) from {_lastSearchResults.Count}.";
         });
-    }
-
-    [RelayCommand]
-    private void OpenPluginManagerWindow()
-    {
-        _commandDispatcher.Dispatch(new AppCommand { Kind = AppCommandKind.OpenPluginManager });
     }
 
     private static bool MatchesFilter(DiscoveredStation station, string filter)
@@ -595,6 +587,19 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         }
 
         Dispatcher.UIThread.Post(Update);
+    }
+
+    partial void OnStatusChanged(string value)
+    {
+        var status = value.Trim();
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            RibbonStatusHub.RemoveOverride(_STATUS_OVERRIDE_ID);
+            return;
+        }
+
+        // Keep station-search feedback visible, but lower priority than focused actions elsewhere.
+        RibbonStatusHub.SetOverride(_STATUS_OVERRIDE_ID, status, priority: 10);
     }
 
     public sealed class ProviderOption(string pluginId, string id, string displayName, StationSearchProviderFeatures features)
