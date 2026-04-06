@@ -5,11 +5,16 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using Avalonia.Threading;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Traydio.Common;
 
 namespace Traydio.Services.Implementations;
 
-public sealed class PluginManager(IStationRepository stationRepository) : IPluginManager
+public sealed class PluginManager(
+    IStationRepository stationRepository,
+    IServiceProvider serviceProvider,
+    ILogger<PluginManager> logger) : IPluginManager
 {
     private readonly List<ITraydioPlugin> _plugins = [];
     private readonly List<PluginDescriptor> _inventory = [];
@@ -115,21 +120,21 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
     public bool RemovePlugin(string pluginId, out string? error)
     {
         error = null;
-        Console.Error.WriteLine($"[Traydio][PluginManager] Remove requested pluginId={pluginId}");
+        logger.LogInformation("Remove requested pluginId={PluginId}", pluginId);
 
         var descriptor = _inventory.FirstOrDefault(item =>
             string.Equals(item.Id, pluginId, StringComparison.OrdinalIgnoreCase));
         if (descriptor is null)
         {
             error = "Plugin not found.";
-            Console.Error.WriteLine($"[Traydio][PluginManager] Remove failed pluginId={pluginId}: {error}");
+            logger.LogWarning("Remove failed pluginId={PluginId}: {Error}", pluginId, error);
             return false;
         }
 
         if (string.IsNullOrWhiteSpace(descriptor.SourcePath))
         {
             error = "Plugin cannot be uninstalled because no plugin file path is available.";
-            Console.Error.WriteLine($"[Traydio][PluginManager] Remove failed pluginId={pluginId}: {error}");
+            logger.LogWarning("Remove failed pluginId={PluginId}: {Error}", pluginId, error);
             return false;
         }
 
@@ -141,21 +146,21 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
             RemovePendingDeletePath(pluginPath);
             RemoveDisabledPluginId(pluginId);
             ReloadPlugins();
-            Console.Error.WriteLine($"[Traydio][PluginManager] Remove succeeded pluginId={pluginId} path={pluginPath}");
+            logger.LogInformation("Remove succeeded pluginId={PluginId} path={PluginPath}", pluginId, pluginPath);
             return true;
         }
         catch (IOException ex)
         {
             QueuePluginForDeleteOnRestart(pluginId, pluginPath);
             ReloadPlugins();
-            Console.Error.WriteLine($"[Traydio][PluginManager] Remove deferred (IO) pluginId={pluginId} path={pluginPath}: {ex}");
+            logger.LogWarning(ex, "Remove deferred (IO) pluginId={PluginId} path={PluginPath}", pluginId, pluginPath);
             return true;
         }
         catch (UnauthorizedAccessException ex)
         {
             QueuePluginForDeleteOnRestart(pluginId, pluginPath);
             ReloadPlugins();
-            Console.Error.WriteLine($"[Traydio][PluginManager] Remove deferred (access denied) pluginId={pluginId} path={pluginPath}: {ex}");
+            logger.LogWarning(ex, "Remove deferred (access denied) pluginId={PluginId} path={PluginPath}", pluginId, pluginPath);
             return true;
         }
     }
@@ -163,12 +168,12 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
     public bool SetPluginEnabled(string pluginId, bool enabled, out string? error)
     {
         error = null;
-        Console.Error.WriteLine($"[Traydio][PluginManager] SetPluginEnabled pluginId={pluginId} enabled={enabled}");
+        logger.LogInformation("SetPluginEnabled pluginId={PluginId} enabled={Enabled}", pluginId, enabled);
 
         if (_inventory.All(p => !string.Equals(p.Id, pluginId, StringComparison.OrdinalIgnoreCase)))
         {
             error = "Plugin not found.";
-            Console.Error.WriteLine($"[Traydio][PluginManager] SetPluginEnabled failed pluginId={pluginId}: {error}");
+            logger.LogWarning("SetPluginEnabled failed pluginId={PluginId}: {Error}", pluginId, error);
             return false;
         }
 
@@ -187,13 +192,13 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
 
         if (!changed)
         {
-            Console.Error.WriteLine($"[Traydio][PluginManager] SetPluginEnabled no-op pluginId={pluginId} enabled={enabled}");
+            logger.LogDebug("SetPluginEnabled no-op pluginId={PluginId} enabled={Enabled}", pluginId, enabled);
             return true;
         }
 
         stationRepository.SaveStationDiscoveryPluginSettings(settings);
         ReloadPlugins();
-        Console.Error.WriteLine($"[Traydio][PluginManager] SetPluginEnabled succeeded pluginId={pluginId} enabled={enabled}");
+        logger.LogInformation("SetPluginEnabled succeeded pluginId={PluginId} enabled={Enabled}", pluginId, enabled);
         return true;
     }
 
@@ -252,6 +257,7 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
 
     private void ReloadPlugins()
     {
+        logger.LogDebug("Reloading plugins.");
         EnsurePluginDirectory();
         _plugins.Clear();
         _inventory.Clear();
@@ -281,6 +287,7 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
         }
 
         PluginsChanged?.Invoke(this, EventArgs.Empty);
+        logger.LogInformation("Plugin reload completed. loaded={LoadedCount}, inventory={InventoryCount}", _plugins.Count, _inventory.Count);
     }
 
     private void EnsurePluginDirectory()
@@ -331,7 +338,7 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
         {
             var loadContext = new PluginLoadContext(pluginPath);
             var assembly = loadContext.LoadFromAssemblyPath(pluginPath);
-            var plugins = CreatePlugins(assembly).ToArray();
+            var plugins = CreatePlugins(assembly, pluginPath).ToArray();
 
             if (plugins.Length == 0)
             {
@@ -346,38 +353,114 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
                 AddIfNotExists(plugin, assembly, pluginPath, canUninstall);
             }
         }
-        catch
+        catch (Exception ex)
         {
             // Ignore malformed or incompatible plugin assemblies.
+            logger.LogWarning(ex, "Failed to load plugin assembly: {PluginPath}", pluginPath);
         }
     }
 
-    private static IEnumerable<ITraydioPlugin> CreatePlugins(Assembly assembly)
+    private IEnumerable<ITraydioPlugin> CreatePlugins(Assembly assembly, string? sourcePath = null)
     {
-        var pluginTypes = assembly.GetTypes()
+        Type[] allTypes;
+        try
+        {
+            allTypes = assembly.GetTypes();
+        }
+        catch (ReflectionTypeLoadException ex)
+        {
+            allTypes = ex.Types.Where(static t => t is not null).Cast<Type>().ToArray();
+            logger.LogWarning(ex, "Partial type-load failure for plugin assembly {Assembly}", assembly.FullName);
+        }
+
+        var pluginTypes = allTypes
             .Where(t => !t.IsAbstract && typeof(ITraydioPlugin).IsAssignableFrom(t))
-            .Where(t => t.GetConstructor(Type.EmptyTypes) is not null)
             .ToArray();
 
         foreach (var type in pluginTypes)
         {
-            if (Activator.CreateInstance(type) is ITraydioPlugin plugin)
+            if (TryCreatePlugin(type, sourcePath, out var plugin) && plugin is not null)
             {
                 yield return plugin;
             }
         }
 
-        var legacyProviderTypes = assembly.GetTypes()
+        var legacyProviderTypes = allTypes
             .Where(t => !t.IsAbstract && typeof(IRadioStationProviderPlugin).IsAssignableFrom(t))
-            .Where(t => t.GetConstructor(Type.EmptyTypes) is not null)
             .ToArray();
 
         foreach (var type in legacyProviderTypes)
         {
-            if (Activator.CreateInstance(type) is IRadioStationProviderPlugin provider)
+            if (TryCreateLegacyProvider(type, sourcePath, out var provider) && provider is not null)
             {
                 yield return new LegacyStationProviderPluginAdapter(provider);
             }
+        }
+    }
+
+    private bool TryCreatePlugin(Type pluginType, string? sourcePath, out ITraydioPlugin? plugin)
+    {
+        plugin = null;
+        try
+        {
+            plugin = ActivatorUtilities.CreateInstance(serviceProvider, pluginType) as ITraydioPlugin;
+            if (plugin is not null)
+            {
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "DI activation failed for plugin type {PluginType} from {SourcePath}", pluginType.FullName, sourcePath ?? "<referenced>");
+        }
+
+        if (pluginType.GetConstructor(Type.EmptyTypes) is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            plugin = Activator.CreateInstance(pluginType) as ITraydioPlugin;
+            return plugin is not null;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Fallback activation failed for plugin type {PluginType} from {SourcePath}", pluginType.FullName, sourcePath ?? "<referenced>");
+            return false;
+        }
+    }
+
+    private bool TryCreateLegacyProvider(Type providerType, string? sourcePath, out IRadioStationProviderPlugin? provider)
+    {
+        provider = null;
+        try
+        {
+            provider = ActivatorUtilities.CreateInstance(serviceProvider, providerType) as IRadioStationProviderPlugin;
+            if (provider is not null)
+            {
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "DI activation failed for legacy provider type {ProviderType} from {SourcePath}", providerType.FullName, sourcePath ?? "<referenced>");
+        }
+
+        if (providerType.GetConstructor(Type.EmptyTypes) is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            provider = Activator.CreateInstance(providerType) as IRadioStationProviderPlugin;
+            return provider is not null;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Fallback activation failed for legacy provider type {ProviderType} from {SourcePath}", providerType.FullName, sourcePath ?? "<referenced>");
+            return false;
         }
     }
 
@@ -457,7 +540,7 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
         }
 
         stationRepository.SaveStationDiscoveryPluginSettings(settings);
-        Console.Error.WriteLine($"[Traydio][PluginManager] Remove queued for restart pluginId={pluginId} path={normalized}");
+        logger.LogInformation("Remove queued for restart pluginId={PluginId} path={PluginPath}", pluginId, normalized);
     }
 
     private void RemovePendingDeletePath(string pluginPath)
@@ -496,17 +579,17 @@ public sealed class PluginManager(IStationRepository stationRepository) : IPlugi
                 if (File.Exists(normalized))
                 {
                     File.Delete(normalized);
-                    Console.Error.WriteLine($"[Traydio][PluginManager] Pending delete succeeded path={normalized}");
+                    logger.LogInformation("Pending delete succeeded path={PluginPath}", normalized);
                 }
                 else
                 {
-                    Console.Error.WriteLine($"[Traydio][PluginManager] Pending delete skipped (missing file) path={normalized}");
+                    logger.LogDebug("Pending delete skipped (missing file) path={PluginPath}", normalized);
                 }
             }
             catch (Exception ex)
             {
                 remaining.Add(path);
-                Console.Error.WriteLine($"[Traydio][PluginManager] Pending delete failed path={path}: {ex}");
+                logger.LogWarning(ex, "Pending delete failed path={PluginPath}", path);
             }
         }
 

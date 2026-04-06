@@ -15,6 +15,7 @@
     <PackageReference Include="JetBrains.Annotations" Version="2025.2.4" />
     <PackageReference Include="LibVLCSharp" Version="3.9.4" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.8" />
     <PackageReference Include="VideoLAN.LibVLC.Windows" Version="3.0.21" />
   </ItemGroup>
 </Project>

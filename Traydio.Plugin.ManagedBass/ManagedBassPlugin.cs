@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using JetBrains.Annotations;
 using Traydio.Common;
 using Traydio.Services;
@@ -11,14 +12,17 @@ namespace Traydio.Plugin.ManagedBass;
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public sealed class ManagedBassPlugin : ITraydioPlugin
 {
-    public const string PluginId = "plugin.playback.managedbass";
+    public const string PLUGIN_ID = "plugin.playback.managedbass";
+    private readonly ILogger<ManagedBassPlugin> _logger;
 
-    public ManagedBassPlugin()
+    public ManagedBassPlugin(ILogger<ManagedBassPlugin> logger)
     {
+        _logger = logger;
         Capabilities = [new RadioPlayerEngineCapability(), new SettingsCapability()];
+        _logger.LogDebug("ManagedBass plugin initialized.");
     }
 
-    public string Id => PluginId;
+    public string Id => PLUGIN_ID;
 
     public string DisplayName => "ManagedBass Playback";
 
@@ -35,7 +39,7 @@ public sealed class ManagedBassPlugin : ITraydioPlugin
         public IRadioPlayer CreatePlayer(IServiceProvider serviceProvider)
         {
             var settingsProvider = serviceProvider.GetService<IPluginSettingsProvider>();
-            var settings = settingsProvider?.GetPluginSettings(PluginId);
+            var settings = settingsProvider?.GetPluginSettings(PLUGIN_ID);
 
             string? nativeFolder = null;
             string? bassDllPath = null;
@@ -72,7 +76,7 @@ public sealed class ManagedBassPlugin : ITraydioPlugin
 
         public string DisplayName => "ManagedBass";
 
-        public object? CreateSettingsView(IPluginSettingsAccessor settingsAccessor)
+        public object CreateSettingsView(IPluginSettingsAccessor settingsAccessor)
         {
             if (settingsAccessor is null)
             {

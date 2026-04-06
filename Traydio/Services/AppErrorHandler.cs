@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
@@ -44,9 +43,8 @@ public static class AppErrorHandler
 
     public static void Report(Exception ex, string context, bool showDialog)
     {
-        var message = $"[Traydio][Error] {context}: {ex}";
-        Console.Error.WriteLine(message);
-        Trace.WriteLine(message);
+        var message = context + ": " + ex.Message;
+        TraydioTrace.Error("Error", message, ex);
         TraydioTrace.Debug("Error", "Reported exception in context: " + context + ". showDialog=" + showDialog);
 
         if (!showDialog)
@@ -66,9 +64,7 @@ public static class AppErrorHandler
         }
         catch (Exception dialogEx)
         {
-            var dialogMessage = "[Traydio][Error] Failed to show error dialog: " + dialogEx;
-            Console.Error.WriteLine(dialogMessage);
-            Trace.WriteLine(dialogMessage);
+            TraydioTrace.Error("Error", "Failed to show error dialog.", dialogEx);
         }
     }
 

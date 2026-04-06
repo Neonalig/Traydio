@@ -2,6 +2,7 @@
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.Extensions.Logging;
 using Traydio.Commands;
 using Traydio.Common;
 using Traydio.Services;
@@ -19,6 +20,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly IAppCommandDispatcher _commandDispatcher;
     private readonly IRadioPlayer _radioPlayer;
     private readonly IWindowManager _windowManager;
+    private readonly ILogger<MainWindowViewModel> _logger;
 
     private bool _suppressVolumeDispatch;
     private readonly DispatcherTimer _mediaMarqueeTimer;
@@ -94,12 +96,14 @@ public partial class MainWindowViewModel : ViewModelBase
         INavigationService navigationService,
         IAppCommandDispatcher commandDispatcher,
         IRadioPlayer radioPlayer,
-        IWindowManager windowManager)
+        IWindowManager windowManager,
+        ILogger<MainWindowViewModel> logger)
     {
         _navigationService = navigationService;
         _commandDispatcher = commandDispatcher;
         _radioPlayer = radioPlayer;
         _windowManager = windowManager;
+        _logger = logger;
 
         _mediaMarqueeTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(250), DispatcherPriority.Background, (_, _) => TickMediaMarquee());
 
@@ -226,8 +230,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
             if (HasMediaError && MediaErrorText.Contains("tags", StringComparison.OrdinalIgnoreCase))
             {
-                Console.Error.WriteLine($"[Traydio][ManagedBass] Metadata/status error: {MediaErrorText}");
-                System.Diagnostics.Trace.WriteLine($"[Traydio][ManagedBass] Metadata/status error: {MediaErrorText}");
+                _logger.LogWarning("ManagedBass metadata/status error: {Error}", MediaErrorText);
             }
 
             MediaCenterText = HasMediaError

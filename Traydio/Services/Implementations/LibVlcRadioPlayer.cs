@@ -391,7 +391,7 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
             ? $"[{e.Level}] {e.Module}: {e.Message}"
             : e.FormattedLog.Trim();
 
-        Console.Error.WriteLine($"[Traydio][LibVLC] {formatted}");
+        TraydioTrace.Debug("LibVLC", formatted);
 
         if (e.Level is not (LogLevel.Warning or LogLevel.Error))
         {

@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
+using Microsoft.Extensions.Logging;
 using Traydio.Common;
 
 namespace Traydio.Plugin.StreamUrlLink;
@@ -15,9 +16,11 @@ namespace Traydio.Plugin.StreamUrlLink;
 public sealed partial class StreamUrlLinkPlugin : ITraydioPlugin
 {
     private static readonly HttpClient _httpClient = new();
+    private readonly ILogger<StreamUrlLinkPlugin> _logger;
 
-    public StreamUrlLinkPlugin()
+    public StreamUrlLinkPlugin(ILogger<StreamUrlLinkPlugin> logger)
     {
+        _logger = logger;
         Capabilities = [new StationDiscoveryCapability(this)];
     }
 
@@ -29,7 +32,7 @@ public sealed partial class StreamUrlLinkPlugin : ITraydioPlugin
 
     private static string _providerId => "streamurl.link";
 
-    private static async IAsyncEnumerable<DiscoveredStation> SearchStationsAsync(
+    private async IAsyncEnumerable<DiscoveredStation> SearchStationsAsync(
         StationSearchRequest request,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
@@ -75,8 +78,9 @@ public sealed partial class StreamUrlLinkPlugin : ITraydioPlugin
                 .Take(Math.Max(1, request.Limit))
                 .ToArray();
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogDebug(ex, "streamurl search failed for query={Query}", query);
             yield break;
         }
 
@@ -96,7 +100,7 @@ public sealed partial class StreamUrlLinkPlugin : ITraydioPlugin
 
         public IAsyncEnumerable<DiscoveredStation> SearchAsync(StationSearchRequest request, CancellationToken cancellationToken)
         {
-            return SearchStationsAsync(request, cancellationToken);
+            return plugin.SearchStationsAsync(request, cancellationToken);
         }
     }
 

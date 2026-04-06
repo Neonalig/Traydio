@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using ManagedBass;
 using ManagedBass.Tags;
+using Microsoft.Extensions.Logging;
 using Traydio.Models;
 using Traydio.Services;
 
@@ -20,6 +21,7 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
     private readonly int? _preferredOutputDeviceIndex;
     private readonly string? _bassOpusDllPath;
     private readonly string? _tagsDllPath;
+    private readonly ILogger<BassRadioPlayer>? _logger;
 
     private int _streamHandle;
     private bool _isInitialized;
@@ -76,7 +78,8 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
         string? nativeLibraryFolder = null,
         int? preferredOutputDeviceIndex = null,
         string? bassOpusDllPath = null,
-        string? tagsDllPath = null)
+        string? tagsDllPath = null,
+        ILogger<BassRadioPlayer>? logger = null)
     {
         _nativeLibraryFolder = string.IsNullOrWhiteSpace(nativeLibraryFolder)
             ? null
@@ -93,6 +96,8 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
         _tagsDllPath = string.IsNullOrWhiteSpace(tagsDllPath)
             ? null
             : tagsDllPath.Trim();
+
+        _logger = logger;
 
         InitializeBass();
         RaiseStateChanged();
@@ -431,8 +436,7 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
         }
 
         _hasLoggedMetadataUnavailable = true;
-        Console.Error.WriteLine(message);
-        System.Diagnostics.Trace.WriteLine(message);
+        _logger?.LogWarning("{Message}", message);
     }
 
     private static bool IsTagsLoadFailure(Exception ex)

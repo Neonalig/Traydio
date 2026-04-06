@@ -13,6 +13,8 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 using ManagedBass;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Traydio.Common;
 
 namespace Traydio.Plugin.ManagedBass;
@@ -22,6 +24,7 @@ public partial class BassPluginSettingsView : UserControl
     private static readonly HttpClient _http = new();
 
     private readonly IPluginSettingsAccessor _settingsAccessor;
+    private readonly ILogger<BassPluginSettingsView> _logger;
     private readonly TextBox _bassPathBox;
     private readonly TextBox _bassOpusPathBox;
     private readonly TextBox _tagsPathBox;
@@ -37,8 +40,14 @@ public partial class BassPluginSettingsView : UserControl
     private static readonly IImage _statusInvalidIcon = LoadIcon("avares://Traydio/Assets/Icons9x/stop.ico");
 
     public BassPluginSettingsView(IPluginSettingsAccessor settingsAccessor)
+        : this(settingsAccessor, NullLogger<BassPluginSettingsView>.Instance)
+    {
+    }
+
+    public BassPluginSettingsView(IPluginSettingsAccessor settingsAccessor, ILogger<BassPluginSettingsView> logger)
     {
         _settingsAccessor = settingsAccessor ?? throw new ArgumentNullException(nameof(settingsAccessor));
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _bassPathBox = new TextBox();
         _bassOpusPathBox = new TextBox();
         _tagsPathBox = new TextBox();
@@ -98,7 +107,7 @@ public partial class BassPluginSettingsView : UserControl
                 },
             };
             SetErrorStatus("Initialization failed.");
-            LogError($"[Traydio][ManagedBassSettings] Initialization failed: {ex}");
+            LogError("Initialization failed.", ex);
         }
     }
 
@@ -205,7 +214,7 @@ public partial class BassPluginSettingsView : UserControl
         catch (Exception ex)
         {
             SetErrorStatus(context + " failed: " + ex.Message);
-            LogError($"[Traydio][ManagedBassSettings] {context} failed: {ex}");
+            LogError(context + " failed.", ex);
         }
     }
 
@@ -287,7 +296,7 @@ public partial class BassPluginSettingsView : UserControl
         catch (Exception ex)
         {
             SetErrorStatus("Download failed: " + ex.Message);
-            LogError($"[Traydio][ManagedBassSettings] Download failed. url={archiveUrl} dll={dllName}: {ex}");
+            LogError($"Download failed. url={archiveUrl} dll={dllName}", ex);
         }
     }
 
@@ -365,7 +374,7 @@ public partial class BassPluginSettingsView : UserControl
         catch (Exception ex)
         {
             SetErrorStatus("Failed to load saved output device: " + ex.Message);
-            LogError($"[Traydio][ManagedBassSettings] Failed to load output device setting: {ex}");
+            LogError("Failed to load output device setting.", ex);
         }
 
         var options = new System.Collections.Generic.List<OutputDeviceOption>
@@ -392,7 +401,7 @@ public partial class BassPluginSettingsView : UserControl
         catch (Exception ex)
         {
             SetErrorStatus("Failed to list output devices: " + ex.Message);
-            LogError($"[Traydio][ManagedBassSettings] Failed to enumerate output devices: {ex}");
+            LogError("Failed to enumerate output devices.", ex);
         }
 
         _outputDeviceComboBox.ItemsSource = options;
@@ -419,7 +428,7 @@ public partial class BassPluginSettingsView : UserControl
         }
         catch (Exception ex)
         {
-            LogError($"[Traydio][ManagedBassSettings] Failed to load native folder fallback: {ex}");
+            LogError("Failed to load native folder fallback.", ex);
         }
 
         _bassPathBox.Text = LoadDependencyPath(BassPluginSettings.BassDllPathKey, fallbackFolder, "bass.dll");
@@ -439,7 +448,7 @@ public partial class BassPluginSettingsView : UserControl
         }
         catch (Exception ex)
         {
-            LogError($"[Traydio][ManagedBassSettings] Failed to load path key={settingsKey}: {ex}");
+            LogError("Failed to load path key=" + settingsKey, ex);
         }
 
         return Path.Combine(fallbackFolder, dllName);
@@ -546,10 +555,9 @@ public partial class BassPluginSettingsView : UserControl
         _statusText.Text = message;
     }
 
-    private static void LogError(string message)
+    private void LogError(string message, Exception? ex = null)
     {
-        Console.Error.WriteLine(message);
-        Trace.WriteLine(message);
+        _logger.LogError(ex, "{Message}", message);
     }
 
     private void ConfigureNativeLibraryPath()
@@ -574,7 +582,7 @@ public partial class BassPluginSettingsView : UserControl
         if (!SetDllDirectory(folderPath))
         {
             var errorCode = Marshal.GetLastWin32Error();
-            LogError($"[Traydio][ManagedBassSettings] SetDllDirectory failed for path={folderPath} win32={errorCode}");
+            LogError($"SetDllDirectory failed for path={folderPath} win32={errorCode}");
         }
     }
 

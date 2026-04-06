@@ -9,6 +9,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.Extensions.Logging;
 using Traydio.Common;
 
 namespace Traydio.Plugin.FmStreamOrg;
@@ -17,9 +18,11 @@ namespace Traydio.Plugin.FmStreamOrg;
 public sealed partial class FmStreamOrgPlugin : ITraydioPlugin
 {
     private static readonly HttpClient _httpClient = new();
+    private readonly ILogger<FmStreamOrgPlugin> _logger;
 
-    public FmStreamOrgPlugin()
+    public FmStreamOrgPlugin(ILogger<FmStreamOrgPlugin> logger)
     {
+        _logger = logger;
         Capabilities = [new StationDiscoveryCapability(this)];
     }
 
@@ -31,7 +34,7 @@ public sealed partial class FmStreamOrgPlugin : ITraydioPlugin
 
     private static string _providerId => "fmstream.org";
 
-    private static async IAsyncEnumerable<DiscoveredStation> SearchStationsAsync(
+    private async IAsyncEnumerable<DiscoveredStation> SearchStationsAsync(
         StationSearchRequest request,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
@@ -55,7 +58,7 @@ public sealed partial class FmStreamOrgPlugin : ITraydioPlugin
         }
     }
 
-    private static async Task<List<DiscoveredStation>> TryJsonApiAsync(
+    private async Task<List<DiscoveredStation>> TryJsonApiAsync(
         string query,
         CancellationToken cancellationToken)
     {
@@ -98,13 +101,14 @@ public sealed partial class FmStreamOrgPlugin : ITraydioPlugin
 
             return results;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogDebug(ex, "fmstream json search failed for query={Query}", query);
             return [];
         }
     }
 
-    private static async Task<List<DiscoveredStation>> TryHtmlFallbackAsync(
+    private async Task<List<DiscoveredStation>> TryHtmlFallbackAsync(
         string query,
         CancellationToken cancellationToken)
     {
@@ -141,8 +145,9 @@ public sealed partial class FmStreamOrgPlugin : ITraydioPlugin
 
             return results;
         }
-        catch
+        catch (Exception ex)
         {
+            _logger.LogDebug(ex, "fmstream html fallback failed for query={Query}", query);
             return [];
         }
     }
@@ -164,7 +169,7 @@ public sealed partial class FmStreamOrgPlugin : ITraydioPlugin
 
         public IAsyncEnumerable<DiscoveredStation> SearchAsync(StationSearchRequest request, CancellationToken cancellationToken)
         {
-            return SearchStationsAsync(request, cancellationToken);
+            return plugin.SearchStationsAsync(request, cancellationToken);
         }
     }
 

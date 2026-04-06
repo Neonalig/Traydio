@@ -1,6 +1,7 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -69,6 +70,7 @@ sealed class Program
 
             using var services = ConfigureServices().BuildServiceProvider();
             _services = services;
+            TraydioTrace.Initialize(services.GetRequiredService<ILoggerFactory>());
 
             var commandRelayCoordinator = services.GetRequiredService<ICommandRelayCoordinator>();
             var instanceGate = services.GetRequiredService<IInstanceGate>();
@@ -108,6 +110,14 @@ sealed class Program
     private static IServiceCollection ConfigureServices()
     {
         var services = new ServiceCollection();
+
+        services.AddLogging(builder =>
+        {
+            builder.ClearProviders();
+            builder.SetMinimumLevel(LogLevel.Debug);
+            builder.AddConsole();
+            builder.AddTraceSource(new SourceSwitch("Traydio", "Verbose"));
+        });
 
         services.AddSingleton<IStationRepository, StationRepository>();
         services.AddSingleton<IPluginSettingsProvider, PluginSettingsProvider>();

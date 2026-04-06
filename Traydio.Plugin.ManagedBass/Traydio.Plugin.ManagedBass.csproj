@@ -17,6 +17,7 @@
     <PackageReference Include="ManagedBass.Opus" Version="4.0.2" />
     <PackageReference Include="ManagedBass.Tags" Version="4.0.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.8" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.8" />
   </ItemGroup>
 </Project>
 

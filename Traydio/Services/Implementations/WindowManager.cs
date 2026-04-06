@@ -7,6 +7,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Classic.CommonControls.Dialogs;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Traydio.Common;
 using Traydio.Views;
 
@@ -16,7 +17,8 @@ public sealed class WindowManager(
     IServiceProvider serviceProvider,
     INavigationService navigationService,
     IPluginManager pluginManager,
-    IPluginSettingsProvider pluginSettingsProvider) : IWindowManager
+    IPluginSettingsProvider pluginSettingsProvider,
+    ILogger<WindowManager> logger) : IWindowManager
 {
     private MainWindow? _mainWindow;
 
@@ -155,7 +157,7 @@ public sealed class WindowManager(
         if (plugin is null)
         {
             error = "Plugin not found.";
-            Console.Error.WriteLine($"[Traydio][PluginSettings] {error} pluginId={pluginId}");
+            logger.LogWarning("{Error} pluginId={PluginId}", error, pluginId);
             return false;
         }
 
@@ -163,7 +165,7 @@ public sealed class WindowManager(
         if (settingsCapability is null)
         {
             error = "This plugin does not expose a settings page.";
-            Console.Error.WriteLine($"[Traydio][PluginSettings] {error} pluginId={plugin.Id}");
+            logger.LogWarning("{Error} pluginId={PluginId}", error, plugin.Id);
             return false;
         }
 
@@ -174,14 +176,14 @@ public sealed class WindowManager(
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine($"[Traydio][PluginSettings] Failed to create settings view for pluginId={plugin.Id}: {ex}");
+            logger.LogError(ex, "Failed to create settings view for pluginId={PluginId}", plugin.Id);
             content = CreatePluginSettingsFailureView(plugin.DisplayName, ex);
         }
 
         if (content is not Control control)
         {
             error = "Plugin returned an unsupported settings view.";
-            Console.Error.WriteLine($"[Traydio][PluginSettings] {error} pluginId={plugin.Id}");
+            logger.LogWarning("{Error} pluginId={PluginId}", error, plugin.Id);
             return false;
         }
 

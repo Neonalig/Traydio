@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using LibVLCSharp.Shared;
+using Microsoft.Extensions.Logging;
 using Traydio.Models;
 using Traydio.Services;
 
@@ -16,6 +17,7 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
     private readonly LibVLC _libVlc;
     private readonly MediaPlayer _mediaPlayer;
     private readonly Lock _sync = new();
+    private readonly ILogger<LibVlcRadioPlayer>? _logger;
     private Media? _currentMedia;
 
     private RadioStation? _currentStation;
@@ -44,12 +46,15 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
     /// </summary>
     /// <param name="requestedAudioOutputModule">Optional VLC output module. Leave null for system default.</param>
     /// <param name="requestedAudioOutputDeviceId">Optional VLC output device id. Leave null for system default.</param>
+    /// <param name="logger">Optional logger for LibVLC diagnostics.</param>
     /// <param name="vlcOptions">Optional VLC startup options.</param>
     public LibVlcRadioPlayer(
         string? requestedAudioOutputModule = null,
         string? requestedAudioOutputDeviceId = null,
+        ILogger<LibVlcRadioPlayer>? logger = null,
         params string[] vlcOptions)
     {
+        _logger = logger;
         Core.Initialize();
 
         _requestedAudioOutputModule = string.IsNullOrWhiteSpace(requestedAudioOutputModule)
@@ -406,9 +411,9 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
             ? $"[{e.Level}] {e.Module}: {e.Message}"
             : e.FormattedLog.Trim();
 
-        Console.Error.WriteLine($"[Traydio][LibVLC] {formatted}");
+        _logger?.LogDebug("LibVLC log: {Log}", formatted);
 
-        if (e.Level is not (LogLevel.Warning or LogLevel.Error))
+        if (e.Level is not (LibVLCSharp.Shared.LogLevel.Warning or LibVLCSharp.Shared.LogLevel.Error))
         {
             return;
         }
@@ -428,6 +433,8 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
         {
             _lastError = $"LibVLC audio output error: {message}";
         }
+
+        _logger?.LogWarning("LibVLC audio output error detected: {Message}", message);
 
         RaiseStateChanged();
     }
