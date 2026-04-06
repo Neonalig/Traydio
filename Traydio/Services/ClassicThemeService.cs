@@ -11,10 +11,20 @@ public static class ClassicThemeService
     [
         "Default",
         "Brick",
-        "Lilac",
+        "ClassicWindows",
+        "Desert",
+        "Eggplant",
+        "Maple",
+        "Marine",
+        "Plum",
         "Pumpkin",
-        "RainyDay",
-        "Spruce",
+        "Rose",
+        // ReSharper disable once StringLiteralTypo // Justification: Classic.Avalonia.Theme exposes this key with a typo.
+        "Sprouce",
+        "StandardWindows",
+        "StarsAndStripes",
+        "Storm",
+        "Wheat",
     ];
 
     public static void Apply(string? themeKey)
@@ -42,13 +52,54 @@ public static class ClassicThemeService
             return null;
         }
 
-        var property = classicThemeType.GetProperty(themeKey.Trim(), BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
-        if (property?.GetValue(null) is ThemeVariant variant)
+        var normalizedInput = themeKey.Trim();
+        var candidates = GetCandidateThemeKeys(normalizedInput);
+
+        foreach (var candidate in candidates)
         {
-            return variant;
+            var property = classicThemeType.GetProperty(candidate, BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
+            if (property?.GetValue(null) is ThemeVariant variant)
+            {
+                return variant;
+            }
         }
 
         return null;
+    }
+
+    private static string[] GetCandidateThemeKeys(string key)
+    {
+        if (string.Equals(key, "Spruce", StringComparison.OrdinalIgnoreCase))
+        {
+            return ["Sprouce", "Spruce"];
+        }
+
+        if (string.Equals(key, "Sprouce", StringComparison.OrdinalIgnoreCase))
+        {
+            return ["Sprouce", "Spruce"];
+        }
+
+        if (string.Equals(key, "Lilac", StringComparison.OrdinalIgnoreCase))
+        {
+            return ["Plum", "Lilac"];
+        }
+
+        if (string.Equals(key, "RainyDay", StringComparison.OrdinalIgnoreCase))
+        {
+            return ["Storm", "RainyDay"];
+        }
+
+        if (string.Equals(key, "ClassicWAindows", StringComparison.OrdinalIgnoreCase))
+        {
+            return ["ClassicWindows", "ClassicWAindows"];
+        }
+
+        if (string.Equals(key, "ClassicWindows", StringComparison.OrdinalIgnoreCase))
+        {
+            return ["ClassicWindows", "ClassicWAindows"];
+        }
+
+        return [key];
     }
 }
 

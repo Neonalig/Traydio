@@ -2,10 +2,10 @@
 using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Threading;
 using Traydio.Models;
 using Traydio.Services;
 using Traydio.Common;
@@ -21,6 +21,7 @@ public partial class SettingsPageViewModel : ViewModelBase
     private readonly IRadioPlayer _radioPlayer;
     private readonly IPluginManager _pluginManager;
     private readonly IWmicExtendedFunctionalityService _wmicExtendedFunctionalityService;
+    private readonly IWindowManager _windowManager;
     private string? _appliedClassicThemeKey;
 
     [ObservableProperty]
@@ -87,13 +88,15 @@ public partial class SettingsPageViewModel : ViewModelBase
         IProtocolRegistrationService protocolRegistrationService,
         IRadioPlayer radioPlayer,
         IPluginManager pluginManager,
-        IWmicExtendedFunctionalityService wmicExtendedFunctionalityService)
+        IWmicExtendedFunctionalityService wmicExtendedFunctionalityService,
+        IWindowManager windowManager)
     {
         _stationRepository = stationRepository;
         _protocolRegistrationService = protocolRegistrationService;
         _radioPlayer = radioPlayer;
         _pluginManager = pluginManager;
         _wmicExtendedFunctionalityService = wmicExtendedFunctionalityService;
+        _windowManager = windowManager;
         Refresh();
     }
 
@@ -211,44 +214,20 @@ public partial class SettingsPageViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void RestartApp()
+    private void ApplyThemeWindow()
     {
-        var processPath = Environment.ProcessPath;
-        if (string.IsNullOrWhiteSpace(processPath))
+        if (Avalonia.Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime lifetime)
         {
-            Status = "Could not determine application path for restart.";
+            _windowManager.ShowSettings();
             return;
         }
 
-        var restartArguments = "--cmd settings";
-        // Intentionally do not pass debugger re-attach arguments on restart.
-
-        if (OperatingSystem.IsWindows())
+        if (lifetime.MainWindow is { } mainWindow)
         {
-            var escapedPath = processPath.Replace("\"", "\"\"");
-            var delayedCommand = $"/c timeout /t 1 /nobreak >nul && start \"\" \"{escapedPath}\" {restartArguments}";
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = "cmd.exe",
-                Arguments = delayedCommand,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-            });
-        }
-        else
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = processPath,
-                Arguments = restartArguments,
-                UseShellExecute = true,
-            });
+            mainWindow.Close();
         }
 
-        if (Avalonia.Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime lifetime)
-        {
-            lifetime.Shutdown();
-        }
+        Dispatcher.UIThread.Post(() => _windowManager.ShowSettings(), DispatcherPriority.Background);
     }
 
     private void Refresh()
@@ -336,8 +315,23 @@ public partial class SettingsPageViewModel : ViewModelBase
     private static IReadOnlyList<ClassicThemeOption> BuildClassicThemeOptions()
     {
         return ClassicThemeService.SupportedThemeKeys
-            .Select(key => new ClassicThemeOption(key, key))
+            .Select(key => new ClassicThemeOption(key, GetClassicThemeDisplayName(key)))
             .ToArray();
+    }
+
+    private static string GetClassicThemeDisplayName(string key)
+    {
+        if (string.Equals(key, "Sprouce", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Spruce";
+        }
+
+        if (string.Equals(key, "ClassicWAindows", StringComparison.OrdinalIgnoreCase))
+        {
+            return "ClassicWindows";
+        }
+
+        return key;
     }
 
     partial void OnSelectedClassicThemeChanged(ClassicThemeOption? value)
@@ -358,10 +352,10 @@ public partial class SettingsPageViewModel : ViewModelBase
     {
         if (EnableNamedPipeRelay != _stationRepository.Communication.EnableNamedPipeRelay
             || EnableLoopbackRelay != _stationRepository.Communication.EnableLoopbackRelay
-            || !string.Equals(LoopbackHost?.Trim(), _stationRepository.Communication.LoopbackHost, StringComparison.Ordinal)
+            || !string.Equals(LoopbackHost.Trim(), _stationRepository.Communication.LoopbackHost, StringComparison.Ordinal)
             || LoopbackPort != _stationRepository.Communication.LoopbackPort
             || EnableProtocolUrlRelay != _stationRepository.Communication.EnableProtocolUrlRelay
-            || !string.Equals(ProtocolScheme?.Trim(), _stationRepository.Communication.ProtocolScheme, StringComparison.OrdinalIgnoreCase))
+            || !string.Equals(ProtocolScheme.Trim(), _stationRepository.Communication.ProtocolScheme, StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }

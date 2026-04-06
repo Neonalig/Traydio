@@ -23,12 +23,12 @@ public partial class SettingsPage : UserControl, IMainWindowClosingHandler
         DataContext = viewModel;
     }
 
-    private void OnRestartAppClick(object? sender, RoutedEventArgs e)
+    private void OnApplyThemeClick(object? sender, RoutedEventArgs e)
     {
-        OnRestartAppClickAsync().ForgetWithErrorHandling("Restart app from settings", showDialog: true);
+        OnApplyThemeClickAsync().ForgetWithErrorHandling("Apply theme from settings", showDialog: true);
     }
 
-    private async Task OnRestartAppClickAsync()
+    private async Task OnApplyThemeClickAsync()
     {
         if (DataContext is not SettingsPageViewModel viewModel)
         {
@@ -42,8 +42,8 @@ public partial class SettingsPage : UserControl, IMainWindowClosingHandler
 
         var choice = await MessageBox.ShowDialog(
             owner,
-            "Save before restart?",
-            "You changed settings. Save before restarting Traydio?\n\nYes = Save then restart\nNo = Restart without saving\nCancel = Stay here",
+            "Save before applying theme?",
+            "You changed settings. Save before reloading the main window?\n\nYes = Save then apply\nNo = Apply without saving\nCancel = Stay here",
             MessageBoxButtons.YesNoCancel,
             MessageBoxIcon.Question);
 
@@ -57,7 +57,7 @@ public partial class SettingsPage : UserControl, IMainWindowClosingHandler
             viewModel.SaveCommand.Execute(null);
         }
 
-        viewModel.RestartAppCommand.Execute(null);
+        viewModel.ApplyThemeWindowCommand.Execute(null);
     }
 
     public async Task<bool> CanCloseMainWindowAsync()

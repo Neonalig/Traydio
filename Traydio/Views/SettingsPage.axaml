@@ -93,10 +93,10 @@
                             Grid.Column="2"
                             Classes="command-button"
                             IsVisible="{Binding IsThemeRestartVisible}"
-                            Click="OnRestartAppClick">
+                            Click="OnApplyThemeClick">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Image Source="/Assets/Icons9x/restart.ico" Classes="icon-small"/>
-                            <TextBlock Text="Restart App" VerticalAlignment="Center"/>
+                            <Image Source="/Assets/Icons9x/apply.ico" Classes="icon-small"/>
+                            <TextBlock Text="Apply" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
 
