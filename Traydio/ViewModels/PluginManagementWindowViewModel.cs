@@ -200,6 +200,18 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         Status = "Could not open plugin settings: " + (error ?? "Unknown error.");
     }
 
+    [RelayCommand]
+    private void InstallCandidateItem(PluginCandidateItem? candidate)
+    {
+        InstallCandidate(candidate);
+    }
+
+    [RelayCommand]
+    private void UpgradeCandidateItem(PluginCandidateItem? candidate)
+    {
+        InstallCandidate(candidate);
+    }
+
     public bool TryOpenPluginSettings(InstalledPluginItem? pluginItem, out string? error)
     {
         error = null;

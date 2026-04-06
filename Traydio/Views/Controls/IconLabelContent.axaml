@@ -1,0 +1,10 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Traydio.Views.Controls.IconLabelContent"
+             x:Name="Root">
+    <StackPanel Orientation="Horizontal" Spacing="6">
+        <Image Source="{Binding IconSource, ElementName=Root}" Classes="icon-small"/>
+        <TextBlock Text="{Binding Text, ElementName=Root}" VerticalAlignment="Center"/>
+    </StackPanel>
+</UserControl>
+

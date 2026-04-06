@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using System.Linq;
+using System.Windows.Input;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
@@ -19,6 +20,14 @@ namespace Traydio.Views;
 [ViewFor(typeof(PluginManagementWindowViewModel))]
 public partial class PluginManagementPage : UserControl
 {
+    public ICommand? OpenPluginSettingsCommand => (DataContext as PluginManagementWindowViewModel)?.OpenPluginSettingsCommand;
+
+    public ICommand? RemovePluginCommand => (DataContext as PluginManagementWindowViewModel)?.RemovePluginCommand;
+
+    public ICommand? InstallCandidateItemCommand => (DataContext as PluginManagementWindowViewModel)?.InstallCandidateItemCommand;
+
+    public ICommand? UpgradeCandidateItemCommand => (DataContext as PluginManagementWindowViewModel)?.UpgradeCandidateItemCommand;
+
     public PluginManagementPage()
     {
         AvaloniaXamlLoader.Load(this);

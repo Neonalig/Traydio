@@ -1,4 +1,6 @@
-﻿namespace Traydio.Views;
+﻿using JetBrains.Annotations;
 
-public sealed record CommandTipItem(string Command, string Tooltip);
+namespace Traydio.Views;
+
+public sealed record CommandTipItem([IgnoreSpellingAndGrammarErrors] string Command, string Tooltip);
 

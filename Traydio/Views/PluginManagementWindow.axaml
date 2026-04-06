@@ -1,9 +1,11 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Traydio.ViewModels"
+             xmlns:controls="using:Traydio.Views.Controls"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d"
+             x:Name="Root"
              x:Class="Traydio.Views.PluginManagementPage"
              x:DataType="vm:PluginManagementWindowViewModel">
     <Grid Margin="0" RowDefinitions="Auto,*" RowSpacing="6">
@@ -22,24 +24,15 @@
                         <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Plugin install folder"/>
                         <TextBox Grid.Column="1" Classes="input-standard" Text="{Binding PluginDirectory}"/>
                         <Button Grid.Column="2" Classes="command-button" Click="OnChangePluginDirectoryClick">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Image Source="/Assets/Icons9x/folder.ico" Classes="icon-small"/>
-                                <TextBlock Text="Browse..." VerticalAlignment="Center"/>
-                            </StackPanel>
+                            <controls:IconLabelContent IconSource="/Assets/Icons9x/folder.ico" Text="Browse..."/>
                         </Button>
                         <Button Grid.Column="3" Classes="command-button" Command="{Binding RefreshCommand}">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Image Source="/Assets/Icons9x/refresh.ico" Classes="icon-small"/>
-                                <TextBlock Text="Refresh" VerticalAlignment="Center"/>
-                            </StackPanel>
+                            <controls:IconLabelContent IconSource="/Assets/Icons9x/refresh.ico" Text="Refresh"/>
                         </Button>
                         <Button Grid.Column="4"
                                 Classes="command-button"
                                 Click="OnRestartAppClick">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Image Source="/Assets/Icons9x/restart.ico" Classes="icon-small"/>
-                                <TextBlock Text="Restart App" VerticalAlignment="Center"/>
-                            </StackPanel>
+                            <controls:IconLabelContent IconSource="/Assets/Icons9x/restart.ico" Text="Restart App"/>
                         </Button>
                     </Grid>
 
@@ -75,20 +68,16 @@
                                                     Classes="command-button plugin-row-button"
                                                     IsVisible="{Binding HasSettings}"
                                                     IsEnabled="{Binding IsEnabled}"
-                                                    Click="OnPluginSettingsClick">
-                                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                                    <Image Source="/Assets/Icons9x/settings.ico" Classes="icon-small"/>
-                                                    <TextBlock Text="Settings" VerticalAlignment="Center"/>
-                                                </StackPanel>
+                                                    Command="{Binding #Root.OpenPluginSettingsCommand}"
+                                                    CommandParameter="{Binding}">
+                                                <controls:IconLabelContent IconSource="/Assets/Icons9x/settings.ico" Text="Settings"/>
                                             </Button>
                                             <Button Grid.Column="4"
                                                     Classes="command-button plugin-row-button"
                                                     IsVisible="{Binding !IsPendingDelete}"
-                                                    Click="OnUninstallPluginClick">
-                                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                                    <Image Source="/Assets/Icons9x/remove.ico" Classes="icon-small"/>
-                                                    <TextBlock Text="Uninstall" VerticalAlignment="Center"/>
-                                                </StackPanel>
+                                                    Command="{Binding #Root.RemovePluginCommand}"
+                                                    CommandParameter="{Binding}">
+                                                <controls:IconLabelContent IconSource="/Assets/Icons9x/remove.ico" Text="Uninstall"/>
                                             </Button>
                                         </Grid>
                                     </Border>
@@ -127,20 +116,16 @@
                                             </StackPanel>
                                             <Button Grid.Column="2"
                                                     Classes="command-button plugin-row-button"
-                                                    Click="OnInstallCandidateClick">
-                                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                                    <Image Source="/Assets/Icons9x/add.ico" Classes="icon-small"/>
-                                                    <TextBlock Text="Install" VerticalAlignment="Center"/>
-                                                </StackPanel>
+                                                    Command="{Binding #Root.InstallCandidateItemCommand}"
+                                                    CommandParameter="{Binding}">
+                                                <controls:IconLabelContent IconSource="/Assets/Icons9x/add.ico" Text="Install"/>
                                             </Button>
                                             <Button Grid.Column="3"
                                                     Classes="command-button plugin-row-button"
                                                     IsVisible="{Binding IsUpgrade}"
-                                                    Click="OnUpgradeCandidateClick">
-                                                <StackPanel Orientation="Horizontal" Spacing="6">
-                                                    <Image Source="/Assets/Icons9x/add.ico" Classes="icon-small"/>
-                                                    <TextBlock Text="Upgrade" VerticalAlignment="Center"/>
-                                                </StackPanel>
+                                                    Command="{Binding #Root.UpgradeCandidateItemCommand}"
+                                                    CommandParameter="{Binding}">
+                                                <controls:IconLabelContent IconSource="/Assets/Icons9x/add.ico" Text="Upgrade"/>
                                             </Button>
                                         </Grid>
                                     </Border>

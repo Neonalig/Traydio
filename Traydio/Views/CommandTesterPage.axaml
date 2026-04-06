@@ -1,28 +1,28 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:views="using:Traydio.Views"
-             x:Class="Traydio.Views.CommandTesterPage">
+             xmlns:controls="using:Traydio.Views.Controls"
+             xmlns:vm="using:Traydio.ViewModels"
+             x:Class="Traydio.Views.CommandTesterPage"
+             x:DataType="vm:CommandTesterPageViewModel">
     <Grid Margin="0" RowDefinitions="Auto,Auto,*" RowSpacing="6">
         <Border Grid.Row="0" Classes="toolbar-frame" Margin="0">
             <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
-                <TextBox x:Name="CommandTextBox" Classes="input-standard" Grid.Column="0" Watermark="Try: play, volume 35, plugins"/>
-                <Button Grid.Column="1" Classes="command-button" Click="OnRunClick">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Image Source="/Assets/Icons9x/play.ico" Classes="icon-small"/>
-                        <TextBlock Text="Run" VerticalAlignment="Center"/>
-                    </StackPanel>
+                <TextBox Classes="input-standard"
+                         Grid.Column="0"
+                         Watermark="Try: play, volume 35, plugins"
+                         Text="{Binding CommandText, Mode=TwoWay}"/>
+                <Button Grid.Column="1" Classes="command-button" Command="{Binding RunCommand}">
+                    <controls:IconLabelContent IconSource="/Assets/Icons9x/play.ico" Text="Run"/>
                 </Button>
-                <Button Grid.Column="2" Classes="command-button" Click="OnClearClick">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Image Source="/Assets/Icons9x/remove.ico" Classes="icon-small"/>
-                        <TextBlock Text="Clear" VerticalAlignment="Center"/>
-                    </StackPanel>
+                <Button Grid.Column="2" Classes="command-button" Command="{Binding ClearCommand}">
+                    <controls:IconLabelContent IconSource="/Assets/Icons9x/remove.ico" Text="Clear"/>
                 </Button>
             </Grid>
         </Border>
 
         <Border Grid.Row="1" Classes="status-strip" Margin="0">
-            <TextBlock x:Name="StatusText" Classes="helper-text"/>
+            <TextBlock Classes="helper-text" Text="{Binding Status}"/>
         </Border>
 
         <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="0" Margin="4,0,4,4">
@@ -34,7 +34,7 @@
                     <TextBlock Grid.Row="0"
                                Text="Commands are routed through ICommandTextRouter. Use station IDs from Station Manager for the station command."
                                Classes="helper-text"/>
-                    <ItemsControl x:Name="SyntaxHintsList" Grid.Row="1">
+                    <ItemsControl Grid.Row="1" ItemsSource="{Binding SyntaxHints}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="views:CommandTipItem">
                                 <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,4" ToolTip.Tip="{ReflectionBinding Tooltip}">
