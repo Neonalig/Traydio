@@ -22,9 +22,17 @@ namespace Traydio;
 sealed class Program
 {
     private static ServiceProvider? _services;
+    private static string? _pendingStartupCommand;
 
     public static IServiceProvider Services => _services
         ?? throw new InvalidOperationException("Service provider is not initialized.");
+
+    public static string? TakePendingStartupCommand()
+    {
+        var command = _pendingStartupCommand;
+        _pendingStartupCommand = null;
+        return command;
+    }
 
     // Initialization code. Don't use any Avalonia, third-party APIs or any
     // SynchronizationContext-reliant code before AppMain is called: things aren't initialized
@@ -60,10 +68,7 @@ sealed class Program
                 return;
             }
 
-            if (!string.IsNullOrWhiteSpace(startupCommand))
-            {
-                commandRelayCoordinator.DispatchLocal(startupCommand);
-            }
+            _pendingStartupCommand = startupCommand;
 
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(
                 args,

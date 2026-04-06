@@ -48,6 +48,12 @@ public class App : Application
             var trayController = Program.Services.GetRequiredService<ITrayController>();
             trayController.Initialize(desktop);
 
+            var pendingStartupCommand = Program.TakePendingStartupCommand();
+            if (!string.IsNullOrWhiteSpace(pendingStartupCommand))
+            {
+                relayCoordinator.DispatchLocal(pendingStartupCommand);
+            }
+
             desktop.Exit += (_, _) =>
             {
                 try
