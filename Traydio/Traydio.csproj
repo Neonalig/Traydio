@@ -7,7 +7,7 @@
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <LangVersion>13</LangVersion>
-        <ApplicationIcon>Assets\Icons9x\stations.ico</ApplicationIcon>
+        <ApplicationIcon>Assets\stations.ico</ApplicationIcon>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)' == 'Release'">
@@ -58,12 +58,28 @@
 
     <ItemGroup>
         <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-            <_Parameter1>Traydio.RecommendedPluginAssemblyNameHash</_Parameter1>
+            <_Parameter1>Traydio.FeaturedPluginAssemblyNameHash</_Parameter1>
             <_Parameter2>27a25b1c13d488acd2b8044a02a1df2384570abaaf87728be08c0f47ccd7db46</_Parameter2>
         </AssemblyAttribute>
         <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-            <_Parameter1>Traydio.RecommendedPluginAssemblyNameHash</_Parameter1>
+            <_Parameter1>Traydio.FeaturedPluginAssemblyNameHash</_Parameter1>
             <_Parameter2>665c627788c7ee8096f4e560ebee9addb642dd516726a00f3245c3da9bc588ee</_Parameter2>
+        </AssemblyAttribute>
+        <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+            <_Parameter1>Traydio.OfficialPluginAssemblyNameHash</_Parameter1>
+            <_Parameter2>27a25b1c13d488acd2b8044a02a1df2384570abaaf87728be08c0f47ccd7db46</_Parameter2>
+        </AssemblyAttribute>
+        <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+            <_Parameter1>Traydio.OfficialPluginAssemblyNameHash</_Parameter1>
+            <_Parameter2>fcb4832876f6988ab1968f7200362ff80322ff70f1b4c2b9492c7aa7f1bf7623</_Parameter2>
+        </AssemblyAttribute>
+        <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+            <_Parameter1>Traydio.OfficialPluginAssemblyNameHash</_Parameter1>
+            <_Parameter2>665c627788c7ee8096f4e560ebee9addb642dd516726a00f3245c3da9bc588ee</_Parameter2>
+        </AssemblyAttribute>
+        <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+            <_Parameter1>Traydio.OfficialPluginAssemblyNameHash</_Parameter1>
+            <_Parameter2>ff01a230df8408f1be752f89f85be597ed590001d15cc5f380f1c94af7399aca</_Parameter2>
         </AssemblyAttribute>
     </ItemGroup>
 </Project>

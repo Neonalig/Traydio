@@ -299,6 +299,7 @@ public sealed class StationRepository : IStationRepository
                 .Select(path => path.Trim())
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .ToList(),
+            HasShownPluginSafetyWarning = settings.HasShownPluginSafetyWarning,
         };
 
         Save();

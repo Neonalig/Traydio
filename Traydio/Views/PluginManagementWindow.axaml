@@ -24,13 +24,13 @@
                         <TextBox Grid.Column="1" Classes="input-standard" Text="{Binding PluginDirectory}"/>
                         <Button Grid.Column="2" Classes="command-button" Click="OnChangePluginDirectoryClick">
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Image Source="/Assets/Icons9x/folder.ico" Classes="icon-small"/>
+                                <Image Source="/Assets/folder.ico" Classes="icon-small"/>
                                 <TextBlock Text="Browse..." VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
                         <Button Grid.Column="3" Classes="command-button" Command="{Binding RefreshCommand}">
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Image Source="/Assets/Icons9x/refresh.ico" Classes="icon-small"/>
+                                <Image Source="/Assets/refresh.ico" Classes="icon-small"/>
                                 <TextBlock Text="Refresh" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
@@ -38,7 +38,7 @@
                                 Classes="command-button"
                                 Click="OnRestartAppClick">
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Image Source="/Assets/Icons9x/restart.ico" Classes="icon-small"/>
+                                <Image Source="/Assets/restart.ico" Classes="icon-small"/>
                                 <TextBlock Text="Restart App" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
@@ -63,7 +63,7 @@
                                                       IsChecked="{Binding IsEnabled}"
                                                       VerticalAlignment="Center"
                                                       Click="OnInstalledCheckboxClick"/>
-                                            <Image Grid.Column="1" Source="/Assets/Icons9x/plugins.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
+                                            <Image Grid.Column="1" Source="/Assets/plugins.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
                                             <StackPanel Grid.Column="2" Spacing="2" IsEnabled="{Binding IsEnabled}">
                                                 <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
                                                 <TextBlock Text="{Binding VersionText, StringFormat='v{0}'}" Classes="subtle-text"/>
@@ -79,7 +79,7 @@
                                                     Command="{Binding #Root.OpenPluginSettingsCommand}"
                                                     CommandParameter="{Binding}">
                                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                                    <Image Source="/Assets/Icons9x/settings.ico" Classes="icon-small"/>
+                                                    <Image Source="/Assets/settings.ico" Classes="icon-small"/>
                                                     <TextBlock Text="Settings" VerticalAlignment="Center"/>
                                                 </StackPanel>
                                             </Button>
@@ -89,7 +89,7 @@
                                                     Command="{Binding #Root.RemovePluginCommand}"
                                                     CommandParameter="{Binding}">
                                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                                    <Image Source="/Assets/Icons9x/remove.ico" Classes="icon-small"/>
+                                                    <Image Source="/Assets/remove.ico" Classes="icon-small"/>
                                                     <TextBlock Text="Uninstall" VerticalAlignment="Center"/>
                                                 </StackPanel>
                                             </Button>
@@ -113,16 +113,36 @@
                                 <DataTemplate x:DataType="vm:PluginManagementWindowViewModel+PluginCandidateItem">
                                     <Border Padding="0,4"
                                             Classes="plugin-candidate-entry"
-                                            Classes.recommended-candidate="{Binding IsRecommended}">
+                                            Classes.recommended-candidate="{Binding IsFeatured}">
                                         <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="8">
-                                            <Image Source="/Assets/Icons9x/plugins.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
+                                            <Image Source="/Assets/plugins.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
                                             <StackPanel Grid.Column="1" Spacing="2">
-                                                <Border Classes="recommended-badge" IsVisible="{Binding IsRecommended}">
-                                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                                        <Image Source="/Assets/Icons9x/recommended.ico" Classes="icon-small"/>
-                                                        <TextBlock Text="Recommended" Classes="recommended-badge-text"/>
-                                                    </StackPanel>
-                                                </Border>
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <Border Classes="recommended-badge"
+                                                            IsVisible="{Binding IsFeatured}"
+                                                            ToolTip.Tip="Featured plugin: this plugin is recommended by the Traydio team for its quality, usefulness, and security.">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <Image Source="/Assets/recommended.ico" Classes="icon-small" Height="12"/>
+                                                            <TextBlock Text="Featured" Classes="recommended-badge-text" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <Border Classes="recommended-badge"
+                                                            IsVisible="{Binding IsOfficial}"
+                                                            ToolTip.Tip="Official plugin: this plugin is developed or officially endorsed by the Traydio team.">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <Image Source="/Assets/keys.ico" Classes="icon-small" Height="12"/>
+                                                            <TextBlock Text="Official" Classes="recommended-badge-text" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                    <Border Classes="recommended-badge"
+                                                            IsVisible="{Binding IsExternal}"
+                                                            ToolTip.Tip="External plugin: install only if you trust the plugin author and have reviewed the code/source.">
+                                                        <StackPanel Orientation="Horizontal" Spacing="4">
+                                                            <Image Source="/Assets/info.ico" Classes="icon-small" Height="12"/>
+                                                            <TextBlock Text="External" Classes="recommended-badge-text" VerticalAlignment="Center"/>
+                                                        </StackPanel>
+                                                    </Border>
+                                                </StackPanel>
                                                 <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"/>
                                                 <TextBlock Text="{Binding VersionText, StringFormat='v{0}'}" Classes="subtle-text"/>
                                                 <TextBlock Text="{Binding InstalledVersionText, StringFormat='Installed v{0}'}" Classes="subtle-text" IsVisible="{Binding HasInstalledVersion}"/>
@@ -133,7 +153,7 @@
                                                     Command="{Binding #Root.InstallCandidateItemCommand}"
                                                     CommandParameter="{Binding}">
                                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                                    <Image Source="/Assets/Icons9x/add.ico" Classes="icon-small"/>
+                                                    <Image Source="/Assets/add.ico" Classes="icon-small"/>
                                                     <TextBlock Text="Install" VerticalAlignment="Center"/>
                                                 </StackPanel>
                                             </Button>
@@ -143,7 +163,7 @@
                                                     Command="{Binding #Root.UpgradeCandidateItemCommand}"
                                                     CommandParameter="{Binding}">
                                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                                    <Image Source="/Assets/Icons9x/add.ico" Classes="icon-small"/>
+                                                    <Image Source="/Assets/add.ico" Classes="icon-small"/>
                                                     <TextBlock Text="Upgrade" VerticalAlignment="Center"/>
                                                 </StackPanel>
                                             </Button>
@@ -157,7 +177,7 @@
                         <TextBox Grid.Column="0" Classes="input-standard" Watermark="Browse or paste plugin DLL path" Text="{Binding PluginDllPath}"/>
                         <Button Grid.Column="1" Classes="command-button" Click="OnBrowsePluginClick">
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Image Source="/Assets/Icons9x/folder_with_file.ico" Classes="icon-small"/>
+                                <Image Source="/Assets/folder_with_file.ico" Classes="icon-small"/>
                                 <TextBlock Text="Browse..." VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>

@@ -8,7 +8,7 @@
         mc:Ignorable="d"
         x:Class="Traydio.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
-        Icon="/Assets/Icons9x/stations.ico"
+        Icon="/Assets/stations.ico"
         MinWidth="700"
         MinHeight="780"
         Width="1100"
@@ -16,10 +16,10 @@
         Title="Traydio - Internet Radio Control Center"
         Theme="{DynamicResource ClassicWindow}">
     <Window.Resources>
-        <imaging:Bitmap x:Key="PlayIcon">avares://Traydio/Assets/Icons9x/play.ico</imaging:Bitmap>
-        <imaging:Bitmap x:Key="PauseIcon">avares://Traydio/Assets/Icons9x/pause.ico</imaging:Bitmap>
-        <imaging:Bitmap x:Key="VolumeIcon">avares://Traydio/Assets/Icons9x/volume.ico</imaging:Bitmap>
-        <imaging:Bitmap x:Key="MuteIcon">avares://Traydio/Assets/Icons9x/mute.ico</imaging:Bitmap>
+        <imaging:Bitmap x:Key="PlayIcon">avares://Traydio/Assets/play.ico</imaging:Bitmap>
+        <imaging:Bitmap x:Key="PauseIcon">avares://Traydio/Assets/pause.ico</imaging:Bitmap>
+        <imaging:Bitmap x:Key="VolumeIcon">avares://Traydio/Assets/volume.ico</imaging:Bitmap>
+        <imaging:Bitmap x:Key="MuteIcon">avares://Traydio/Assets/mute.ico</imaging:Bitmap>
 
         <conv:BooleanToImageConverter x:Key="PlayPauseIconConverter"
                                       TrueImage="{StaticResource PauseIcon}"
@@ -35,28 +35,28 @@
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6">
                     <ToggleButton Classes="ribbon-button ribbon-tab" IsChecked="{Binding IsStationsTabChecked, Mode=OneWay}" Click="OnStationsTabClick">
                         <StackPanel Orientation="Vertical" Spacing="4" HorizontalAlignment="Center">
-                            <Image Source="/Assets/Icons9x/stations.ico" Classes="icon-ribbon" HorizontalAlignment="Center"/>
+                            <Image Source="/Assets/stations.ico" Classes="icon-ribbon" HorizontalAlignment="Center"/>
                             <TextBlock Text="Stations" TextAlignment="Center"/>
                         </StackPanel>
                     </ToggleButton>
 
                     <ToggleButton Classes="ribbon-button ribbon-tab" IsChecked="{Binding IsSearchTabChecked, Mode=OneWay}" Click="OnSearchTabClick">
                         <StackPanel Orientation="Vertical" Spacing="4" HorizontalAlignment="Center">
-                            <Image Source="/Assets/Icons9x/search.ico" Classes="icon-ribbon" HorizontalAlignment="Center"/>
+                            <Image Source="/Assets/search.ico" Classes="icon-ribbon" HorizontalAlignment="Center"/>
                             <TextBlock Text="Search" TextAlignment="Center"/>
                         </StackPanel>
                     </ToggleButton>
 
                     <ToggleButton Classes="ribbon-button ribbon-tab" IsChecked="{Binding IsPluginsTabChecked, Mode=OneWay}" Click="OnPluginsTabClick">
                         <StackPanel Orientation="Vertical" Spacing="4" HorizontalAlignment="Center">
-                            <Image Source="/Assets/Icons9x/plugins.ico" Classes="icon-ribbon" HorizontalAlignment="Center"/>
+                            <Image Source="/Assets/plugins.ico" Classes="icon-ribbon" HorizontalAlignment="Center"/>
                             <TextBlock Text="Plugins" TextAlignment="Center"/>
                         </StackPanel>
                     </ToggleButton>
 
                     <ToggleButton Classes="ribbon-button ribbon-tab" IsChecked="{Binding IsSettingsTabChecked, Mode=OneWay}" Click="OnSettingsTabClick">
                         <StackPanel Orientation="Vertical" Spacing="4" HorizontalAlignment="Center">
-                            <Image Source="/Assets/Icons9x/settings.ico" Classes="icon-ribbon" HorizontalAlignment="Center"/>
+                            <Image Source="/Assets/settings.ico" Classes="icon-ribbon" HorizontalAlignment="Center"/>
                             <TextBlock Text="Settings" TextAlignment="Center"/>
                         </StackPanel>
                     </ToggleButton>
@@ -67,14 +67,14 @@
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
                     <Button Classes="ribbon-button" Command="{Binding OpenCommandsCommand}">
                         <StackPanel Orientation="Vertical" Spacing="4" HorizontalAlignment="Center">
-                            <Image Source="/Assets/Icons9x/info.ico" Classes="icon-ribbon" HorizontalAlignment="Center"/>
+                            <Image Source="/Assets/info.ico" Classes="icon-ribbon" HorizontalAlignment="Center"/>
                             <TextBlock Text="Commands" TextAlignment="Center"/>
                         </StackPanel>
                     </Button>
 
                     <Button Classes="ribbon-button" Command="{Binding OpenAboutCommand}">
                         <StackPanel Orientation="Vertical" Spacing="4" HorizontalAlignment="Center">
-                            <Image Source="/Assets/Icons9x/help.ico" Classes="icon-ribbon" HorizontalAlignment="Center"/>
+                            <Image Source="/Assets/help.ico" Classes="icon-ribbon" HorizontalAlignment="Center"/>
                             <TextBlock Text="About" TextAlignment="Center"/>
                         </StackPanel>
                     </Button>

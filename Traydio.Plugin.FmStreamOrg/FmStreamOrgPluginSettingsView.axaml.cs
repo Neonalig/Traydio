@@ -62,7 +62,7 @@ public class FmStreamOrgPluginSettingsView : UserControl
         var root = new Grid
         {
             Margin = new Avalonia.Thickness(12),
-            RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,Auto,Auto,*"),
+            RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,Auto,*,Auto,Auto,Auto"),
             RowSpacing = 10,
         };
 
@@ -117,12 +117,12 @@ public class FmStreamOrgPluginSettingsView : UserControl
 
         var siteLinkButton = CreateHyperlinkButton("Open fmstream.org", OnOpenWebsiteClick);
 
-        var aboutButton = new Button
+        var disclaimerButton = new Button
         {
-            Content = "Copyright / About / Conditions",
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+            Content = "View disclaimer information",
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
         };
-        aboutButton.Click += OnAboutConditionsClick;
+        disclaimerButton.Click += OnAboutConditionsClick;
 
         var actionPanel = new StackPanel
         {
@@ -131,23 +131,33 @@ public class FmStreamOrgPluginSettingsView : UserControl
         };
         actionPanel.Children.Add(_defaultHighQualityBox);
         actionPanel.Children.Add(saveButton);
-        actionPanel.Children.Add(aboutButton);
         Grid.SetRow(actionPanel, 4);
         root.Children.Add(actionPanel);
 
-        Grid.SetRow(siteLinkButton, 5);
+        siteLinkButton.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center;
+        Grid.SetRow(siteLinkButton, 6);
         root.Children.Add(siteLinkButton);
 
-        var hintText = new TextBlock
+        var legalPanel = new StackPanel
         {
-            Text = "Use POST only if your fmstream key setup requires it; default GET follows documented query parameters.",
-            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            Spacing = 6,
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
         };
-        Grid.SetRow(hintText, 6);
-        root.Children.Add(hintText);
 
-        Grid.SetRow(_statusText, 6);
-        _statusText.Margin = new Avalonia.Thickness(0, 30, 0, 0);
+        legalPanel.Children.Add(new TextBlock
+        {
+            Text = "Copyright (C) Traydio contributors. Data source: fmstream.org",
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center,
+            Classes = { "subtle-text" },
+        });
+        legalPanel.Children.Add(disclaimerButton);
+
+        Grid.SetRow(legalPanel, 7);
+        root.Children.Add(legalPanel);
+
+        _statusText.TextWrapping = Avalonia.Media.TextWrapping.Wrap;
+        _statusText.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
+        Grid.SetRow(_statusText, 8);
         root.Children.Add(_statusText);
 
         Content = root;

@@ -11,6 +11,7 @@ using Classic.CommonControls.Dialogs;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Traydio.Common;
+using Traydio.Models;
 using Traydio.Views;
 
 namespace Traydio.Services;
@@ -20,6 +21,7 @@ public sealed class WindowManager(
     INavigationService navigationService,
     IPluginManager pluginManager,
     IPluginSettingsProvider pluginSettingsProvider,
+    IStationRepository stationRepository,
     IPluginInstallDisclaimerService pluginInstallDisclaimerService,
     ILogger<WindowManager> logger) : IWindowManager
 {
@@ -88,6 +90,36 @@ public sealed class WindowManager(
         ShowMainWindowCore();
         TraydioTrace.Debug("WindowManager", "Navigating to Plugins page.");
         navigationService.Navigate(AppPage.Plugins);
+        ShowPluginSafetyWarningIfNeededAsync().ForgetWithErrorHandling("Show plugin safety warning", showDialog: false);
+    }
+
+    private async Task ShowPluginSafetyWarningIfNeededAsync()
+    {
+        var settings = stationRepository.StationDiscoveryPlugins;
+        if (settings.HasShownPluginSafetyWarning)
+        {
+            return;
+        }
+
+        if (_mainWindow is null)
+        {
+            return;
+        }
+
+        await MessageBox.ShowDialog(
+            _mainWindow,
+            "Plugins can execute external code. Only install plugins from authors you trust and review source when possible.",
+            "Plugin safety warning",
+            MessageBoxButtons.Ok,
+            MessageBoxIcon.Warning);
+
+        stationRepository.SaveStationDiscoveryPluginSettings(new StationDiscoveryPluginSettings
+        {
+            PluginDirectory = settings.PluginDirectory,
+            DisabledPluginIds = settings.DisabledPluginIds,
+            PendingDeletePluginPaths = settings.PendingDeletePluginPaths,
+            HasShownPluginSafetyWarning = true,
+        });
     }
 
     public void ShowSettings()
@@ -233,7 +265,7 @@ public sealed class WindowManager(
             return;
         }
 
-        using var iconStream = AssetLoader.Open(new Uri("avares://Traydio/Assets/Icons9x/stations.ico"));
+        using var iconStream = AssetLoader.Open(new Uri("avares://Traydio/Assets/stations.ico"));
         var bitmap = new Bitmap(iconStream);
         const int INITIAL_COPYRIGHT_YEAR = 2026;
         var buildYear = ViewLocator.BuildYear;
@@ -290,7 +322,7 @@ public sealed class WindowManager(
 
         public string? GetValue(string key)
         {
-            return _values.TryGetValue(key, out var value) ? value : null;
+            return _values.GetValueOrDefault(key);
         }
 
         public void SetValue(string key, string? value)

@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Traydio.Plugin.LibVlc.LibVlcPluginSettingsView">
 
-    <Grid Margin="12" RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="10">
+    <Grid Margin="12" RowDefinitions="Auto,Auto,Auto,Auto,Auto,*" RowSpacing="10">
         <TextBlock Grid.Row="0" Text="LibVLC Output Settings" FontSize="18" FontWeight="SemiBold"/>
 
         <TextBlock Grid.Row="1"
@@ -20,7 +20,12 @@
             <TextBox x:Name="OutputDeviceIdBox" Grid.Column="1" Watermark="Blank = system default"/>
         </Grid>
 
-        <TextBlock Grid.Row="4" x:Name="StatusText" Foreground="{DynamicResource StatusAccentBrush}" TextWrapping="Wrap"/>
+        <TextBlock Grid.Row="4"
+                   Text="Copyright (C) VideoLAN and LibVLC contributors."
+                   Foreground="Gray"
+                   TextWrapping="Wrap"/>
+
+        <TextBlock Grid.Row="5" x:Name="StatusText" Foreground="{DynamicResource StatusAccentBrush}" TextWrapping="Wrap"/>
     </Grid>
 </UserControl>
 

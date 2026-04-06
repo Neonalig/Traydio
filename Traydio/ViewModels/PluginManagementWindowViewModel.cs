@@ -21,9 +21,11 @@ namespace Traydio.ViewModels;
 [ViewModelFor(typeof(PluginManagementPage))]
 public partial class PluginManagementWindowViewModel : ViewModelBase
 {
-    private const string _RECOMMENDED_ASSEMBLY_HASH_METADATA_KEY = "Traydio.RecommendedPluginAssemblyNameHash";
+    private const string _FEATURED_ASSEMBLY_HASH_METADATA_KEY = "Traydio.FeaturedPluginAssemblyNameHash";
+    private const string _OFFICIAL_ASSEMBLY_HASH_METADATA_KEY = "Traydio.OfficialPluginAssemblyNameHash";
 
-    private static readonly HashSet<string> _recommendedAssemblyNameHashes = LoadRecommendedHashes(_RECOMMENDED_ASSEMBLY_HASH_METADATA_KEY);
+    private static readonly HashSet<string> _featuredAssemblyNameHashes = LoadPluginHashes(_FEATURED_ASSEMBLY_HASH_METADATA_KEY);
+    private static readonly HashSet<string> _officialAssemblyNameHashes = LoadPluginHashes(_OFFICIAL_ASSEMBLY_HASH_METADATA_KEY);
 
     private readonly IPluginManager _pluginManager;
     private readonly IPluginInstallDisclaimerService _pluginInstallDisclaimerService;
@@ -98,7 +100,8 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
 
             var discovered = DiscoverEligiblePluginDlls(installedByAssemblyName)
                 .Where(candidate => !candidate.IsSameVersionInstalled)
-                .OrderByDescending(candidate => candidate.IsRecommended)
+                .OrderByDescending(candidate => candidate.IsFeatured)
+                .ThenByDescending(candidate => candidate.IsOfficial)
                 .ThenBy(candidate => candidate.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
@@ -191,6 +194,7 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             PluginDirectory = string.IsNullOrWhiteSpace(PluginDirectory) ? settings.PluginDirectory : PluginDirectory.Trim(),
             DisabledPluginIds = settings.DisabledPluginIds,
             PendingDeletePluginPaths = settings.PendingDeletePluginPaths,
+            HasShownPluginSafetyWarning = settings.HasShownPluginSafetyWarning,
         });
 
         Status = "Plugin directory saved.";
@@ -396,6 +400,7 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
                 PluginDirectory = targetPath,
                 DisabledPluginIds = settings.DisabledPluginIds,
                 PendingDeletePluginPaths = settings.PendingDeletePluginPaths,
+                HasShownPluginSafetyWarning = settings.HasShownPluginSafetyWarning,
             });
 
             PluginDirectory = targetPath;
@@ -500,7 +505,7 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             var fileName = Path.GetFileName(path);
             if (knownFileNames.Add(fileName))
             {
-                yield return CreateCandidate(path, installedByAssemblyName, _recommendedAssemblyNameHashes);
+                yield return CreateCandidate(path, installedByAssemblyName, _featuredAssemblyNameHashes, _officialAssemblyNameHashes);
             }
         }
 
@@ -509,7 +514,7 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             var fileName = Path.GetFileName(path);
             if (knownFileNames.Add(fileName))
             {
-                yield return CreateCandidate(path, installedByAssemblyName, _recommendedAssemblyNameHashes);
+                yield return CreateCandidate(path, installedByAssemblyName, _featuredAssemblyNameHashes, _officialAssemblyNameHashes);
             }
         }
     }
@@ -517,7 +522,8 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
     private static PluginCandidateItem CreateCandidate(
         string path,
         IReadOnlyDictionary<string, Version> installedByAssemblyName,
-        ISet<string> recommendedAssemblyNameHashes)
+        ISet<string> featuredAssemblyNameHashes,
+        ISet<string> officialAssemblyNameHashes)
     {
         if (!TryGetPluginAssemblyMetadata(path, out var assemblyName, out var version))
         {
@@ -530,7 +536,9 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
                 false,
                 false,
                 false,
-                false);
+                false,
+                false,
+                true);
         }
 
         installedByAssemblyName.TryGetValue(assemblyName, out var installedVersion);
@@ -538,7 +546,8 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         var isSameVersionInstalled = version is not null && installedVersion is not null && version == installedVersion;
         var isUpgrade = version is not null && installedVersion is not null && version > installedVersion;
 
-        var isRecommended = IsRecommendedCandidate(assemblyName, recommendedAssemblyNameHashes);
+        var isFeatured = IsFeaturedCandidate(assemblyName, featuredAssemblyNameHashes);
+        var isOfficial = IsOfficialCandidate(assemblyName, officialAssemblyNameHashes);
 
         return new PluginCandidateItem(
             path,
@@ -549,21 +558,34 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             isUpgrade,
             hasInstalledVersion,
             isSameVersionInstalled,
-            isRecommended);
+            isFeatured,
+            isOfficial,
+            !isOfficial);
     }
 
-    private static bool IsRecommendedCandidate(string assemblyName, ISet<string> recommendedAssemblyNameHashes)
+    private static bool IsFeaturedCandidate(string assemblyName, ISet<string> featuredAssemblyNameHashes)
     {
-        if (recommendedAssemblyNameHashes.Count == 0)
+        if (featuredAssemblyNameHashes.Count == 0)
         {
             return false;
         }
 
         var normalizedAssemblyName = assemblyName.Trim().ToLowerInvariant();
-        return recommendedAssemblyNameHashes.Contains(ComputeSha256Hex(normalizedAssemblyName));
+        return featuredAssemblyNameHashes.Contains(ComputeSha256Hex(normalizedAssemblyName));
     }
 
-    private static HashSet<string> LoadRecommendedHashes(string metadataKey)
+    private static bool IsOfficialCandidate(string assemblyName, ISet<string> officialAssemblyNameHashes)
+    {
+        if (officialAssemblyNameHashes.Count == 0)
+        {
+            return false;
+        }
+
+        var normalizedAssemblyName = assemblyName.Trim().ToLowerInvariant();
+        return officialAssemblyNameHashes.Contains(ComputeSha256Hex(normalizedAssemblyName));
+    }
+
+    private static HashSet<string> LoadPluginHashes(string metadataKey)
     {
         var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -702,7 +724,9 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         bool isUpgrade,
         bool hasInstalledVersion,
         bool isSameVersionInstalled,
-        bool isRecommended)
+        bool isFeatured,
+        bool isOfficial,
+        bool isExternal)
     {
         public string Path { get; } = path;
 
@@ -724,7 +748,11 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
 
         public bool IsSameVersionInstalled { get; } = isSameVersionInstalled;
 
-        public bool IsRecommended { get; } = isRecommended;
+        public bool IsFeatured { get; } = isFeatured;
+
+        public bool IsOfficial { get; } = isOfficial;
+
+        public bool IsExternal { get; } = isExternal;
     }
 }
 

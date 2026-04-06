@@ -32,7 +32,7 @@
                             ToolTip.Tip="Revert this setting to saved value"
                             IsVisible="{Binding IsNamedPipeRelayDirty}"
                             Command="{Binding ResetNamedPipeRelaySettingCommand}">
-                        <Image Source="/Assets/Icons9x/undo.ico" Classes="icon-small"/>
+                        <Image Source="/Assets/undo.ico" Classes="icon-small"/>
                     </Button>
 
                     <CheckBox Grid.Row="0" Grid.Column="3" Grid.ColumnSpan="2" IsChecked="{Binding EnableLoopbackRelay}">
@@ -45,7 +45,7 @@
                             ToolTip.Tip="Revert this setting to saved value"
                             IsVisible="{Binding IsLoopbackRelayDirty}"
                             Command="{Binding ResetLoopbackRelaySettingCommand}">
-                        <Image Source="/Assets/Icons9x/undo.ico" Classes="icon-small"/>
+                        <Image Source="/Assets/undo.ico" Classes="icon-small"/>
                     </Button>
 
                     <controls:DirtySettingLabel Grid.Row="1"
@@ -59,7 +59,7 @@
                             ToolTip.Tip="Revert this setting to saved value"
                             IsVisible="{Binding IsLoopbackHostDirty}"
                             Command="{Binding ResetLoopbackHostSettingCommand}">
-                        <Image Source="/Assets/Icons9x/undo.ico" Classes="icon-small"/>
+                        <Image Source="/Assets/undo.ico" Classes="icon-small"/>
                     </Button>
 
                     <controls:DirtySettingLabel Grid.Row="1"
@@ -73,7 +73,7 @@
                             ToolTip.Tip="Revert this setting to saved value"
                             IsVisible="{Binding IsLoopbackPortDirty}"
                             Command="{Binding ResetLoopbackPortSettingCommand}">
-                        <Image Source="/Assets/Icons9x/undo.ico" Classes="icon-small"/>
+                        <Image Source="/Assets/undo.ico" Classes="icon-small"/>
                     </Button>
 
                     <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="6" Text="Use named pipes for local machine reliability; use loopback when you need protocol compatibility over TCP." Classes="helper-text"/>
@@ -106,7 +106,7 @@
                             ToolTip.Tip="Revert this setting to saved value"
                             IsVisible="{Binding IsRadioPlayerEngineDirty}"
                             Command="{Binding ResetPlaybackEngineSettingCommand}">
-                        <Image Source="/Assets/Icons9x/undo.ico" Classes="icon-small"/>
+                        <Image Source="/Assets/undo.ico" Classes="icon-small"/>
                     </Button>
 
                     <controls:DirtySettingLabel Grid.Row="1"
@@ -128,7 +128,7 @@
                             ToolTip.Tip="Revert this setting to saved value"
                             IsVisible="{Binding IsAudioOutputDeviceDirty}"
                             Command="{Binding ResetAudioOutputDeviceSettingCommand}">
-                        <Image Source="/Assets/Icons9x/undo.ico" Classes="icon-small"/>
+                        <Image Source="/Assets/undo.ico" Classes="icon-small"/>
                     </Button>
 
                     <controls:DirtySettingLabel Grid.Row="2"
@@ -150,7 +150,7 @@
                             ToolTip.Tip="Revert this setting to saved value"
                             IsVisible="{Binding IsClassicThemeDirty}"
                             Command="{Binding ResetClassicThemeSettingCommand}">
-                        <Image Source="/Assets/Icons9x/undo.ico" Classes="icon-small"/>
+                        <Image Source="/Assets/undo.ico" Classes="icon-small"/>
                     </Button>
 
                     <Button Grid.Row="2"
@@ -159,7 +159,7 @@
                             IsVisible="{Binding IsThemeRestartVisible}"
                             Click="OnApplyThemeClick">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Image Source="/Assets/Icons9x/save.ico" Classes="icon-small"/>
+                            <Image Source="/Assets/save.ico" Classes="icon-small"/>
                             <TextBlock Text="Save &amp; Apply" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -187,7 +187,7 @@
                             ToolTip.Tip="Revert this setting to saved value"
                             IsVisible="{Binding IsProtocolUrlRelayDirty}"
                             Command="{Binding ResetProtocolUrlRelaySettingCommand}">
-                        <Image Source="/Assets/Icons9x/undo.ico" Classes="icon-small"/>
+                        <Image Source="/Assets/undo.ico" Classes="icon-small"/>
                     </Button>
                     <Button Grid.Row="0"
                             Grid.Column="3"
@@ -197,8 +197,8 @@
                             VerticalContentAlignment="Center"
                             Command="{Binding ToggleProtocolRegistrationCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Image Source="/Assets/Icons9x/add.ico" Classes="icon-small" IsVisible="{Binding !IsProtocolRegistered}"/>
-                            <Image Source="/Assets/Icons9x/remove.ico" Classes="icon-small" IsVisible="{Binding IsProtocolRegistered}"/>
+                            <Image Source="/Assets/add.ico" Classes="icon-small" IsVisible="{Binding !IsProtocolRegistered}"/>
+                            <Image Source="/Assets/remove.ico" Classes="icon-small" IsVisible="{Binding IsProtocolRegistered}"/>
                             <TextBlock Text="{Binding ProtocolActionText}" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -214,7 +214,7 @@
                             ToolTip.Tip="Revert this setting to saved value"
                             IsVisible="{Binding IsProtocolSchemeDirty}"
                             Command="{Binding ResetProtocolSchemeSettingCommand}">
-                        <Image Source="/Assets/Icons9x/undo.ico" Classes="icon-small"/>
+                        <Image Source="/Assets/undo.ico" Classes="icon-small"/>
                     </Button>
 
                     <TextBlock Grid.Row="2" Grid.Column="0" VerticalAlignment="Center" Text="Extended functionality"/>
@@ -226,7 +226,7 @@
                             IsEnabled="{Binding IsWmicSupported}"
                             IsVisible="{Binding !IsWmicInstalled}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Image Source="/Assets/Icons9x/add.ico" Classes="icon-small"/>
+                            <Image Source="/Assets/add.ico" Classes="icon-small"/>
                             <TextBlock Text="Install WMIC Utility" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -254,7 +254,7 @@
                             Command="{Binding SaveCommand}"
                             IsEnabled="{Binding HasUnsavedChanges}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Image Source="/Assets/Icons9x/save.ico" Classes="icon-small"/>
+                            <Image Source="/Assets/save.ico" Classes="icon-small"/>
                             <TextBlock Text="Save Settings" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -264,7 +264,7 @@
                             Command="{Binding DiscardChangesCommand}"
                             IsEnabled="{Binding HasUnsavedChanges}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Image Source="/Assets/Icons9x/remove.ico" Classes="icon-small"/>
+                            <Image Source="/Assets/remove.ico" Classes="icon-small"/>
                             <TextBlock Text="Discard" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -273,7 +273,7 @@
                             VerticalContentAlignment="Center"
                             Command="{Binding ResetAllDefaultsCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Image Source="/Assets/Icons9x/reset_to_default.ico" Classes="icon-small"/>
+                            <Image Source="/Assets/reset_to_default.ico" Classes="icon-small"/>
                             <TextBlock Text="Reset to Defaults" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>

@@ -128,8 +128,8 @@ public partial class SettingsPageViewModel : ViewModelBase
         : "Install URL Handler";
 
     public string ProtocolActionIconPath => IsProtocolRegistered
-        ? "/Assets/Icons9x/remove.ico"
-        : "/Assets/Icons9x/add.ico";
+        ? "/Assets/remove.ico"
+        : "/Assets/add.ico";
 
     public SettingsPageViewModel(
         IStationRepository stationRepository,

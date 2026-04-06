@@ -36,9 +36,9 @@ public partial class BassPluginSettingsView : UserControl
     private readonly TextBlock _statusText;
     private readonly IBrush? _statusNormalForeground;
 
-    private static readonly IImage _statusLoadedIcon = LoadIcon("avares://Traydio/Assets/Icons9x/play.ico");
-    private static readonly IImage _statusWarningIcon = LoadIcon("avares://Traydio/Assets/Icons9x/warning.ico");
-    private static readonly IImage _statusInvalidIcon = LoadIcon("avares://Traydio/Assets/Icons9x/stop.ico");
+    private static readonly IImage _statusLoadedIcon = LoadIcon("avares://Traydio/Assets/play.ico");
+    private static readonly IImage _statusWarningIcon = LoadIcon("avares://Traydio/Assets/warning.ico");
+    private static readonly IImage _statusInvalidIcon = LoadIcon("avares://Traydio/Assets/stop.ico");
 
     public BassPluginSettingsView()
         : this(new NullPluginSettingsAccessor(), NullLogger<BassPluginSettingsView>.Instance)

@@ -13,13 +13,13 @@
                          Text="{Binding CommandText, Mode=TwoWay}"/>
                 <Button Grid.Column="1" Classes="command-button" Command="{Binding RunCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Image Source="/Assets/Icons9x/play.ico" Classes="icon-small"/>
+                        <Image Source="/Assets/play.ico" Classes="icon-small"/>
                         <TextBlock Text="Run" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
                 <Button Grid.Column="2" Classes="command-button" Command="{Binding ClearCommand}">
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Image Source="/Assets/Icons9x/remove.ico" Classes="icon-small"/>
+                        <Image Source="/Assets/remove.ico" Classes="icon-small"/>
                         <TextBlock Text="Clear" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
@@ -43,7 +43,7 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="views:CommandTipItem">
                                 <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,0,4" ToolTip.Tip="{ReflectionBinding Tooltip}">
-                                    <Image Source="/Assets/Icons9x/info.ico"
+                                    <Image Source="/Assets/info.ico"
                                            Classes="icon-small"/>
                                     <Border Classes="tip-help-box">
                                         <TextBlock Text="{ReflectionBinding Command}"/>

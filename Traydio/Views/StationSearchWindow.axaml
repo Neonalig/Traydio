@@ -27,14 +27,14 @@
                     <TextBox Grid.Column="2" Classes="input-standard" Watermark="Search query" Text="{Binding Query}"/>
                     <Button Grid.Column="3" Classes="command-button" Command="{Binding SearchCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Image Source="/Assets/Icons9x/search.ico" Classes="icon-small"/>
+                            <Image Source="/Assets/search.ico" Classes="icon-small"/>
                             <TextBlock Text="Search" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
                     <TextBox Grid.Column="4" Classes="input-standard" Watermark="Filter results" Text="{Binding FilterText}"/>
                     <Button Grid.Column="5" Classes="command-button" Command="{Binding ApplyFilterCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Image Source="/Assets/Icons9x/refresh.ico" Classes="icon-small"/>
+                            <Image Source="/Assets/refresh.ico" Classes="icon-small"/>
                             <TextBlock Text="Apply Filter" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
@@ -99,7 +99,7 @@
                     <Grid Grid.Row="0" ColumnDefinitions="Auto,*" ColumnSpacing="8">
                         <Button Grid.Column="0" Classes="command-button" Command="{Binding OpenPluginManagerWindowCommand}">
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Image Source="/Assets/Icons9x/plugins.ico" Classes="icon-small"/>
+                                <Image Source="/Assets/plugins.ico" Classes="icon-small"/>
                                 <TextBlock Text="Open Plugin Manager" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>
@@ -110,7 +110,7 @@
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <Grid ColumnDefinitions="Auto,3*,5*" ColumnSpacing="8">
-                                    <Image Source="/Assets/Icons9x/stations.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
+                                    <Image Source="/Assets/stations.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
                                     <StackPanel Grid.Column="1">
                                         <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
                                         <TextBlock Text="{Binding Country}" Classes="subtle-text"/>
@@ -127,7 +127,7 @@
                     <Grid Grid.Row="2" ColumnDefinitions="Auto" ColumnSpacing="8">
                         <Button Grid.Column="0" Classes="command-button" Command="{Binding AddSelectedStationCommand}">
                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                <Image Source="/Assets/Icons9x/add.ico" Classes="icon-small"/>
+                                <Image Source="/Assets/add.ico" Classes="icon-small"/>
                                 <TextBlock Text="Add Selected Station" VerticalAlignment="Center"/>
                             </StackPanel>
                         </Button>

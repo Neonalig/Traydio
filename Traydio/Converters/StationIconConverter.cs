@@ -11,7 +11,7 @@ namespace Traydio.Converters;
 
 public sealed class StationIconConverter : IValueConverter
 {
-    public string DefaultIcon { get; init; } = "/Assets/Icons9x/stations.ico";
+    public string DefaultIcon { get; init; } = "/Assets/stations.ico";
 
     private readonly Dictionary<string, IImage> _fileIconCache = new(StringComparer.OrdinalIgnoreCase);
     private IImage? _defaultIcon;

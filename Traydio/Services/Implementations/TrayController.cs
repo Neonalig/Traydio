@@ -24,7 +24,7 @@ public sealed class TrayController : ITrayController
     public void Initialize(IClassicDesktopStyleApplicationLifetime lifetime)
     {
         TraydioTrace.Info("Tray", "Initializing tray icon.");
-        using var iconStream = AssetLoader.Open(new Uri("avares://Traydio/Assets/Icons9x/stations.ico"));
+        using var iconStream = AssetLoader.Open(new Uri("avares://Traydio/Assets/stations.ico"));
 
         _trayIcon = new TrayIcon
         {

@@ -9,6 +9,8 @@ public sealed class StationDiscoveryPluginSettings
     public List<string> DisabledPluginIds { get; set; } = [];
 
     public List<string> PendingDeletePluginPaths { get; set; } = [];
+
+    public bool HasShownPluginSafetyWarning { get; set; }
 }
 
 public sealed class CommunicationBridgeSettings
