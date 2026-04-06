@@ -45,8 +45,8 @@ public sealed class LibVlcPlugin : ITraydioPlugin
 
             if (settings is not null)
             {
-                settings.TryGetValue(LibVlcPluginSettings.OutputModuleKey, out outputModule);
-                settings.TryGetValue(LibVlcPluginSettings.OutputDeviceIdKey, out outputDeviceId);
+                settings.TryGetValue(LibVlcPluginSettings.OUTPUT_MODULE_KEY, out outputModule);
+                settings.TryGetValue(LibVlcPluginSettings.OUTPUT_DEVICE_ID_KEY, out outputDeviceId);
             }
 
             return new LibVlcRadioPlayer(outputModule, outputDeviceId);

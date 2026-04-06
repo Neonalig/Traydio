@@ -1,11 +1,13 @@
 ﻿using System;
+using System.Diagnostics;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Traydio.Common;
 
 namespace Traydio.Plugin.FmStreamOrg;
 
-public partial class FmStreamOrgPluginSettingsView : UserControl
+public class FmStreamOrgPluginSettingsView : UserControl
 {
     private readonly IPluginSettingsAccessor _settingsAccessor;
     private readonly ComboBox _apiMethodBox;
@@ -52,48 +54,59 @@ public partial class FmStreamOrgPluginSettingsView : UserControl
 
     private void BuildLayout()
     {
-        var panel = new StackPanel
+        _apiKeyNameBox.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
+        _apiKeyValueBox.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
+        _apiKeyNameBox.MinWidth = 260;
+        _apiKeyValueBox.MinWidth = 260;
+
+        var root = new Grid
         {
             Margin = new Avalonia.Thickness(12),
-            Spacing = 10,
+            RowDefinitions = new RowDefinitions("Auto,Auto,Auto,Auto,Auto,Auto,*"),
+            RowSpacing = 10,
         };
 
-        panel.Children.Add(new TextBlock
+        root.Children.Add(new TextBlock
         {
             Text = "FMStream.org API Settings",
             FontSize = 18,
             FontWeight = Avalonia.Media.FontWeight.SemiBold,
         });
 
-        panel.Children.Add(new TextBlock
+        var infoText = new TextBlock
         {
             Text = "Configure API method, key parameter, and default quality preference for station discovery requests.",
             TextWrapping = Avalonia.Media.TextWrapping.Wrap,
-        });
+        };
+        Grid.SetRow(infoText, 1);
+        root.Children.Add(infoText);
 
-        panel.Children.Add(new StackPanel
+        var methodGrid = new Grid
         {
-            Orientation = Avalonia.Layout.Orientation.Horizontal,
-            Spacing = 8,
-            Children =
-            {
-                new TextBlock { Text = "HTTP method", VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center },
-                _apiMethodBox,
-            },
-        });
+            ColumnDefinitions = new ColumnDefinitions("Auto,*"),
+            ColumnSpacing = 8,
+        };
+        methodGrid.Children.Add(new TextBlock { Text = "HTTP method", VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
+        Grid.SetColumn(_apiMethodBox, 1);
+        methodGrid.Children.Add(_apiMethodBox);
+        Grid.SetRow(methodGrid, 2);
+        root.Children.Add(methodGrid);
 
-        panel.Children.Add(new StackPanel
+        var keyGrid = new Grid
         {
-            Orientation = Avalonia.Layout.Orientation.Horizontal,
-            Spacing = 8,
-            Children =
-            {
-                new TextBlock { Text = "API key name", VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center },
-                _apiKeyNameBox,
-                new TextBlock { Text = "API key value", VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center },
-                _apiKeyValueBox,
-            },
-        });
+            ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto,*"),
+            ColumnSpacing = 8,
+        };
+        keyGrid.Children.Add(new TextBlock { Text = "API key name", VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center });
+        Grid.SetColumn(_apiKeyNameBox, 1);
+        keyGrid.Children.Add(_apiKeyNameBox);
+        var apiValueLabel = new TextBlock { Text = "API key value", VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center };
+        Grid.SetColumn(apiValueLabel, 2);
+        keyGrid.Children.Add(apiValueLabel);
+        Grid.SetColumn(_apiKeyValueBox, 3);
+        keyGrid.Children.Add(_apiKeyValueBox);
+        Grid.SetRow(keyGrid, 3);
+        root.Children.Add(keyGrid);
 
         var saveButton = new Button
         {
@@ -102,26 +115,96 @@ public partial class FmStreamOrgPluginSettingsView : UserControl
         };
         saveButton.Click += OnSaveClick;
 
-        panel.Children.Add(new StackPanel
+        var siteLinkButton = CreateHyperlinkButton("Open fmstream.org", OnOpenWebsiteClick);
+
+        var aboutButton = new Button
+        {
+            Content = "Copyright / About / Conditions",
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+        };
+        aboutButton.Click += OnAboutConditionsClick;
+
+        var actionPanel = new StackPanel
         {
             Orientation = Avalonia.Layout.Orientation.Horizontal,
             Spacing = 8,
-            Children =
-            {
-                _defaultHighQualityBox,
-                saveButton,
-            },
-        });
+        };
+        actionPanel.Children.Add(_defaultHighQualityBox);
+        actionPanel.Children.Add(saveButton);
+        actionPanel.Children.Add(aboutButton);
+        Grid.SetRow(actionPanel, 4);
+        root.Children.Add(actionPanel);
 
-        panel.Children.Add(new TextBlock
+        Grid.SetRow(siteLinkButton, 5);
+        root.Children.Add(siteLinkButton);
+
+        var hintText = new TextBlock
         {
             Text = "Use POST only if your fmstream key setup requires it; default GET follows documented query parameters.",
             TextWrapping = Avalonia.Media.TextWrapping.Wrap,
-        });
+        };
+        Grid.SetRow(hintText, 6);
+        root.Children.Add(hintText);
 
-        panel.Children.Add(_statusText);
+        Grid.SetRow(_statusText, 6);
+        _statusText.Margin = new Avalonia.Thickness(0, 30, 0, 0);
+        root.Children.Add(_statusText);
 
-        Content = panel;
+        Content = root;
+    }
+
+    private static Button CreateHyperlinkButton(string text, EventHandler<RoutedEventArgs> clickHandler)
+    {
+        var textBlock = new TextBlock
+        {
+            Text = text,
+            Foreground = Avalonia.Media.Brushes.DodgerBlue,
+            TextDecorations = Avalonia.Media.TextDecorations.Underline,
+        };
+
+        var button = new Button
+        {
+            Content = textBlock,
+            Background = Avalonia.Media.Brushes.Transparent,
+            BorderThickness = new Avalonia.Thickness(0),
+            Padding = new Avalonia.Thickness(0),
+            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+        };
+        button.Click += clickHandler;
+        return button;
+    }
+
+    private void OnOpenWebsiteClick(object? sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(FmStreamOrgPlugin.InstallDisclaimer.LinkUrl))
+        {
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = FmStreamOrgPlugin.InstallDisclaimer.LinkUrl,
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception ex)
+        {
+            _statusText.Text = "Could not open browser: " + ex.Message;
+        }
+    }
+
+    private async void OnAboutConditionsClick(object? sender, RoutedEventArgs e)
+    {
+        var shown = await _settingsAccessor.ShowInstallDisclaimerAsync(
+            FmStreamOrgPlugin.PLUGIN_ID,
+            FmStreamOrgPlugin.InstallDisclaimer,
+            requireAcceptance: false);
+        if (!shown)
+        {
+            _statusText.Text = "Could not display disclaimer dialog.";
+        }
     }
 
     private void OnSaveClick(object? sender, RoutedEventArgs e)
@@ -176,6 +259,11 @@ public partial class FmStreamOrgPluginSettingsView : UserControl
 
         public void Save()
         {
+        }
+
+        public Task<bool> ShowInstallDisclaimerAsync(string pluginId, PluginInstallDisclaimer disclaimer, bool requireAcceptance)
+        {
+            return Task.FromResult(!requireAcceptance);
         }
     }
 }

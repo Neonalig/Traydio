@@ -42,13 +42,21 @@
 
                 <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,*,Auto,*,Auto,*,Auto,*" ColumnSpacing="8">
                     <TextBlock Grid.Column="0" Text="Country" VerticalAlignment="Center"/>
-                    <TextBox Grid.Column="1" Classes="input-standard" Watermark="ITU code" Text="{Binding CountryFilter}" IsEnabled="{Binding SupportsCountryFilter}"/>
+                    <ComboBox Grid.Column="1"
+                              ItemsSource="{Binding CountryOptions}"
+                              SelectedItem="{Binding SelectedCountry}"
+                              DisplayMemberBinding="{Binding DisplayName}"
+                              IsEnabled="{Binding SupportsCountryFilter}"/>
 
                     <TextBlock Grid.Column="2" Text="Genre" VerticalAlignment="Center"/>
                     <TextBox Grid.Column="3" Classes="input-standard" Watermark="style" Text="{Binding GenreFilter}" IsEnabled="{Binding SupportsGenreFilter}"/>
 
                     <TextBlock Grid.Column="4" Text="Language" VerticalAlignment="Center"/>
-                    <TextBox Grid.Column="5" Classes="input-standard" Watermark="ISO-2" Text="{Binding LanguageFilter}" IsEnabled="{Binding SupportsLanguageFilter}"/>
+                    <ComboBox Grid.Column="5"
+                              ItemsSource="{Binding LanguageOptions}"
+                              SelectedItem="{Binding SelectedLanguage}"
+                              DisplayMemberBinding="{Binding DisplayName}"
+                              IsEnabled="{Binding SupportsLanguageFilter}"/>
 
                     <TextBlock Grid.Column="6" Text="Order" VerticalAlignment="Center"/>
                     <TextBox Grid.Column="7" Classes="input-standard" Watermark="top/big/med/sma" Text="{Binding OrderFilter}" IsEnabled="{Binding SupportsOrderFilter}"/>

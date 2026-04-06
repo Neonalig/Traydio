@@ -2,7 +2,7 @@
 
 internal static class LibVlcPluginSettings
 {
-    public const string OutputModuleKey = "outputModule";
-    public const string OutputDeviceIdKey = "outputDeviceId";
+    public const string OUTPUT_MODULE_KEY = "outputModule";
+    public const string OUTPUT_DEVICE_ID_KEY = "outputDeviceId";
 }
 

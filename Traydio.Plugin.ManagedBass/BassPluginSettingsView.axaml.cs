@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
@@ -123,7 +124,7 @@ public partial class BassPluginSettingsView : UserControl
 
     private async System.Threading.Tasks.Task OnBrowseBassClickAsync()
     {
-        await PickDependencyPathAsync(_bassPathBox, BassPluginSettings.BassDllPathKey, "bass.dll");
+        await PickDependencyPathAsync(_bassPathBox, BassPluginSettings.BASS_DLL_PATH_KEY, "bass.dll");
         ConfigureNativeLibraryPath();
         RefreshDependencyStatuses();
     }
@@ -135,7 +136,7 @@ public partial class BassPluginSettingsView : UserControl
 
     private async System.Threading.Tasks.Task OnBrowseBassOpusClickAsync()
     {
-        await PickDependencyPathAsync(_bassOpusPathBox, BassPluginSettings.BassOpusDllPathKey, "bassopus.dll");
+        await PickDependencyPathAsync(_bassOpusPathBox, BassPluginSettings.BASS_OPUS_DLL_PATH_KEY, "bassopus.dll");
         RefreshDependencyStatuses();
     }
 
@@ -146,7 +147,7 @@ public partial class BassPluginSettingsView : UserControl
 
     private async System.Threading.Tasks.Task OnBrowseTagsClickAsync()
     {
-        await PickDependencyPathAsync(_tagsPathBox, BassPluginSettings.TagsDllPathKey, "tags.dll");
+        await PickDependencyPathAsync(_tagsPathBox, BassPluginSettings.TAGS_DLL_PATH_KEY, "tags.dll");
         RefreshDependencyStatuses();
     }
 
@@ -164,10 +165,10 @@ public partial class BassPluginSettingsView : UserControl
     private async System.Threading.Tasks.Task OnDownloadBassClickAsync()
     {
         await DownloadDependencyAsync(
-            BassPluginSettings.BassDownloadUrl,
+            BassPluginSettings.BASS_DOWNLOAD_URL,
             "bass.dll",
             _bassPathBox,
-            BassPluginSettings.BassDllPathKey,
+            BassPluginSettings.BASS_DLL_PATH_KEY,
             "Downloading bass24.zip...");
         ConfigureNativeLibraryPath();
         RefreshDependencyStatuses();
@@ -181,10 +182,10 @@ public partial class BassPluginSettingsView : UserControl
     private async System.Threading.Tasks.Task OnDownloadBassOpusClickAsync()
     {
         await DownloadDependencyAsync(
-            BassPluginSettings.BassOpusDownloadUrl,
+            BassPluginSettings.BASS_OPUS_DOWNLOAD_URL,
             "bassopus.dll",
             _bassOpusPathBox,
-            BassPluginSettings.BassOpusDllPathKey,
+            BassPluginSettings.BASS_OPUS_DLL_PATH_KEY,
             "Downloading bassopus24.zip...");
         RefreshDependencyStatuses();
     }
@@ -197,10 +198,10 @@ public partial class BassPluginSettingsView : UserControl
     private async System.Threading.Tasks.Task OnDownloadTagsClickAsync()
     {
         await DownloadDependencyAsync(
-            BassPluginSettings.BassTagsDownloadUrl,
+            BassPluginSettings.BASS_TAGS_DOWNLOAD_URL,
             "tags.dll",
             _tagsPathBox,
-            BassPluginSettings.TagsDllPathKey,
+            BassPluginSettings.TAGS_DLL_PATH_KEY,
             "Downloading basstags.zip...");
         RefreshDependencyStatuses();
     }
@@ -253,7 +254,7 @@ public partial class BassPluginSettingsView : UserControl
 
         targetBox.Text = selectedPath;
         SaveDependencyPath(settingsKey, selectedPath);
-        if (settingsKey == BassPluginSettings.BassDllPathKey)
+        if (settingsKey == BassPluginSettings.BASS_DLL_PATH_KEY)
         {
             SaveLegacyNativeFolder(selectedPath);
         }
@@ -355,11 +356,11 @@ public partial class BassPluginSettingsView : UserControl
     {
         if (_outputDeviceComboBox.SelectedItem is OutputDeviceOption { DeviceIndex: { } selectedIndex })
         {
-            _settingsAccessor.SetValue(BassPluginSettings.OutputDeviceIndexKey, selectedIndex.ToString());
+            _settingsAccessor.SetValue(BassPluginSettings.OUTPUT_DEVICE_INDEX_KEY, selectedIndex.ToString());
         }
         else
         {
-            _settingsAccessor.SetValue(BassPluginSettings.OutputDeviceIndexKey, null);
+            _settingsAccessor.SetValue(BassPluginSettings.OUTPUT_DEVICE_INDEX_KEY, null);
         }
 
         _settingsAccessor.Save();
@@ -371,7 +372,7 @@ public partial class BassPluginSettingsView : UserControl
 
         try
         {
-            var configuredValue = _settingsAccessor.GetValue(BassPluginSettings.OutputDeviceIndexKey);
+            var configuredValue = _settingsAccessor.GetValue(BassPluginSettings.OUTPUT_DEVICE_INDEX_KEY);
             configuredIndex = int.TryParse(configuredValue, out var parsedIndex)
                 ? parsedIndex
                 : null;
@@ -425,7 +426,7 @@ public partial class BassPluginSettingsView : UserControl
 
         try
         {
-            var savedFolder = _settingsAccessor.GetValue(BassPluginSettings.NativeLibraryFolderKey);
+            var savedFolder = _settingsAccessor.GetValue(BassPluginSettings.NATIVE_LIBRARY_FOLDER_KEY);
             if (!string.IsNullOrWhiteSpace(savedFolder))
             {
                 fallbackFolder = savedFolder;
@@ -436,9 +437,9 @@ public partial class BassPluginSettingsView : UserControl
             LogError("Failed to load native folder fallback.", ex);
         }
 
-        _bassPathBox.Text = LoadDependencyPath(BassPluginSettings.BassDllPathKey, fallbackFolder, "bass.dll");
-        _bassOpusPathBox.Text = LoadDependencyPath(BassPluginSettings.BassOpusDllPathKey, fallbackFolder, "bassopus.dll");
-        _tagsPathBox.Text = LoadDependencyPath(BassPluginSettings.TagsDllPathKey, fallbackFolder, "tags.dll");
+        _bassPathBox.Text = LoadDependencyPath(BassPluginSettings.BASS_DLL_PATH_KEY, fallbackFolder, "bass.dll");
+        _bassOpusPathBox.Text = LoadDependencyPath(BassPluginSettings.BASS_OPUS_DLL_PATH_KEY, fallbackFolder, "bassopus.dll");
+        _tagsPathBox.Text = LoadDependencyPath(BassPluginSettings.TAGS_DLL_PATH_KEY, fallbackFolder, "tags.dll");
     }
 
     private string LoadDependencyPath(string settingsKey, string fallbackFolder, string dllName)
@@ -473,7 +474,7 @@ public partial class BassPluginSettingsView : UserControl
             return;
         }
 
-        _settingsAccessor.SetValue(BassPluginSettings.NativeLibraryFolderKey, folder);
+        _settingsAccessor.SetValue(BassPluginSettings.NATIVE_LIBRARY_FOLDER_KEY, folder);
         _settingsAccessor.Save();
     }
 
@@ -626,6 +627,11 @@ public partial class BassPluginSettingsView : UserControl
 
         public void Save()
         {
+        }
+
+        public Task<bool> ShowInstallDisclaimerAsync(string pluginId, PluginInstallDisclaimer disclaimer, bool requireAcceptance)
+        {
+            return Task.FromResult(!requireAcceptance);
         }
     }
 }

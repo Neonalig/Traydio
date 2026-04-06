@@ -31,6 +31,24 @@ public sealed class FmStreamOrgPlugin : ITraydioPlugin
         SupportedModes = [StationSearchMode.Query, StationSearchMode.Featured, StationSearchMode.Random],
     };
 
+    public static PluginInstallDisclaimer InstallDisclaimer { get; } = new()
+    {
+        Version = "2026-04-06",
+        Title = "FMStream.org data usage conditions",
+        Message =
+            "This plugin uses fmstream.org station data for non-commercial use.\n\n" +
+            "By accepting, you confirm that:\n" +
+            "- Traydio and this plugin are used as free/open-source software for non-commercial use only.\n" +
+            "- You accept full responsibility and release fmstream.org and Traydio authors from liability.\n" +
+            "- Station details and stream links may be incorrect, outdated, or legally problematic in your region.\n" +
+            "- You must not republish or aggregate fmstream data into your own database.\n\n" +
+            "Reject to cancel installation.",
+        LinkText = "Open fmstream.org",
+        LinkUrl = "https://fmstream.org/",
+        AcceptButtonText = "Accept",
+        RejectButtonText = "Reject",
+    };
+
     private readonly ILogger<FmStreamOrgPlugin> _logger;
     private readonly IPluginSettingsProvider? _settingsProvider;
 
@@ -38,7 +56,7 @@ public sealed class FmStreamOrgPlugin : ITraydioPlugin
     {
         _logger = logger;
         _settingsProvider = settingsProvider;
-        Capabilities = [new StationDiscoveryCapability(this), new SettingsCapability()];
+        Capabilities = [new StationDiscoveryCapability(this), new SettingsCapability(), new InstallDisclaimerCapability()];
     }
 
     public string Id => PLUGIN_ID;
@@ -472,6 +490,13 @@ public sealed class FmStreamOrgPlugin : ITraydioPlugin
         {
             return new FmStreamOrgPluginSettingsView(settingsAccessor);
         }
+    }
+
+    private sealed class InstallDisclaimerCapability : IPluginInstallDisclaimerCapability
+    {
+        public string CapabilityId => "plugin-install-disclaimer";
+
+        public PluginInstallDisclaimer Disclaimer => InstallDisclaimer;
     }
 
 }

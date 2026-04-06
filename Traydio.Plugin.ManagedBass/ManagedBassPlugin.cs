@@ -49,11 +49,11 @@ public sealed class ManagedBassPlugin : ITraydioPlugin
 
             if (settings is not null)
             {
-                settings.TryGetValue(BassPluginSettings.BassDllPathKey, out bassDllPath);
-                settings.TryGetValue(BassPluginSettings.BassOpusDllPathKey, out bassOpusDllPath);
-                settings.TryGetValue(BassPluginSettings.TagsDllPathKey, out tagsDllPath);
-                settings.TryGetValue(BassPluginSettings.NativeLibraryFolderKey, out nativeFolder);
-                settings.TryGetValue(BassPluginSettings.OutputDeviceIndexKey, out outputDeviceIndexText);
+                settings.TryGetValue(BassPluginSettings.BASS_DLL_PATH_KEY, out bassDllPath);
+                settings.TryGetValue(BassPluginSettings.BASS_OPUS_DLL_PATH_KEY, out bassOpusDllPath);
+                settings.TryGetValue(BassPluginSettings.TAGS_DLL_PATH_KEY, out tagsDllPath);
+                settings.TryGetValue(BassPluginSettings.NATIVE_LIBRARY_FOLDER_KEY, out nativeFolder);
+                settings.TryGetValue(BassPluginSettings.OUTPUT_DEVICE_INDEX_KEY, out outputDeviceIndexText);
             }
 
             if (!string.IsNullOrWhiteSpace(bassDllPath)

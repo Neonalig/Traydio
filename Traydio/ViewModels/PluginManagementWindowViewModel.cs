@@ -6,6 +6,8 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -24,6 +26,7 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
     private static readonly HashSet<string> _recommendedAssemblyNameHashes = LoadRecommendedHashes(_RECOMMENDED_ASSEMBLY_HASH_METADATA_KEY);
 
     private readonly IPluginManager _pluginManager;
+    private readonly IPluginInstallDisclaimerService _pluginInstallDisclaimerService;
     private readonly IStationRepository _stationRepository;
     private readonly IWindowManager _windowManager;
 
@@ -49,9 +52,14 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
     [ObservableProperty]
     private bool _hasPendingDeletes;
 
-    public PluginManagementWindowViewModel(IPluginManager pluginManager, IStationRepository stationRepository, IWindowManager windowManager)
+    public PluginManagementWindowViewModel(
+        IPluginManager pluginManager,
+        IPluginInstallDisclaimerService pluginInstallDisclaimerService,
+        IStationRepository stationRepository,
+        IWindowManager windowManager)
     {
         _pluginManager = pluginManager;
+        _pluginInstallDisclaimerService = pluginInstallDisclaimerService;
         _stationRepository = stationRepository;
         _windowManager = windowManager;
 
@@ -119,7 +127,7 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void InstallSelectedCandidate()
+    private async Task InstallSelectedCandidate()
     {
         if (SelectedPluginCandidate is null)
         {
@@ -127,11 +135,11 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             return;
         }
 
-        InstallPluginFromPath(SelectedPluginCandidate.Path);
+        await InstallPluginFromPathAsync(SelectedPluginCandidate.Path, CancellationToken.None).ConfigureAwait(false);
     }
 
     [RelayCommand]
-    private void InstallFromPath()
+    private async Task InstallFromPath()
     {
         if (string.IsNullOrWhiteSpace(PluginDllPath))
         {
@@ -139,7 +147,7 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             return;
         }
 
-        InstallPluginFromPath(PluginDllPath);
+        await InstallPluginFromPathAsync(PluginDllPath, CancellationToken.None).ConfigureAwait(false);
     }
 
     [RelayCommand]
@@ -201,15 +209,15 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void InstallCandidateItem(PluginCandidateItem? candidate)
+    private async Task InstallCandidateItem(PluginCandidateItem? candidate)
     {
-        InstallCandidate(candidate);
+        await InstallCandidate(candidate, CancellationToken.None).ConfigureAwait(false);
     }
 
     [RelayCommand]
-    private void UpgradeCandidateItem(PluginCandidateItem? candidate)
+    private async Task UpgradeCandidateItem(PluginCandidateItem? candidate)
     {
-        InstallCandidate(candidate);
+        await InstallCandidate(candidate, CancellationToken.None).ConfigureAwait(false);
     }
 
     public bool TryOpenPluginSettings(InstalledPluginItem? pluginItem, out string? error)
@@ -237,20 +245,31 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         return false;
     }
 
-    private void InstallPluginFromPath(string path)
+    private async Task<bool> InstallPluginFromPathAsync(string path, CancellationToken cancellationToken)
     {
+        var installedBefore = _pluginManager.GetPluginInventory()
+            .Select(item => item.Id)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         if (_pluginManager.AddPlugin(path, out var error))
         {
+            if (!await ConfirmInstallDisclaimersAsync(installedBefore, cancellationToken).ConfigureAwait(false))
+            {
+                Refresh();
+                return false;
+            }
+
             PluginDllPath = string.Empty;
             Status = "Plugin installed and loaded.";
             Refresh();
-            return;
+            return true;
         }
 
         Status = "Could not install plugin: " + (error ?? "Unknown error.");
+        return false;
     }
 
-    public void InstallPluginsFromDroppedPaths(IReadOnlyList<string> paths)
+    public async Task InstallPluginsFromDroppedPathsAsync(IReadOnlyList<string> paths)
     {
         if (paths.Count == 0)
         {
@@ -262,13 +281,13 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
 
         foreach (var path in paths)
         {
-            if (_pluginManager.AddPlugin(path, out var error))
+            if (await InstallPluginFromPathAsync(path, CancellationToken.None).ConfigureAwait(false))
             {
                 successes++;
             }
             else
             {
-                lastError = error;
+                lastError = Status;
             }
         }
 
@@ -333,14 +352,14 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         return false;
     }
 
-    public void InstallCandidate(PluginCandidateItem? candidate)
+    public async Task InstallCandidate(PluginCandidateItem? candidate, CancellationToken cancellationToken)
     {
         if (candidate is null)
         {
             return;
         }
 
-        InstallPluginFromPath(candidate.Path);
+        await InstallPluginFromPathAsync(candidate.Path, cancellationToken).ConfigureAwait(false);
     }
 
     public bool ChangePluginDirectory(string newDirectory, bool migrateExistingPlugins, out string? error)
@@ -391,7 +410,7 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void UpgradeCandidate(PluginCandidateItem? candidate)
+    private async Task UpgradeCandidate(PluginCandidateItem? candidate)
     {
         if (candidate is null)
         {
@@ -399,7 +418,7 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             return;
         }
 
-        InstallPluginFromPath(candidate.Path);
+        await InstallPluginFromPathAsync(candidate.Path, CancellationToken.None).ConfigureAwait(false);
     }
 
     public string? GetDowngradeWarningForPath(string path)
@@ -425,7 +444,7 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         return null;
     }
 
-    public void InstallPluginFromFilePath(string path)
+    public async Task InstallPluginFromFilePathAsync(string path)
     {
         if (string.IsNullOrWhiteSpace(path))
         {
@@ -433,7 +452,37 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             return;
         }
 
-        InstallPluginFromPath(path);
+        await InstallPluginFromPathAsync(path, CancellationToken.None).ConfigureAwait(false);
+    }
+
+    private async Task<bool> ConfirmInstallDisclaimersAsync(HashSet<string> installedBefore, CancellationToken cancellationToken)
+    {
+        var newlyInstalled = _pluginManager.GetPlugins()
+            .Where(plugin => !installedBefore.Contains(plugin.Id))
+            .ToArray();
+
+        foreach (var plugin in newlyInstalled)
+        {
+            var disclaimerCapability = plugin.Capabilities.OfType<IPluginInstallDisclaimerCapability>().FirstOrDefault();
+            if (disclaimerCapability is null)
+            {
+                continue;
+            }
+
+            var accepted = await _pluginInstallDisclaimerService
+                .EnsureAcceptedAsync(plugin.Id, disclaimerCapability.Disclaimer, cancellationToken)
+                .ConfigureAwait(false);
+            if (accepted)
+            {
+                continue;
+            }
+
+            _pluginManager.RemovePlugin(plugin.Id, out _);
+            Status = $"Installation canceled: '{plugin.DisplayName}' conditions were rejected.";
+            return false;
+        }
+
+        return true;
     }
 
     private IEnumerable<PluginCandidateItem> DiscoverEligiblePluginDlls(

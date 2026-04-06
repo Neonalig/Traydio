@@ -122,6 +122,7 @@ sealed class Program
 
         services.AddSingleton<IStationRepository, StationRepository>();
         services.AddSingleton<IPluginSettingsProvider, PluginSettingsProvider>();
+        services.AddSingleton<IPluginInstallDisclaimerService, PluginInstallDisclaimerService>();
         services.AddSingleton<IRadioPlayer, DeferredPluginRadioPlayer>();
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IWindowManager, WindowManager>();

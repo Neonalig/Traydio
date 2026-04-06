@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Net.Http;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Threading;
@@ -17,8 +19,11 @@ namespace Traydio.ViewModels;
 [ViewModelFor(typeof(StationSearchPage))]
 public partial class StationSearchWindowViewModel : ViewModelBase
 {
+    private static readonly HttpClient _lookupHttpClient = new();
+
     private readonly IStationDiscoveryService _stationDiscoveryService;
     private readonly IPluginManager _pluginManager;
+    private readonly IPluginInstallDisclaimerService _pluginInstallDisclaimerService;
     private readonly IStationRepository _stationRepository;
     private readonly IAppCommandDispatcher _commandDispatcher;
 
@@ -28,6 +33,8 @@ public partial class StationSearchWindowViewModel : ViewModelBase
 
     public ObservableCollection<ProviderOption> Providers { get; } = [];
     public ObservableCollection<SearchModeOption> SearchModes { get; } = [];
+    public ObservableCollection<CodeOption> CountryOptions { get; } = [];
+    public ObservableCollection<CodeOption> LanguageOptions { get; } = [];
 
     public ObservableCollection<DiscoveredStation> Results { get; } = [];
 
@@ -51,6 +58,12 @@ public partial class StationSearchWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _languageFilter = string.Empty;
+
+    [ObservableProperty]
+    private CodeOption? _selectedCountry;
+
+    [ObservableProperty]
+    private CodeOption? _selectedLanguage;
 
     [ObservableProperty]
     private string _orderFilter = string.Empty;
@@ -98,15 +111,19 @@ public partial class StationSearchWindowViewModel : ViewModelBase
     public StationSearchWindowViewModel(
         IStationDiscoveryService stationDiscoveryService,
         IPluginManager pluginManager,
+        IPluginInstallDisclaimerService pluginInstallDisclaimerService,
         IStationRepository stationRepository,
         IAppCommandDispatcher commandDispatcher)
     {
         _stationDiscoveryService = stationDiscoveryService;
         _pluginManager = pluginManager;
+        _pluginInstallDisclaimerService = pluginInstallDisclaimerService;
         _stationRepository = stationRepository;
         _commandDispatcher = commandDispatcher;
 
         _pluginManager.PluginsChanged += (_, _) => RefreshProviders();
+        InitializeLanguageOptions();
+        LoadCountryOptionsAsync().ForgetWithErrorHandling("Load station search country list", showDialog: false);
         RefreshProviders();
     }
 
@@ -147,6 +164,8 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         CountryFilter = string.Empty;
         GenreFilter = string.Empty;
         LanguageFilter = string.Empty;
+        SelectedCountry = CountryOptions.FirstOrDefault();
+        SelectedLanguage = LanguageOptions.FirstOrDefault();
         OrderFilter = string.Empty;
         PreferHighQuality = true;
         _activePageIndex = 0;
@@ -177,9 +196,9 @@ public partial class StationSearchWindowViewModel : ViewModelBase
             {
                 Mode = mode,
                 Query = Query,
-                Country = SupportsCountryFilter ? NormalizeFilterValue(CountryFilter) : null,
+                Country = SupportsCountryFilter ? SelectedCountry?.Code ?? NormalizeFilterValue(CountryFilter) : null,
                 Genre = SupportsGenreFilter ? NormalizeFilterValue(GenreFilter) : null,
-                Language = SupportsLanguageFilter ? NormalizeFilterValue(LanguageFilter) : null,
+                Language = SupportsLanguageFilter ? SelectedLanguage?.Code ?? NormalizeFilterValue(LanguageFilter) : null,
                 Order = SupportsOrderFilter ? NormalizeFilterValue(OrderFilter) : null,
                 PreferHighQuality = SupportsHighQualityPreference ? PreferHighQuality : null,
                 Offset = SupportsPagination ? _activePageIndex * pageSize : 0,
@@ -270,7 +289,7 @@ public partial class StationSearchWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void AddPluginFromPath()
+    private async Task AddPluginFromPath()
     {
         if (string.IsNullOrWhiteSpace(PluginDllPath))
         {
@@ -278,8 +297,38 @@ public partial class StationSearchWindowViewModel : ViewModelBase
             return;
         }
 
+        var installedBefore = _pluginManager.GetPluginInventory()
+            .Select(item => item.Id)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
         if (_pluginManager.AddPlugin(PluginDllPath, out var error))
         {
+            var newlyInstalled = _pluginManager.GetPlugins()
+                .Where(plugin => !installedBefore.Contains(plugin.Id))
+                .ToArray();
+
+            foreach (var plugin in newlyInstalled)
+            {
+                var disclaimerCapability = plugin.Capabilities.OfType<IPluginInstallDisclaimerCapability>().FirstOrDefault();
+                if (disclaimerCapability is null)
+                {
+                    continue;
+                }
+
+                var accepted = await _pluginInstallDisclaimerService
+                    .EnsureAcceptedAsync(plugin.Id, disclaimerCapability.Disclaimer, CancellationToken.None)
+                    .ConfigureAwait(false);
+                if (accepted)
+                {
+                    continue;
+                }
+
+                _pluginManager.RemovePlugin(plugin.Id, out _);
+                Status = $"Installation canceled: '{plugin.DisplayName}' conditions were rejected.";
+                RefreshProviders();
+                return;
+            }
+
             PluginDllPath = string.Empty;
             Status = "Plugin added. Providers reloaded.";
             RefreshProviders();
@@ -382,6 +431,134 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         return string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
     }
 
+    private void InitializeLanguageOptions()
+    {
+        LanguageOptions.Clear();
+        LanguageOptions.Add(new CodeOption(string.Empty, "Any language"));
+
+        foreach (var option in new[]
+                 {
+                     new CodeOption("en", "English"),
+                     new CodeOption("es", "Spanish"),
+                     new CodeOption("fr", "French"),
+                     new CodeOption("de", "German"),
+                     new CodeOption("it", "Italian"),
+                     new CodeOption("pt", "Portuguese"),
+                     new CodeOption("nl", "Dutch"),
+                     new CodeOption("sv", "Swedish"),
+                     new CodeOption("no", "Norwegian"),
+                     new CodeOption("da", "Danish"),
+                     new CodeOption("fi", "Finnish"),
+                     new CodeOption("pl", "Polish"),
+                     new CodeOption("cs", "Czech"),
+                     new CodeOption("tr", "Turkish"),
+                     new CodeOption("ru", "Russian"),
+                     new CodeOption("uk", "Ukrainian"),
+                     new CodeOption("ja", "Japanese"),
+                     new CodeOption("ko", "Korean"),
+                     new CodeOption("zh", "Chinese"),
+                     new CodeOption("ar", "Arabic"),
+                 })
+        {
+            LanguageOptions.Add(option);
+        }
+
+        SelectedLanguage = LanguageOptions.FirstOrDefault();
+    }
+
+    private async Task LoadCountryOptionsAsync()
+    {
+        var countries = await FetchFmStreamItuCountriesAsync().ConfigureAwait(false);
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            CountryOptions.Clear();
+            CountryOptions.Add(new CodeOption(string.Empty, "Any country"));
+            foreach (var country in countries)
+            {
+                CountryOptions.Add(country);
+            }
+
+            SelectedCountry = CountryOptions.FirstOrDefault();
+        });
+    }
+
+    private static async Task<IReadOnlyList<CodeOption>> FetchFmStreamItuCountriesAsync()
+    {
+        try
+        {
+            var payload = await _lookupHttpClient.GetStringAsync("https://fmstream.org/itu.php").ConfigureAwait(false);
+            var parsed = ParseCountryMapPayload(payload);
+            if (parsed.Count > 0)
+            {
+                return parsed;
+            }
+        }
+        catch
+        {
+            // Network or parsing issues fall back to a small static list.
+        }
+
+        return
+        [
+            new CodeOption("ABW", "Aruba (HOL)"),
+            new CodeOption("AFG", "Afghanistan"),
+            new CodeOption("AFS", "South Africa"),
+            new CodeOption("AUS", "Australia"),
+            new CodeOption("AUT", "Austria"),
+            new CodeOption("BEL", "Belgium"),
+            new CodeOption("BRA", "Brazil"),
+            new CodeOption("CAN", "Canada"),
+            new CodeOption("DEU", "Germany"),
+            new CodeOption("ESP", "Spain"),
+            new CodeOption("FRA", "France"),
+            new CodeOption("GBR", "United Kingdom"),
+            new CodeOption("ITA", "Italy"),
+            new CodeOption("JPN", "Japan"),
+            new CodeOption("NLD", "Netherlands"),
+            new CodeOption("POL", "Poland"),
+            new CodeOption("PRT", "Portugal"),
+            new CodeOption("SWE", "Sweden"),
+            new CodeOption("USA", "United States"),
+        ];
+    }
+
+    private static IReadOnlyList<CodeOption> ParseCountryMapPayload(string payload)
+    {
+        var start = payload.IndexOf('{');
+        var end = payload.LastIndexOf('}');
+        if (start < 0 || end <= start)
+        {
+            return [];
+        }
+
+        var json = payload.Substring(start, end - start + 1);
+        using var document = JsonDocument.Parse(json);
+        if (document.RootElement.ValueKind != JsonValueKind.Object)
+        {
+            return [];
+        }
+
+        var list = new List<CodeOption>();
+        foreach (var property in document.RootElement.EnumerateObject())
+        {
+            if (property.Value.ValueKind != JsonValueKind.String)
+            {
+                continue;
+            }
+
+            var code = property.Name.Trim().ToUpperInvariant();
+            var name = property.Value.GetString()?.Trim();
+            if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(name))
+            {
+                continue;
+            }
+
+            list.Add(new CodeOption(code, $"{name} ({code})"));
+        }
+
+        return list.OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase).ToArray();
+    }
+
     private void RefreshProviders()
     {
         void Update()
@@ -434,6 +611,13 @@ public partial class StationSearchWindowViewModel : ViewModelBase
     public sealed class SearchModeOption(StationSearchMode mode, string displayName)
     {
         public StationSearchMode Mode { get; } = mode;
+
+        public string DisplayName { get; } = displayName;
+    }
+
+    public sealed class CodeOption(string code, string displayName)
+    {
+        public string Code { get; } = code;
 
         public string DisplayName { get; } = displayName;
     }

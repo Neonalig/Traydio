@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Windows.Input;
@@ -77,7 +78,7 @@ public partial class PluginManagementPage : UserControl
         }
 
         viewModel.PluginDllPath = selected.TryGetLocalPath() ?? selected.Name;
-        viewModel.InstallPluginFromFilePath(viewModel.PluginDllPath);
+        await viewModel.InstallPluginFromFilePathAsync(viewModel.PluginDllPath);
         await ShowViewModelStatusDialogAsync(viewModel, "Plugin install");
     }
 
@@ -123,7 +124,7 @@ public partial class PluginManagementPage : UserControl
             return;
         }
 
-        viewModel.InstallCandidate(candidate);
+        await viewModel.InstallCandidate(candidate, CancellationToken.None);
         await ShowViewModelStatusDialogAsync(viewModel, "Plugin upgrade");
     }
 
@@ -144,7 +145,7 @@ public partial class PluginManagementPage : UserControl
             return;
         }
 
-        viewModel.InstallCandidate(candidate);
+        await viewModel.InstallCandidate(candidate, CancellationToken.None);
         await ShowViewModelStatusDialogAsync(viewModel, "Plugin install");
     }
 
@@ -340,7 +341,7 @@ public partial class PluginManagementPage : UserControl
             return;
         }
 
-        viewModel.InstallCandidate(candidate);
+        await viewModel.InstallCandidate(candidate, CancellationToken.None);
         await ShowViewModelStatusDialogAsync(viewModel, "Plugin install");
     }
 
@@ -383,7 +384,7 @@ public partial class PluginManagementPage : UserControl
             return;
         }
 
-        viewModel.InstallPluginsFromDroppedPaths(files);
+        await viewModel.InstallPluginsFromDroppedPathsAsync(files);
         await ShowViewModelStatusDialogAsync(viewModel, "Plugin install");
     }
 
@@ -473,7 +474,7 @@ public partial class PluginManagementPage : UserControl
             await ShowInfoDialogAsync("Plugin downgrade warning", warning);
         }
 
-        viewModel.InstallPluginFromFilePath(viewModel.PluginDllPath);
+        await viewModel.InstallPluginFromFilePathAsync(viewModel.PluginDllPath);
         await ShowViewModelStatusDialogAsync(viewModel, "Plugin install");
     }
 

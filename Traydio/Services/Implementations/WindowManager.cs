@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Platform;
 using Avalonia.Media.Imaging;
@@ -18,6 +20,7 @@ public sealed class WindowManager(
     INavigationService navigationService,
     IPluginManager pluginManager,
     IPluginSettingsProvider pluginSettingsProvider,
+    IPluginInstallDisclaimerService pluginInstallDisclaimerService,
     ILogger<WindowManager> logger) : IWindowManager
 {
     private MainWindow? _mainWindow;
@@ -172,7 +175,10 @@ public sealed class WindowManager(
         object? content;
         try
         {
-            content = settingsCapability.CreateSettingsView(new PluginSettingsAccessor(pluginSettingsProvider, plugin.Id));
+            content = settingsCapability.CreateSettingsView(new PluginSettingsAccessor(
+                pluginSettingsProvider,
+                pluginInstallDisclaimerService,
+                plugin.Id));
         }
         catch (Exception ex)
         {
@@ -273,7 +279,10 @@ public sealed class WindowManager(
         };
     }
 
-    private sealed class PluginSettingsAccessor(IPluginSettingsProvider pluginSettingsProvider, string pluginId) : IPluginSettingsAccessor
+    private sealed class PluginSettingsAccessor(
+        IPluginSettingsProvider pluginSettingsProvider,
+        IPluginInstallDisclaimerService pluginInstallDisclaimerService,
+        string pluginId) : IPluginSettingsAccessor
     {
         private readonly Dictionary<string, string> _values = new(
             pluginSettingsProvider.GetPluginSettings(pluginId),
@@ -303,6 +312,11 @@ public sealed class WindowManager(
         public void Save()
         {
             pluginSettingsProvider.SavePluginSettings(pluginId, _values);
+        }
+
+        public Task<bool> ShowInstallDisclaimerAsync(string targetPluginId, PluginInstallDisclaimer disclaimer, bool requireAcceptance)
+        {
+            return pluginInstallDisclaimerService.ShowAsync(disclaimer, requireAcceptance, CancellationToken.None);
         }
     }
 }

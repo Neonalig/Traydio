@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
@@ -30,8 +31,8 @@ public partial class LibVlcPluginSettingsView : UserControl
         _statusText = this.FindControl<TextBlock>("StatusText")
             ?? throw new InvalidOperationException("LibVLC settings view is missing StatusText.");
 
-        _outputModuleBox.Text = _settingsAccessor.GetValue(LibVlcPluginSettings.OutputModuleKey);
-        _outputDeviceIdBox.Text = _settingsAccessor.GetValue(LibVlcPluginSettings.OutputDeviceIdKey);
+        _outputModuleBox.Text = _settingsAccessor.GetValue(LibVlcPluginSettings.OUTPUT_MODULE_KEY);
+        _outputDeviceIdBox.Text = _settingsAccessor.GetValue(LibVlcPluginSettings.OUTPUT_DEVICE_ID_KEY);
     }
 
     private void OnSaveClick(object? sender, RoutedEventArgs e)
@@ -39,8 +40,8 @@ public partial class LibVlcPluginSettingsView : UserControl
         var module = _outputModuleBox.Text?.Trim();
         var deviceId = _outputDeviceIdBox.Text?.Trim();
 
-        _settingsAccessor.SetValue(LibVlcPluginSettings.OutputModuleKey, string.IsNullOrWhiteSpace(module) ? null : module);
-        _settingsAccessor.SetValue(LibVlcPluginSettings.OutputDeviceIdKey, string.IsNullOrWhiteSpace(deviceId) ? null : deviceId);
+        _settingsAccessor.SetValue(LibVlcPluginSettings.OUTPUT_MODULE_KEY, string.IsNullOrWhiteSpace(module) ? null : module);
+        _settingsAccessor.SetValue(LibVlcPluginSettings.OUTPUT_DEVICE_ID_KEY, string.IsNullOrWhiteSpace(deviceId) ? null : deviceId);
         _settingsAccessor.Save();
 
         _statusText.Text = "Saved LibVLC output settings. Restart playback to apply changes.";
@@ -56,6 +57,11 @@ public partial class LibVlcPluginSettingsView : UserControl
 
         public void Save()
         {
+        }
+
+        public Task<bool> ShowInstallDisclaimerAsync(string pluginId, PluginInstallDisclaimer disclaimer, bool requireAcceptance)
+        {
+            return Task.FromResult(!requireAcceptance);
         }
     }
 }
