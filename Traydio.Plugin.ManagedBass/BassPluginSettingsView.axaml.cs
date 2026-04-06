@@ -201,6 +201,39 @@ public partial class BassPluginSettingsView : UserControl
         RunSafelyAsync(OnDownloadTagsClickAsync(), "Download tags.dll");
     }
 
+    private void OnOpenWebsiteClick(object? sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(ManagedBassPlugin.SettingsDisclaimer.LinkUrl))
+        {
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = ManagedBassPlugin.SettingsDisclaimer.LinkUrl,
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception ex)
+        {
+            SetErrorStatus("Could not open browser: " + ex.Message);
+        }
+    }
+
+    private async void OnShowDisclaimerClick(object? sender, RoutedEventArgs e)
+    {
+        var shown = await _settingsAccessor.ShowInstallDisclaimerAsync(
+            ManagedBassPlugin.PLUGIN_ID,
+            ManagedBassPlugin.SettingsDisclaimer,
+            requireAcceptance: false);
+        if (!shown)
+        {
+            SetErrorStatus("Could not display disclaimer dialog.");
+        }
+    }
+
     private async Task OnDownloadTagsClickAsync()
     {
         await DownloadDependencyAsync(

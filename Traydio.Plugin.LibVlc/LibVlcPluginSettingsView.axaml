@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Traydio.Plugin.LibVlc.LibVlcPluginSettingsView">
 
-    <Grid Margin="12" RowDefinitions="Auto,Auto,Auto,Auto,Auto,*" RowSpacing="10">
+    <Grid Margin="12" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto" RowSpacing="10">
         <TextBlock Grid.Row="0" Text="LibVLC Output Settings" FontSize="18" FontWeight="SemiBold"/>
 
         <TextBlock Grid.Row="1"
@@ -11,20 +11,37 @@
 
         <Grid Grid.Row="2" ColumnDefinitions="Auto,*" ColumnSpacing="8">
             <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Output module"/>
-            <TextBox x:Name="OutputModuleBox" Grid.Column="1" Watermark="Blank = system default"/>
+            <ComboBox x:Name="OutputModuleComboBox" Grid.Column="1"/>
         </Grid>
 
         <Grid Grid.Row="3" ColumnDefinitions="Auto,*" ColumnSpacing="8">
-            <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Output device id"/>
-            <TextBox x:Name="OutputDeviceIdBox" Grid.Column="1" Watermark="Blank = system default"/>
+            <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Output device"/>
+            <ComboBox x:Name="OutputDeviceComboBox" Grid.Column="1"/>
         </Grid>
 
-        <TextBlock Grid.Row="4"
-                   Text="Copyright (C) VideoLAN and LibVLC contributors."
-                   Foreground="Gray"
-                   TextWrapping="Wrap"/>
+        <Button Grid.Row="5"
+                x:Name="WebsiteLinkButton"
+                Click="OnOpenWebsiteClick"
+                HorizontalAlignment="Center"
+                Background="Transparent"
+                BorderThickness="0"
+                Padding="0">
+            <TextBlock Text="Open videolan.org"
+                       Foreground="DodgerBlue"
+                       TextDecorations="Underline"/>
+        </Button>
 
-        <TextBlock Grid.Row="5" x:Name="StatusText" Foreground="{DynamicResource StatusAccentBrush}" TextWrapping="Wrap"/>
+        <StackPanel Grid.Row="6" Spacing="6" HorizontalAlignment="Center">
+            <TextBlock Text="Copyright (C) VideoLAN and LibVLC contributors."
+                       Foreground="Gray"
+                       TextWrapping="Wrap"
+                       HorizontalAlignment="Center"/>
+            <Button Content="View disclaimer information"
+                    HorizontalAlignment="Center"
+                    Click="OnShowDisclaimerClick"/>
+        </StackPanel>
+
+        <TextBlock Grid.Row="7" x:Name="StatusText" Foreground="{DynamicResource StatusAccentBrush}" TextWrapping="Wrap"/>
     </Grid>
 </UserControl>
 

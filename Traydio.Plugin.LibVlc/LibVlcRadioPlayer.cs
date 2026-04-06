@@ -26,7 +26,7 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
     private bool _isLoading;
     private bool _disposed;
     private int _requestedVolume = 60;
-    private string? _requestedAudioOutputModule;
+    private readonly string? _requestedAudioOutputModule;
     private string? _requestedAudioOutputDeviceId;
 
     /// <inheritdoc />

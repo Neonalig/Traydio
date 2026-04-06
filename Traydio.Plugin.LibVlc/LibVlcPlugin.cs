@@ -12,6 +12,21 @@ namespace Traydio.Plugin.LibVlc;
 public sealed class LibVlcPlugin : ITraydioPlugin
 {
     public const string PLUGIN_ID = "plugin.playback.libvlc";
+
+    public static PluginInstallDisclaimer SettingsDisclaimer { get; } = new()
+    {
+        Version = "2026-04-06",
+        Title = "LibVLC playback information",
+        Message =
+            "This plugin uses LibVLC/VideoLAN components for playback.\n\n" +
+            "Please review license and platform packaging requirements when distributing builds.\n" +
+            "Audio output module/device options are advanced settings and may vary by operating system.",
+        LinkText = "Open VideoLAN",
+        LinkUrl = "https://www.videolan.org/",
+        AcceptButtonText = "OK",
+        RejectButtonText = "Close",
+    };
+
     private readonly ILogger<LibVlcPlugin> _logger;
 
     public LibVlcPlugin(ILogger<LibVlcPlugin> logger)

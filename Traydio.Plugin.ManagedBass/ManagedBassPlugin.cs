@@ -13,6 +13,21 @@ namespace Traydio.Plugin.ManagedBass;
 public sealed class ManagedBassPlugin : ITraydioPlugin
 {
     public const string PLUGIN_ID = "plugin.playback.managedbass";
+
+    public static PluginInstallDisclaimer SettingsDisclaimer { get; } = new()
+    {
+        Version = "2026-04-06",
+        Title = "ManagedBass playback information",
+        Message =
+            "This plugin uses ManagedBass and native BASS libraries.\n\n" +
+            "You are responsible for obtaining and using the correct native DLLs for your platform and license context.\n" +
+            "Downloaded dependency archives are provided by external vendors and should be trusted before use.",
+        LinkText = "Open BASS website",
+        LinkUrl = "https://www.un4seen.com/",
+        AcceptButtonText = "OK",
+        RejectButtonText = "Close",
+    };
+
     private readonly ILogger<ManagedBassPlugin> _logger;
 
     public ManagedBassPlugin(ILogger<ManagedBassPlugin> logger)
