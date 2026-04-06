@@ -293,11 +293,7 @@ public partial class PluginManagementPage : UserControl
         }
 
         var restartArguments = "--cmd plugins";
-        if (Debugger.IsAttached)
-        {
-            // Best effort: the relaunched app can request debugger attach on startup.
-            restartArguments += " --debugger-launch";
-        }
+        // Intentionally do not pass debugger re-attach arguments on restart.
 
         if (OperatingSystem.IsWindows())
         {

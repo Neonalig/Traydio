@@ -80,6 +80,8 @@ public partial class SettingsPageViewModel : ViewModelBase
     [ObservableProperty]
     private string _wmicStatus = string.Empty;
 
+    public bool HasUnsavedChanges => ComputeHasUnsavedChanges();
+
     public SettingsPageViewModel(
         IStationRepository stationRepository,
         IProtocolRegistrationService protocolRegistrationService,
@@ -219,10 +221,7 @@ public partial class SettingsPageViewModel : ViewModelBase
         }
 
         var restartArguments = "--cmd settings";
-        if (Debugger.IsAttached)
-        {
-            restartArguments += " --debugger-launch";
-        }
+        // Intentionally do not pass debugger re-attach arguments on restart.
 
         if (OperatingSystem.IsWindows())
         {
@@ -353,6 +352,28 @@ public partial class SettingsPageViewModel : ViewModelBase
             SelectedClassicTheme?.Key,
             _appliedClassicThemeKey,
             StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool ComputeHasUnsavedChanges()
+    {
+        if (EnableNamedPipeRelay != _stationRepository.Communication.EnableNamedPipeRelay
+            || EnableLoopbackRelay != _stationRepository.Communication.EnableLoopbackRelay
+            || !string.Equals(LoopbackHost?.Trim(), _stationRepository.Communication.LoopbackHost, StringComparison.Ordinal)
+            || LoopbackPort != _stationRepository.Communication.LoopbackPort
+            || EnableProtocolUrlRelay != _stationRepository.Communication.EnableProtocolUrlRelay
+            || !string.Equals(ProtocolScheme?.Trim(), _stationRepository.Communication.ProtocolScheme, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (!string.Equals(SelectedAudioOutputDevice?.Id, _stationRepository.AudioOutputDeviceId, StringComparison.Ordinal)
+            || !string.Equals(SelectedRadioPlayerEngine?.Id, _stationRepository.RadioPlayerEngineId, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(SelectedClassicTheme?.Key, _stationRepository.ClassicThemeKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return false;
     }
 }
 

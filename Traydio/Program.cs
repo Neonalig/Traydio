@@ -44,29 +44,30 @@ sealed class Program
         {
             TraydioTrace.Info("Program", "Startup begin.");
 
-            var hasDebuggerLaunchArg = false;
-            foreach (var arg in args)
-            {
-                if (!string.Equals(arg, "--debugger-launch", StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                hasDebuggerLaunchArg = true;
-                break;
-            }
-
-            if (hasDebuggerLaunchArg && !Debugger.IsAttached)
-            {
-                try
-                {
-                    Debugger.Launch();
-                }
-                catch
-                {
-                    // Best effort only; restart should continue even if debugger launch fails.
-                }
-            }
+            // Debugger auto-attach is intentionally disabled.
+            // var hasDebuggerLaunchArg = false;
+            // foreach (var arg in args)
+            // {
+            //     if (!string.Equals(arg, "--debugger-launch", StringComparison.OrdinalIgnoreCase))
+            //     {
+            //         continue;
+            //     }
+            //
+            //     hasDebuggerLaunchArg = true;
+            //     break;
+            // }
+            //
+            // if (hasDebuggerLaunchArg && !Debugger.IsAttached)
+            // {
+            //     try
+            //     {
+            //         Debugger.Launch();
+            //     }
+            //     catch
+            //     {
+            //         // Best effort only; restart should continue even if debugger launch fails.
+            //     }
+            // }
 
             using var services = ConfigureServices().BuildServiceProvider();
             _services = services;
