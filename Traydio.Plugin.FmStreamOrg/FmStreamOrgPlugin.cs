@@ -56,7 +56,7 @@ public sealed class FmStreamOrgPlugin : ITraydioPlugin
     {
         _logger = logger;
         _settingsProvider = settingsProvider;
-        Capabilities = [new StationDiscoveryCapability(this), new SettingsCapability(), new InstallDisclaimerCapability()];
+        Capabilities = [new StationDiscoveryCapability(this), new StationSearchMetadataCapability(), new SettingsCapability(), new InstallDisclaimerCapability()];
     }
 
     public string Id => PLUGIN_ID;
@@ -490,6 +490,15 @@ public sealed class FmStreamOrgPlugin : ITraydioPlugin
         {
             return new FmStreamOrgPluginSettingsView(settingsAccessor);
         }
+    }
+
+    private sealed class StationSearchMetadataCapability : IStationSearchProviderMetadataCapability
+    {
+        public string CapabilityId => "station-search-metadata";
+
+        public string ProviderId => _providerId;
+
+        public string WebsiteUrl => "https://fmstream.org/";
     }
 
     private sealed class InstallDisclaimerCapability : IPluginInstallDisclaimerCapability

@@ -52,7 +52,7 @@ public sealed class RadioDirectoryPlugin : ITraydioPlugin
     {
         _logger = logger;
         _settingsProvider = settingsProvider;
-        Capabilities = [new StationDiscoveryCapability(this), new SettingsCapability()];
+        Capabilities = [new StationDiscoveryCapability(this), new StationSearchMetadataCapability(), new SettingsCapability()];
     }
 
     public string Id => PLUGIN_ID;
@@ -274,6 +274,15 @@ public sealed class RadioDirectoryPlugin : ITraydioPlugin
         {
             return new RadioDirectoryPluginSettingsView(settingsAccessor);
         }
+    }
+
+    private sealed class StationSearchMetadataCapability : IStationSearchProviderMetadataCapability
+    {
+        public string CapabilityId => "station-search-metadata";
+
+        public string ProviderId => _providerId;
+
+        public string WebsiteUrl => "https://radio-directory.com/";
     }
 
 

@@ -65,7 +65,7 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
     {
         _logger = logger;
         _settingsProvider = settingsProvider;
-        Capabilities = [new StationDiscoveryCapability(this), new StationSearchSettingsCapability(), new SettingsCapability()];
+        Capabilities = [new StationDiscoveryCapability(this), new StationSearchMetadataCapability(), new StationSearchSettingsCapability(), new SettingsCapability()];
     }
 
     public string Id => PLUGIN_ID;
@@ -426,6 +426,15 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
         {
             return new RadioBrowserPluginSettingsView(settingsAccessor);
         }
+    }
+
+    private sealed class StationSearchMetadataCapability : IStationSearchProviderMetadataCapability
+    {
+        public string CapabilityId => "station-search-metadata";
+
+        public string ProviderId => _providerId;
+
+        public string WebsiteUrl => "https://www.radio-browser.info/";
     }
 
     private sealed class StationSearchSettingsCapability : IStationSearchSettingsCapability

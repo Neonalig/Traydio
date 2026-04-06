@@ -77,6 +77,12 @@ public partial class StationSearchWindowViewModel : ViewModelBase
     private int _pageSize = 50;
 
     [ObservableProperty]
+    private bool _isQueryModeLocked;
+
+    [ObservableProperty]
+    private string? _selectedProviderWebsiteUrl;
+
+    [ObservableProperty]
     private string _filterText = string.Empty;
 
     [ObservableProperty]
@@ -94,6 +100,9 @@ public partial class StationSearchWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _hasNextPage;
+
+    [ObservableProperty]
+    private int? _knownMaxPage;
 
     [ObservableProperty]
     private object? _providerSearchSettingsView;
@@ -116,6 +125,33 @@ public partial class StationSearchWindowViewModel : ViewModelBase
     public bool SupportsHighQualityPreference => SelectedProvider?.Features.SupportsHighQualityPreference ?? false;
 
     public bool SupportsPagination => SelectedProvider?.Features.SupportsPagination ?? false;
+
+    public bool IsSearchModeEditable => SupportsModes && !IsQueryModeLocked;
+
+    public bool HasSelectedProviderWebsiteUrl => !string.IsNullOrWhiteSpace(SelectedProviderWebsiteUrl);
+
+    public string ProviderWebsiteHostText
+    {
+        get
+        {
+            if (!Uri.TryCreate(SelectedProviderWebsiteUrl, UriKind.Absolute, out var uri))
+            {
+                return "Provider site";
+            }
+
+            return uri.Host;
+        }
+    }
+
+    public string PaginationText => KnownMaxPage is > 0
+        ? $"Page {CurrentPage} of {KnownMaxPage}"
+        : $"Page {CurrentPage}";
+
+    public bool CanGoToFirstPage => SupportsPagination && _activePageIndex > 0;
+
+    public bool CanGoToLastPage => SupportsPagination && KnownMaxPage.HasValue && CurrentPage < KnownMaxPage.Value;
+
+    public IReadOnlyList<int> PageSizePresetOptions { get; } = [10, 20, 50, 100, 150, 200];
 
     public StationSearchWindowViewModel(
         IStationDiscoveryService stationDiscoveryService,
@@ -166,6 +202,36 @@ public partial class StationSearchWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private async Task FirstPageAsync()
+    {
+        if (!SupportsPagination || _activePageIndex == 0)
+        {
+            return;
+        }
+
+        _activePageIndex = 0;
+        await ExecuteSearchAsync().ConfigureAwait(false);
+    }
+
+    [RelayCommand]
+    private async Task LastPageAsync()
+    {
+        if (!SupportsPagination || KnownMaxPage is null)
+        {
+            return;
+        }
+
+        var targetIndex = Math.Max(0, KnownMaxPage.Value - 1);
+        if (targetIndex == _activePageIndex)
+        {
+            return;
+        }
+
+        _activePageIndex = targetIndex;
+        await ExecuteSearchAsync().ConfigureAwait(false);
+    }
+
+    [RelayCommand]
     private void ResetAdvancedFilters()
     {
         CountryFilter = string.Empty;
@@ -177,6 +243,20 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         PreferHighQuality = true;
         _activePageIndex = 0;
         OnPropertyChanged(nameof(CurrentPage));
+    }
+
+    [RelayCommand]
+    private async Task SetPageSizePresetAsync(int preset)
+    {
+        var pageSize = Math.Clamp(preset, 1, 200);
+        if (PageSize == pageSize)
+        {
+            return;
+        }
+
+        PageSize = pageSize;
+        _activePageIndex = 0;
+        await ExecuteSearchAsync().ConfigureAwait(false);
     }
 
     private async Task ExecuteSearchAsync()
@@ -199,6 +279,10 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         IsBusy = true;
         HasPreviousPage = _activePageIndex > 0;
         HasNextPage = false;
+        KnownMaxPage = null;
+        OnPropertyChanged(nameof(PaginationText));
+        OnPropertyChanged(nameof(CanGoToFirstPage));
+        OnPropertyChanged(nameof(CanGoToLastPage));
         Status = "Searching...";
         try
         {
@@ -243,6 +327,16 @@ public partial class StationSearchWindowViewModel : ViewModelBase
 
             HasPreviousPage = SupportsPagination && _activePageIndex > 0;
             HasNextPage = SupportsPagination && _lastSearchResults.Count >= pageSize;
+            if (SupportsPagination)
+            {
+                KnownMaxPage = _lastSearchResults.Count < pageSize
+                    ? CurrentPage
+                    : null;
+            }
+
+            OnPropertyChanged(nameof(PaginationText));
+            OnPropertyChanged(nameof(CanGoToFirstPage));
+            OnPropertyChanged(nameof(CanGoToLastPage));
 
             var modeLabel = mode switch
             {
@@ -352,45 +446,45 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         try
         {
 
-        var installedBefore = _pluginManager.GetPluginInventory()
-            .Select(item => item.Id)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var installedBefore = _pluginManager.GetPluginInventory()
+                .Select(item => item.Id)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        if (_pluginManager.AddPlugin(PluginDllPath, out var error))
-        {
-            var newlyInstalled = _pluginManager.GetPlugins()
-                .Where(plugin => !installedBefore.Contains(plugin.Id))
-                .ToArray();
-
-            foreach (var plugin in newlyInstalled)
+            if (_pluginManager.AddPlugin(PluginDllPath, out var error))
             {
-                var disclaimerCapability = plugin.Capabilities.OfType<IPluginInstallDisclaimerCapability>().FirstOrDefault();
-                if (disclaimerCapability is null)
+                var newlyInstalled = _pluginManager.GetPlugins()
+                    .Where(plugin => !installedBefore.Contains(plugin.Id))
+                    .ToArray();
+
+                foreach (var plugin in newlyInstalled)
                 {
-                    continue;
+                    var disclaimerCapability = plugin.Capabilities.OfType<IPluginInstallDisclaimerCapability>().FirstOrDefault();
+                    if (disclaimerCapability is null)
+                    {
+                        continue;
+                    }
+
+                    var accepted = await _pluginInstallDisclaimerService
+                        .EnsureAcceptedAsync(plugin.Id, disclaimerCapability.Disclaimer, CancellationToken.None)
+                        .ConfigureAwait(false);
+                    if (accepted)
+                    {
+                        continue;
+                    }
+
+                    _pluginManager.RemovePlugin(plugin.Id, out _);
+                    Status = $"Installation canceled: '{plugin.DisplayName}' conditions were rejected.";
+                    RefreshProviders();
+                    return;
                 }
 
-                var accepted = await _pluginInstallDisclaimerService
-                    .EnsureAcceptedAsync(plugin.Id, disclaimerCapability.Disclaimer, CancellationToken.None)
-                    .ConfigureAwait(false);
-                if (accepted)
-                {
-                    continue;
-                }
-
-                _pluginManager.RemovePlugin(plugin.Id, out _);
-                Status = $"Installation canceled: '{plugin.DisplayName}' conditions were rejected.";
+                PluginDllPath = string.Empty;
+                Status = "Plugin added. Providers reloaded.";
                 RefreshProviders();
                 return;
             }
 
-            PluginDllPath = string.Empty;
-            Status = "Plugin added. Providers reloaded.";
-            RefreshProviders();
-            return;
-        }
-
-        Status = "Could not add plugin: " + (error ?? "Unknown error.");
+            Status = "Could not add plugin: " + (error ?? "Unknown error.");
         }
         finally
         {
@@ -434,6 +528,8 @@ public partial class StationSearchWindowViewModel : ViewModelBase
     {
         ConfigureProviderSearchSettingsView(value);
 
+        SelectedProviderWebsiteUrl = value?.WebsiteUrl;
+
         UpdateSearchModes(value?.Features ?? StationSearchProviderFeatures.Basic);
         OnPropertyChanged(nameof(SupportsModes));
         OnPropertyChanged(nameof(SupportsCountryFilter));
@@ -442,6 +538,7 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(SupportsOrderFilter));
         OnPropertyChanged(nameof(SupportsHighQualityPreference));
         OnPropertyChanged(nameof(SupportsPagination));
+        OnPropertyChanged(nameof(IsSearchModeEditable));
 
         if (value is not null)
         {
@@ -451,12 +548,65 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         _activePageIndex = 0;
         HasPreviousPage = false;
         HasNextPage = false;
+        KnownMaxPage = null;
         OnPropertyChanged(nameof(CurrentPage));
+        OnPropertyChanged(nameof(PaginationText));
+        OnPropertyChanged(nameof(CanGoToFirstPage));
+        OnPropertyChanged(nameof(CanGoToLastPage));
 
         if (value is not null)
         {
+            EnsureQueryModeSelectionIfLocked();
             SearchAsync().ForgetWithErrorHandling("Station provider switched search", showDialog: false);
         }
+    }
+
+    partial void OnQueryChanged(string value)
+    {
+        IsQueryModeLocked = !string.IsNullOrWhiteSpace(value);
+        OnPropertyChanged(nameof(IsSearchModeEditable));
+        EnsureQueryModeSelectionIfLocked();
+    }
+
+    partial void OnSelectedProviderWebsiteUrlChanged(string? value)
+    {
+        _ = value;
+        OnPropertyChanged(nameof(HasSelectedProviderWebsiteUrl));
+        OnPropertyChanged(nameof(ProviderWebsiteHostText));
+    }
+
+    partial void OnSelectedSearchModeChanged(SearchModeOption? value)
+    {
+        _ = value;
+        EnsureQueryModeSelectionIfLocked();
+    }
+
+    partial void OnPageSizeChanged(int value)
+    {
+        _ = value;
+        if (IsBusy)
+        {
+            return;
+        }
+
+        if (!SupportsPagination)
+        {
+            return;
+        }
+
+        _activePageIndex = 0;
+        ExecuteSearchAsync().ForgetWithErrorHandling("Station page-size changed search", showDialog: false);
+    }
+
+    private void EnsureQueryModeSelectionIfLocked()
+    {
+        if (!IsQueryModeLocked)
+        {
+            return;
+        }
+
+        SelectedSearchMode = SearchModes.FirstOrDefault(mode => mode.Mode == StationSearchMode.Query)
+            ?? SelectedSearchMode;
     }
 
     private IReadOnlyDictionary<string, string>? BuildProviderOptionsSnapshot()
@@ -669,13 +819,25 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         {
             Providers.Clear();
             var providers = _pluginManager.GetPlugins()
-                .SelectMany(plugin => plugin.Capabilities
-                    .OfType<IStationDiscoveryCapability>()
-                    .Select(capability => new ProviderOption(
-                        plugin.Id,
-                        capability.ProviderId,
-                        capability.DisplayName,
-                        capability.Features)))
+                .SelectMany(plugin =>
+                {
+                    var metadata = plugin.Capabilities
+                        .OfType<IStationSearchProviderMetadataCapability>()
+                        .ToDictionary(item => item.ProviderId, StringComparer.OrdinalIgnoreCase);
+
+                    return plugin.Capabilities
+                        .OfType<IStationDiscoveryCapability>()
+                        .Select(capability => new ProviderOption(
+                            plugin.Id,
+                            capability.ProviderId,
+                            capability.DisplayName,
+                            capability.Features)
+                        {
+                            WebsiteUrl = metadata.TryGetValue(capability.ProviderId, out var found)
+                                ? found.WebsiteUrl
+                                : null,
+                        });
+                })
                 .OrderBy(option => option.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
@@ -706,9 +868,7 @@ public partial class StationSearchWindowViewModel : ViewModelBase
     {
         public string? GetValue(string key)
         {
-            return options.TryGetValue(key, out var value)
-                ? value
-                : null;
+            return options.GetValueOrDefault(key);
         }
 
         public void SetValue(string key, string? value)
@@ -728,6 +888,7 @@ public partial class StationSearchWindowViewModel : ViewModelBase
             options[normalizedKey] = value.Trim();
         }
     }
+
 
     partial void OnStatusChanged(string value)
     {
@@ -751,6 +912,8 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         public string DisplayName { get; } = displayName;
 
         public StationSearchProviderFeatures Features { get; } = features;
+
+        public string? WebsiteUrl { get; init; }
     }
 
     public sealed class SearchModeOption(StationSearchMode mode, string displayName)

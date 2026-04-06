@@ -16,33 +16,43 @@
         <Grid IsEnabled="{Binding !IsBusy}" RowDefinitions="Auto,Auto,*" RowSpacing="6">
             <Border Grid.Row="0" Classes="toolbar-frame" Margin="0">
                 <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
-                <Grid Grid.Row="0" ColumnDefinitions="2*,1.2*,2.2*,Auto,1.6*,Auto" ColumnSpacing="8">
-                    <ComboBox Grid.Column="0"
+                <Grid Grid.Row="0" ColumnDefinitions="84,2.4*,*" ColumnSpacing="8">
+                    <TextBlock Grid.Column="0" Text="Provider" VerticalAlignment="Center"/>
+                    <ComboBox Grid.Column="1"
                               ItemsSource="{Binding Providers}"
                               SelectedItem="{Binding SelectedProvider}"
                               DisplayMemberBinding="{Binding DisplayName}"/>
+                    <Button Grid.Column="2"
+                            HorizontalAlignment="Right"
+                            Click="OnOpenProviderWebsiteClick"
+                            IsVisible="{Binding HasSelectedProviderWebsiteUrl}"
+                            Background="Transparent"
+                            BorderThickness="0"
+                            Padding="0">
+                        <TextBlock Text="{Binding ProviderWebsiteHostText}"
+                                   Foreground="DodgerBlue"
+                                   TextDecorations="Underline"/>
+                    </Button>
+                </Grid>
+
+                <Grid Grid.Row="1" ColumnDefinitions="84,1.2*,84,2.8*,Auto" ColumnSpacing="8">
+                    <TextBlock Grid.Column="0" Text="View" VerticalAlignment="Center"/>
                     <ComboBox Grid.Column="1"
                               ItemsSource="{Binding SearchModes}"
                               SelectedItem="{Binding SelectedSearchMode}"
                               DisplayMemberBinding="{Binding DisplayName}"
-                              IsEnabled="{Binding SupportsModes}"/>
-                    <TextBox Grid.Column="2" Classes="input-standard" Watermark="Search query" Text="{Binding Query}"/>
-                    <Button Grid.Column="3" Classes="command-button" Command="{Binding SearchCommand}">
+                              IsEnabled="{Binding IsSearchModeEditable}"/>
+                    <TextBlock Grid.Column="2" Text="Query" VerticalAlignment="Center"/>
+                    <TextBox Grid.Column="3" Classes="input-standard" Watermark="Search query" Text="{Binding Query}"/>
+                    <Button Grid.Column="4" Classes="command-button" Command="{Binding SearchCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <Image Source="/Assets/search.ico" Classes="icon-small"/>
                             <TextBlock Text="Search" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
-                    <TextBox Grid.Column="4" Classes="input-standard" Watermark="Filter results" Text="{Binding FilterText}"/>
-                    <Button Grid.Column="5" Classes="command-button" Command="{Binding ApplyFilterCommand}">
-                        <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Image Source="/Assets/refresh.ico" Classes="icon-small"/>
-                            <TextBlock Text="Apply Filter" VerticalAlignment="Center"/>
-                        </StackPanel>
-                    </Button>
                 </Grid>
 
-                <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,*,Auto,*,Auto,*,Auto,*" ColumnSpacing="8">
+                <Grid Grid.Row="2" ColumnDefinitions="84,*,84,*,84,*,84,*,84,*,Auto,Auto" ColumnSpacing="8">
                     <TextBlock Grid.Column="0" Text="Country" VerticalAlignment="Center"/>
                     <ComboBox Grid.Column="1"
                               ItemsSource="{Binding CountryOptions}"
@@ -63,27 +73,18 @@
                     <TextBlock Grid.Column="6" Text="Order" VerticalAlignment="Center"/>
                     <TextBox Grid.Column="7" Classes="input-standard" Watermark="top/big/med/sma" Text="{Binding OrderFilter}" IsEnabled="{Binding SupportsOrderFilter}"/>
 
-                    <CheckBox Grid.Column="8" Grid.ColumnSpan="2"
+                    <TextBox Grid.Column="8" Classes="input-standard" Watermark="Filter results" Text="{Binding FilterText}"/>
+                    <CheckBox Grid.Column="9"
                               VerticalAlignment="Center"
                               Content="Prefer high quality"
                               IsChecked="{Binding PreferHighQuality}"
                               IsEnabled="{Binding SupportsHighQualityPreference}"/>
-                </Grid>
-
-                <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,*" ColumnSpacing="8">
-                    <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Page size"/>
-                    <TextBox Grid.Column="1" Width="72" Text="{Binding PageSize}"/>
-                    <Button Grid.Column="2" Classes="command-button" Command="{Binding PreviousPageCommand}" IsEnabled="{Binding HasPreviousPage}">
-                        <TextBlock Text="Previous"/>
+                    <Button Grid.Column="10" Classes="command-button" Command="{Binding ApplyFilterCommand}">
+                        <TextBlock Text="Apply" VerticalAlignment="Center"/>
                     </Button>
-                    <TextBlock Grid.Column="3" VerticalAlignment="Center" Text="{Binding CurrentPage, StringFormat=Page {0}}"/>
-                    <Button Grid.Column="4" Classes="command-button" Command="{Binding NextPageCommand}" IsEnabled="{Binding HasNextPage}">
-                        <TextBlock Text="Next"/>
+                    <Button Grid.Column="11" Classes="command-button" Command="{Binding ResetAdvancedFiltersCommand}">
+                        <TextBlock Text="Reset" VerticalAlignment="Center"/>
                     </Button>
-                    <Button Grid.Column="5" Classes="command-button" Command="{Binding ResetAdvancedFiltersCommand}">
-                        <TextBlock Text="Reset Advanced"/>
-                    </Button>
-                    <TextBlock Grid.Column="6" VerticalAlignment="Center" Classes="subtle-text" Text="Pagination" IsVisible="{Binding SupportsPagination}"/>
                 </Grid>
 
                 <ContentControl Grid.Row="3"
@@ -100,7 +101,7 @@
                            TextTrimming="CharacterEllipsis"
                            VerticalAlignment="Center"/>
                 <TextBlock Grid.Column="1"
-                           Text="Choose a provider view (Search/Featured/Random), apply optional provider filters, then page through results."
+                           Text="Entering query text locks View to Search until query is cleared."
                            Classes="helper-text"
                            VerticalAlignment="Center"/>
                 </Grid>
@@ -111,12 +112,13 @@
                     <TextBlock Text="Search Results" Classes="group-title"/>
                 </Border>
                 <Border Grid.Row="1" Classes="group-frame" Margin="0,-8,0,0">
-                    <Grid RowDefinitions="*" RowSpacing="8">
+                    <Grid RowDefinitions="*,Auto" RowSpacing="8">
                         <ListBox x:Name="ResultsList"
                                  Grid.Row="0"
                                  Classes="list-surface"
                                  ItemsSource="{Binding Results}"
-                                 SelectedItem="{Binding SelectedResult}">
+                                 SelectedItem="{Binding SelectedResult}"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <Grid ColumnDefinitions="Auto,3*,5*,Auto" ColumnSpacing="8">
@@ -128,16 +130,24 @@
                                             </ContextMenu>
                                         </Grid.ContextMenu>
                                         <Image Source="/Assets/stations.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
-                                        <StackPanel Grid.Column="1">
-                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                                            <TextBlock Text="{Binding Country}" Classes="subtle-text"/>
+                                        <StackPanel Grid.Column="1" MaxWidth="320">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontWeight="SemiBold"
+                                                       TextWrapping="WrapWithOverflow"
+                                                       ToolTip.Tip="{Binding Name}"/>
+                                            <TextBlock Text="{Binding Country}"
+                                                       Classes="subtle-text"
+                                                       TextWrapping="WrapWithOverflow"
+                                                       ToolTip.Tip="{Binding Country}"/>
                                         </StackPanel>
-                                        <StackPanel Grid.Column="2">
+                                        <StackPanel Grid.Column="2" MaxWidth="640">
                                             <TextBlock Text="{Binding StreamUrl}"
-                                                       TextWrapping="NoWrap"
-                                                       TextTrimming="CharacterEllipsis"
+                                                       TextWrapping="WrapWithOverflow"
                                                        ToolTip.Tip="{Binding StreamUrl}"/>
-                                            <TextBlock Text="{Binding Description}" Classes="subtle-text" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding Description}"
+                                                       Classes="subtle-text"
+                                                       TextWrapping="WrapWithOverflow"
+                                                       ToolTip.Tip="{Binding Description}"/>
                                         </StackPanel>
                                         <Button Grid.Column="3"
                                                 Classes="command-button"
@@ -152,6 +162,75 @@
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
+
+                        <Grid Grid.Row="1" ColumnDefinitions="*,Auto,*" ColumnSpacing="8" Margin="0,4,0,0" IsVisible="{Binding SupportsPagination}">
+                            <Border Grid.Column="0"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                <Button Classes="command-button"
+                                        Width="34"
+                                        Height="34"
+                                        MinWidth="34"
+                                        MaxWidth="34"
+                                        MinHeight="34"
+                                        MaxHeight="34"
+                                        Padding="0"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding FirstPageCommand}"
+                                        IsVisible="{Binding CanGoToFirstPage}">
+                                    <TextBlock Text="&lt;&lt;" HorizontalAlignment="Center"/>
+                                </Button>
+                                <Button Classes="command-button"
+                                        Width="34"
+                                        Height="34"
+                                        MinWidth="34"
+                                        MaxWidth="34"
+                                        MinHeight="34"
+                                        MaxHeight="34"
+                                        Padding="0"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding PreviousPageCommand}"
+                                        IsEnabled="{Binding HasPreviousPage}">
+                                    <TextBlock Text="&lt;" HorizontalAlignment="Center"/>
+                                </Button>
+                                <TextBlock Text="{Binding PaginationText}" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                                <Button Classes="command-button"
+                                        Width="34"
+                                        Height="34"
+                                        MinWidth="34"
+                                        MaxWidth="34"
+                                        MinHeight="34"
+                                        MaxHeight="34"
+                                        Padding="0"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding NextPageCommand}"
+                                        IsEnabled="{Binding HasNextPage}">
+                                    <TextBlock Text="&gt;" HorizontalAlignment="Center"/>
+                                </Button>
+                                <Button Classes="command-button"
+                                        Width="34"
+                                        Height="34"
+                                        MinWidth="34"
+                                        MaxWidth="34"
+                                        MinHeight="34"
+                                        MaxHeight="34"
+                                        Padding="0"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Command="{Binding LastPageCommand}"
+                                        IsVisible="{Binding CanGoToLastPage}">
+                                    <TextBlock Text="&gt;&gt;" HorizontalAlignment="Center"/>
+                                </Button>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                <TextBlock Text="Items per page" VerticalAlignment="Center"/>
+                                <ComboBox Width="96"
+                                          ItemsSource="{Binding PageSizePresetOptions}"
+                                          SelectedItem="{Binding PageSize}"/>
+                            </StackPanel>
+                        </Grid>
                     </Grid>
                 </Border>
             </Grid>

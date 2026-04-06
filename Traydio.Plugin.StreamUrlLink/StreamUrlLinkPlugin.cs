@@ -52,7 +52,7 @@ public sealed partial class StreamUrlLinkPlugin : ITraydioPlugin
     public StreamUrlLinkPlugin(ILogger<StreamUrlLinkPlugin> logger)
     {
         _logger = logger;
-        Capabilities = [new StationDiscoveryCapability(this), new SettingsCapability()];
+        Capabilities = [new StationDiscoveryCapability(this), new StationSearchMetadataCapability(), new SettingsCapability()];
     }
 
     public string Id => PLUGIN_ID;
@@ -147,6 +147,15 @@ public sealed partial class StreamUrlLinkPlugin : ITraydioPlugin
         {
             return new SettingsView(settingsAccessor);
         }
+    }
+
+    private sealed class StationSearchMetadataCapability : IStationSearchProviderMetadataCapability
+    {
+        public string CapabilityId => "station-search-metadata";
+
+        public string ProviderId => _providerId;
+
+        public string WebsiteUrl => "https://streamurl.link/";
     }
 
     private sealed class SettingsView : UserControl

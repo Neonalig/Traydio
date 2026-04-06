@@ -23,6 +23,13 @@ public interface IStationSearchSettingsCapability : IPluginCapability
     object CreateSearchSettingsView(IStationSearchSettingsAccessor settingsAccessor);
 }
 
+public interface IStationSearchProviderMetadataCapability : IPluginCapability
+{
+    string ProviderId { get; }
+
+    string? WebsiteUrl { get; }
+}
+
 public interface IStationSearchSettingsAccessor
 {
     string? GetValue(string key);

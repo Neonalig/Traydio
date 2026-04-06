@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -71,6 +72,28 @@ public partial class StationSearchPage : UserControl
         }
     }
 
+    private void OnOpenProviderWebsiteClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not StationSearchWindowViewModel viewModel ||
+            string.IsNullOrWhiteSpace(viewModel.SelectedProviderWebsiteUrl))
+        {
+            return;
+        }
+
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = viewModel.SelectedProviderWebsiteUrl,
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception ex)
+        {
+            viewModel.Status = "Could not open provider website: " + ex.Message;
+        }
+    }
+
     private void OnCopyResultNameClick(object? sender, RoutedEventArgs e)
     {
         CopyResultAsync(sender, static station => station.Name, "station name")
@@ -132,6 +155,47 @@ public partial class StationSearchPage : UserControl
         }
 
         return null;
+    }
+
+    private void OnOpenPageSizeMenuClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { ContextMenu: { } contextMenu } button)
+        {
+            return;
+        }
+
+        contextMenu.PlacementTarget = button;
+        contextMenu.Open();
+    }
+
+    private void OnPageSizePreset10Click(object? sender, RoutedEventArgs e)
+    {
+        ApplyPageSizePresetAsync(10).ForgetWithErrorHandling("Set station page size", showDialog: false);
+    }
+
+    private void OnPageSizePreset20Click(object? sender, RoutedEventArgs e)
+    {
+        ApplyPageSizePresetAsync(20).ForgetWithErrorHandling("Set station page size", showDialog: false);
+    }
+
+    private void OnPageSizePreset50Click(object? sender, RoutedEventArgs e)
+    {
+        ApplyPageSizePresetAsync(50).ForgetWithErrorHandling("Set station page size", showDialog: false);
+    }
+
+    private void OnPageSizePreset100Click(object? sender, RoutedEventArgs e)
+    {
+        ApplyPageSizePresetAsync(100).ForgetWithErrorHandling("Set station page size", showDialog: false);
+    }
+
+    private async Task ApplyPageSizePresetAsync(int pageSize)
+    {
+        if (DataContext is not StationSearchWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        await viewModel.SetPageSizePresetCommand.ExecuteAsync(pageSize);
     }
 
 }

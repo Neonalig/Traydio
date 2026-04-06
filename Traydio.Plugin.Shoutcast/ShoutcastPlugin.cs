@@ -52,7 +52,7 @@ public sealed class ShoutcastPlugin : ITraydioPlugin
     {
         _logger = logger;
         _settingsProvider = settingsProvider;
-        Capabilities = [new StationDiscoveryCapability(this), new SettingsCapability()];
+        Capabilities = [new StationDiscoveryCapability(this), new StationSearchMetadataCapability(), new SettingsCapability()];
     }
 
     public string Id => PLUGIN_ID;
@@ -330,6 +330,15 @@ public sealed class ShoutcastPlugin : ITraydioPlugin
         {
             return new ShoutcastPluginSettingsView(settingsAccessor);
         }
+    }
+
+    private sealed class StationSearchMetadataCapability : IStationSearchProviderMetadataCapability
+    {
+        public string CapabilityId => "station-search-metadata";
+
+        public string ProviderId => _providerId;
+
+        public string WebsiteUrl => "https://www.shoutcast.com/";
     }
 
 
