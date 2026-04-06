@@ -230,9 +230,13 @@ public partial class PluginManagementPage : UserControl
 
     private async Task ConfirmAndRemovePluginAsync(PluginManagementWindowViewModel viewModel, PluginManagementWindowViewModel.InstalledPluginItem pluginItem)
     {
-        var topLevel = TopLevel.GetTopLevel(this);
+        if (TopLevel.GetTopLevel(this) is not Window owner)
+        {
+            return;
+        }
+
         var choice = await MessageBox.ShowDialog(
-            (topLevel as Window)!,
+            owner,
             "Confirm uninstall",
             $"Uninstall plugin '{pluginItem.DisplayName}'?\n\nIf the file is currently locked, it will be marked for delete on restart and disabled now.",
             MessageBoxButtons.YesNo,
@@ -255,9 +259,13 @@ public partial class PluginManagementPage : UserControl
 
     private async Task OnRestartAppClickAsync()
     {
-        var topLevel = TopLevel.GetTopLevel(this);
+        if (TopLevel.GetTopLevel(this) is not Window owner)
+        {
+            return;
+        }
+
         var choice = await MessageBox.ShowDialog(
-            (topLevel as Window)!,
+            owner,
             "Restart app",
             "Restart Traydio now?\n\nUse this after changing native plugin dependency paths so new DLLs are loaded.",
             MessageBoxButtons.YesNo,
@@ -387,7 +395,7 @@ public partial class PluginManagementPage : UserControl
         }
 
         var topLevel = TopLevel.GetTopLevel(this);
-        if (topLevel?.StorageProvider is null)
+        if (topLevel?.StorageProvider is null || topLevel is not Window owner)
         {
             return;
         }
@@ -417,8 +425,9 @@ public partial class PluginManagementPage : UserControl
 
         var migrate = false;
         if (hasExistingPlugins)
-        {var choice = await MessageBox.ShowDialog(
-                (topLevel as Window)!,
+        {
+            var choice = await MessageBox.ShowDialog(
+                owner,
                 "Move existing plugins?",
                 "Migrate existing plugin DLLs to the new folder?\n\nYes = copy existing plugins\nNo = keep existing plugins in current folder\nCancel = abort",
                 MessageBoxButtons.YesNoCancel,
@@ -475,8 +484,12 @@ public partial class PluginManagementPage : UserControl
 
     private async Task ShowInfoDialogAsync(string title, string message)
     {
-        var topLevel = TopLevel.GetTopLevel(this);
-        await MessageBox.ShowDialog((topLevel as Window)!, title, message, MessageBoxButtons.Ok, MessageBoxIcon.Information);
+        if (TopLevel.GetTopLevel(this) is not Window owner)
+        {
+            return;
+        }
+
+        await MessageBox.ShowDialog(owner, title, message, MessageBoxButtons.Ok, MessageBoxIcon.Information);
     }
 }
 

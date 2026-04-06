@@ -125,7 +125,7 @@ public static class AppErrorHandler
             closeButton.Click += (_, _) => dialog.Close();
         }
 
-        if (owner is not null)
+        if (owner is { IsVisible: true })
         {
             dialog.ShowDialog(owner).ForgetWithErrorHandling("Show unhandled error dialog", showDialog: false);
             return;

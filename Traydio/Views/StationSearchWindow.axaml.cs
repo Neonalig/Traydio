@@ -105,8 +105,12 @@ public partial class StationSearchPage : UserControl
 
     private async Task ShowInfoDialogAsync(string title, string message)
     {
-        var topLevel = TopLevel.GetTopLevel(this);
-        await MessageBox.ShowDialog((topLevel as Window)!, title, message, MessageBoxButtons.Ok, MessageBoxIcon.Information);
+        if (TopLevel.GetTopLevel(this) is not Window owner)
+        {
+            return;
+        }
+
+        await MessageBox.ShowDialog(owner, title, message, MessageBoxButtons.Ok, MessageBoxIcon.Information);
     }
 
 }

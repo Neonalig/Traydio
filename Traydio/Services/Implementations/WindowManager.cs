@@ -4,6 +4,7 @@ using System.Linq;
 using Avalonia.Controls;
 using Avalonia.Platform;
 using Avalonia.Media.Imaging;
+using Avalonia.Threading;
 using Classic.CommonControls.Dialogs;
 using Microsoft.Extensions.DependencyInjection;
 using Traydio.Common;
@@ -21,6 +22,17 @@ public sealed class WindowManager(
 
     public void ShowMainWindow()
     {
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(ShowMainWindowCore, DispatcherPriority.Normal);
+            return;
+        }
+
+        ShowMainWindowCore();
+    }
+
+    private void ShowMainWindowCore()
+    {
         if (_mainWindow is { IsVisible: true })
         {
             _mainWindow.Activate();
@@ -34,31 +46,61 @@ public sealed class WindowManager(
 
     public void ShowStationManager()
     {
-        ShowMainWindow();
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(ShowStationManager, DispatcherPriority.Normal);
+            return;
+        }
+
+        ShowMainWindowCore();
         navigationService.Navigate(AppPage.Stations);
     }
 
     public void ShowStationSearch()
     {
-        ShowMainWindow();
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(ShowStationSearch, DispatcherPriority.Normal);
+            return;
+        }
+
+        ShowMainWindowCore();
         navigationService.Navigate(AppPage.Search);
     }
 
     public void ShowPluginManager()
     {
-        ShowMainWindow();
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(ShowPluginManager, DispatcherPriority.Normal);
+            return;
+        }
+
+        ShowMainWindowCore();
         navigationService.Navigate(AppPage.Plugins);
     }
 
     public void ShowSettings()
     {
-        ShowMainWindow();
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(ShowSettings, DispatcherPriority.Normal);
+            return;
+        }
+
+        ShowMainWindowCore();
         navigationService.Navigate(AppPage.Settings);
     }
 
     public void ShowCommandTester()
     {
-        ShowMainWindow();
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(ShowCommandTester, DispatcherPriority.Normal);
+            return;
+        }
+
+        ShowMainWindowCore();
 
         var page = serviceProvider.GetRequiredService<CommandTesterPage>();
         var window = new Window
@@ -71,7 +113,7 @@ public sealed class WindowManager(
         };
         WindowThemeHelper.ApplyClassicWindowTheme(window);
 
-        if (_mainWindow is not null)
+        if (_mainWindow is { IsVisible: true })
         {
             window.ShowDialog(_mainWindow).ForgetWithErrorHandling("Show command tester dialog", showDialog: true);
             return;
@@ -81,6 +123,22 @@ public sealed class WindowManager(
     }
 
     public bool ShowPluginSettings(string pluginId, out string? error)
+    {
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            string? marshaledError = null;
+            var result = Dispatcher.UIThread
+                .InvokeAsync(() => ShowPluginSettingsCore(pluginId, out marshaledError), DispatcherPriority.Normal)
+                .GetAwaiter()
+                .GetResult();
+            error = marshaledError;
+            return result;
+        }
+
+        return ShowPluginSettingsCore(pluginId, out error);
+    }
+
+    private bool ShowPluginSettingsCore(string pluginId, out string? error)
     {
         error = null;
         var plugin = pluginManager.GetPlugins()
@@ -119,7 +177,7 @@ public sealed class WindowManager(
             return false;
         }
 
-        ShowMainWindow();
+        ShowMainWindowCore();
 
         var settingsWindow = new Window
         {
@@ -131,7 +189,7 @@ public sealed class WindowManager(
         };
         WindowThemeHelper.ApplyClassicWindowTheme(settingsWindow);
 
-        if (_mainWindow is not null)
+        if (_mainWindow is { IsVisible: true })
         {
             settingsWindow.ShowDialog(_mainWindow).ForgetWithErrorHandling("Show plugin settings dialog", showDialog: true);
         }
@@ -145,7 +203,18 @@ public sealed class WindowManager(
 
     public void ShowAboutDialog()
     {
-        ShowMainWindow();
+        if (!Dispatcher.UIThread.CheckAccess())
+        {
+            Dispatcher.UIThread.Post(ShowAboutDialog, DispatcherPriority.Normal);
+            return;
+        }
+
+        ShowMainWindowCore();
+
+        if (_mainWindow is null)
+        {
+            return;
+        }
 
         using var iconStream = AssetLoader.Open(new Uri("avares://Traydio/Assets/Icons9x/stations.ico"));
         var bitmap = new Bitmap(iconStream);
@@ -156,7 +225,7 @@ public sealed class WindowManager(
             : $"Copyright (C) {INITIAL_COPYRIGHT_YEAR} - {buildYear}";
 
         AboutDialog.ShowDialog(
-            _mainWindow!,
+            _mainWindow,
             new AboutDialogOptions
             {
                 Title = "Traydio",

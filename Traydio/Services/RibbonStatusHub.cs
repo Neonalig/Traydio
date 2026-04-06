@@ -59,20 +59,14 @@ public static class RibbonStatusHub
     {
         SetOverride(id, text, priority);
 
-        _ = ClearTemporaryOverrideAsync(id, duration);
+        ClearTemporaryOverrideAsync(id, duration)
+            .ForgetWithErrorHandling("Clear temporary ribbon status", showDialog: false);
     }
 
     private static async Task ClearTemporaryOverrideAsync(string id, TimeSpan duration)
     {
-        try
-        {
-            await Task.Delay(duration).ConfigureAwait(false);
-            RemoveOverride(id);
-        }
-        catch
-        {
-            // Best effort only.
-        }
+        await Task.Delay(duration).ConfigureAwait(false);
+        RemoveOverride(id);
     }
 
     private static RibbonStatusEntry? GetTopEntry_NoLock()

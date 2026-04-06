@@ -17,6 +17,10 @@ public static class TaskSafetyExtensions
         {
             await task.ConfigureAwait(false);
         }
+        catch (OperationCanceledException)
+        {
+            // Cancellation is expected for some UI/background operations.
+        }
         catch (Exception ex)
         {
             AppErrorHandler.Report(ex, context, showDialog);
