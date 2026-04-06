@@ -166,7 +166,11 @@ public partial class PluginManagementPage : UserControl
             return;
         }
 
-        viewModel.SetInstalledPluginEnabled(pluginItem, isChecked);
+        await RunBusyAsync(viewModel, isChecked ? "Enabling plugin..." : "Disabling plugin...", () =>
+        {
+            viewModel.SetInstalledPluginEnabled(pluginItem, isChecked);
+            return Task.CompletedTask;
+        });
         await ShowViewModelStatusDialogAsync(viewModel, "Plugin state");
     }
 
@@ -187,7 +191,7 @@ public partial class PluginManagementPage : UserControl
             return;
         }
 
-        viewModel.ToggleInstalledPlugin(pluginItem);
+        await RunBusyAsync(viewModel, pluginItem.IsEnabled ? "Disabling plugin..." : "Enabling plugin...", () => viewModel.ToggleInstalledPluginAsync(pluginItem));
         await ShowViewModelStatusDialogAsync(viewModel, "Plugin state");
     }
 
@@ -258,7 +262,11 @@ public partial class PluginManagementPage : UserControl
             return;
         }
 
-        viewModel.RemoveInstalledPlugin(pluginItem);
+        await RunBusyAsync(viewModel, "Removing plugin...", () =>
+        {
+            viewModel.RemoveInstalledPlugin(pluginItem);
+            return Task.CompletedTask;
+        });
         await ShowViewModelStatusDialogAsync(viewModel, "Plugin remove");
     }
 
@@ -447,13 +455,20 @@ public partial class PluginManagementPage : UserControl
             migrate = choice == MessageBoxResult.Yes;
         }
 
-        if (viewModel.ChangePluginDirectory(nextPath, migrate, out var error))
+        var success = false;
+        await RunBusyAsync(viewModel, "Updating plugin directory...", () =>
+        {
+            success = viewModel.ChangePluginDirectory(nextPath, migrate, out _);
+            return Task.CompletedTask;
+        });
+
+        if (success)
         {
             await ShowInfoDialogAsync("Plugin folder", "Plugin install folder updated.");
             return;
         }
 
-        await ShowInfoDialogAsync("Plugin folder", "Could not change plugin folder: " + (error ?? "Unknown error."));
+        await ShowInfoDialogAsync("Plugin folder", "Could not change plugin folder.");
     }
 
     private void OnInstallFromPathClick(object? sender, RoutedEventArgs e)
@@ -496,6 +511,23 @@ public partial class PluginManagementPage : UserControl
         }
 
         await MessageBox.ShowDialog(owner, title, message, MessageBoxButtons.Ok, MessageBoxIcon.Information);
+    }
+
+    private static async Task RunBusyAsync(PluginManagementWindowViewModel viewModel, string busyText, Func<Task> action)
+    {
+        viewModel.IsBusy = true;
+        viewModel.BusyText = busyText;
+
+        try
+        {
+            await Task.Yield();
+            await action();
+        }
+        finally
+        {
+            viewModel.IsBusy = false;
+            viewModel.BusyText = string.Empty;
+        }
     }
 }
 

@@ -268,7 +268,7 @@ public partial class StationSearchWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void RemoveSelectedProvider()
+    private async Task RemoveSelectedProvider()
     {
         if (SelectedProvider is null)
         {
@@ -276,14 +276,24 @@ public partial class StationSearchWindowViewModel : ViewModelBase
             return;
         }
 
-        if (_pluginManager.RemovePlugin(SelectedProvider.PluginId, out var error))
+        IsBusy = true;
+        Status = "Removing provider...";
+        try
         {
-            Status = $"Provider '{SelectedProvider.DisplayName}' removed or disabled.";
-            RefreshProviders();
-            return;
-        }
+            await Task.Yield();
+            if (_pluginManager.RemovePlugin(SelectedProvider.PluginId, out var error))
+            {
+                Status = $"Provider '{SelectedProvider.DisplayName}' removed or disabled.";
+                RefreshProviders();
+                return;
+            }
 
-        Status = "Could not remove provider: " + (error ?? "Unknown error.");
+            Status = "Could not remove provider: " + (error ?? "Unknown error.");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]
@@ -294,6 +304,11 @@ public partial class StationSearchWindowViewModel : ViewModelBase
             Status = "Specify a plugin DLL path first.";
             return;
         }
+
+        IsBusy = true;
+        Status = "Installing plugin...";
+        try
+        {
 
         var installedBefore = _pluginManager.GetPluginInventory()
             .Select(item => item.Id)
@@ -334,6 +349,11 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         }
 
         Status = "Could not add plugin: " + (error ?? "Unknown error.");
+        }
+        finally
+        {
+            IsBusy = false;
+        }
     }
 
     [RelayCommand]

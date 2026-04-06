@@ -7,13 +7,15 @@
              x:Name="Root"
              x:Class="Traydio.Views.PluginManagementPage"
              x:DataType="vm:PluginManagementWindowViewModel">
-    <Grid Margin="0" RowDefinitions="Auto,*" RowSpacing="6">
+    <Grid Margin="0">
 
-        <Border Grid.Row="0" Classes="status-strip" Margin="0">
-            <TextBlock Text="Double-click candidates to install and installed entries to disable/enable. Uninstall (or Delete key) removes plugins. If a plugin file is locked, it is marked for delete on restart." Classes="helper-text"/>
-        </Border>
+        <Grid IsEnabled="{Binding !IsBusy}" RowDefinitions="Auto,*" RowSpacing="6">
 
-        <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="0" Margin="4,0,4,4">
+            <Border Grid.Row="0" Classes="status-strip" Margin="0">
+                <TextBlock Text="Double-click candidates to install and installed entries to disable/enable. Uninstall (or Delete key) removes plugins. If a plugin file is locked, it is marked for delete on restart." Classes="helper-text"/>
+            </Border>
+
+            <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="0" Margin="4,0,4,4">
             <Border Classes="group-caption-chip">
                 <TextBlock Text="Plugin Source and Inventory" Classes="group-title"/>
             </Border>
@@ -186,7 +188,16 @@
                     </Grid>
                 </Grid>
             </Border>
+            </Grid>
+
         </Grid>
+
+        <Border IsVisible="{Binding IsBusy}" Background="{DynamicResource OverlayBackgroundBrush}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                <ProgressBar Width="220" IsIndeterminate="True"/>
+                <TextBlock Text="{Binding BusyText}" Classes="helper-text" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
 
     </Grid>
 </UserControl>

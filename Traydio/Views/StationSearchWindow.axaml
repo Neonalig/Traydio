@@ -12,9 +12,10 @@
         <KeyBinding Gesture="Enter" Command="{Binding SearchCommand}" />
     </UserControl.KeyBindings>
 
-    <Grid Margin="0" RowDefinitions="Auto,Auto,*" RowSpacing="6">
-        <Border Grid.Row="0" Classes="toolbar-frame" Margin="0">
-            <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+    <Grid Margin="0">
+        <Grid IsEnabled="{Binding !IsBusy}" RowDefinitions="Auto,Auto,*" RowSpacing="6">
+            <Border Grid.Row="0" Classes="toolbar-frame" Margin="0">
+                <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
                 <Grid Grid.Row="0" ColumnDefinitions="2*,1.2*,2.2*,Auto,1.6*,Auto" ColumnSpacing="8">
                     <ComboBox Grid.Column="0"
                               ItemsSource="{Binding Providers}"
@@ -84,68 +85,70 @@
                     </Button>
                     <TextBlock Grid.Column="6" VerticalAlignment="Center" Classes="subtle-text" Text="Pagination" IsVisible="{Binding SupportsPagination}"/>
                 </Grid>
-            </Grid>
-        </Border>
+                </Grid>
+            </Border>
 
-        <Border Grid.Row="1" Classes="status-strip" Margin="0">
-            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                <ProgressBar Grid.Column="0"
-                             Width="120"
-                             Height="6"
-                             IsIndeterminate="True"
-                             IsVisible="{Binding IsBusy}"
-                             VerticalAlignment="Center"/>
-                <TextBlock Grid.Column="1"
+            <Border Grid.Row="1" Classes="status-strip" Margin="0">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <TextBlock Grid.Column="0"
                            Text="{Binding Status}"
                            Classes="helper-text"
                            TextTrimming="CharacterEllipsis"
                            VerticalAlignment="Center"/>
-                <TextBlock Grid.Column="2"
+                <TextBlock Grid.Column="1"
                            Text="Choose a provider view (Search/Featured/Random), apply optional provider filters, then page through results."
                            Classes="helper-text"
                            VerticalAlignment="Center"/>
-            </Grid>
-        </Border>
-
-        <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="0" Margin="4,0,4,4">
-            <Border Classes="group-caption-chip">
-                <TextBlock Text="Search Results" Classes="group-title"/>
-            </Border>
-            <Border Grid.Row="1" Classes="group-frame" Margin="0,-8,0,0">
-                <Grid RowDefinitions="*" RowSpacing="8">
-                    <ListBox x:Name="ResultsList"
-                             Grid.Row="0"
-                             Classes="list-surface"
-                             ItemsSource="{Binding Results}"
-                             SelectedItem="{Binding SelectedResult}">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <Grid ColumnDefinitions="Auto,3*,5*,Auto" ColumnSpacing="8">
-                                    <Image Source="/Assets/stations.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
-                                    <StackPanel Grid.Column="1">
-                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
-                                        <TextBlock Text="{Binding Country}" Classes="subtle-text"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="2">
-                                        <TextBlock Text="{Binding StreamUrl}" TextWrapping="Wrap"/>
-                                        <TextBlock Text="{Binding Description}" Classes="subtle-text" TextWrapping="Wrap"/>
-                                    </StackPanel>
-                                    <Button Grid.Column="3"
-                                            Classes="command-button"
-                                            VerticalAlignment="Center"
-                                            Click="OnAddResultClick">
-                                        <StackPanel Orientation="Horizontal" Spacing="6">
-                                            <Image Source="/Assets/add.ico" Classes="icon-small"/>
-                                            <TextBlock Text="Add" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                    </Button>
-                                </Grid>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
                 </Grid>
             </Border>
+
+            <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="0" Margin="4,0,4,4">
+                <Border Classes="group-caption-chip">
+                    <TextBlock Text="Search Results" Classes="group-title"/>
+                </Border>
+                <Border Grid.Row="1" Classes="group-frame" Margin="0,-8,0,0">
+                    <Grid RowDefinitions="*" RowSpacing="8">
+                        <ListBox x:Name="ResultsList"
+                                 Grid.Row="0"
+                                 Classes="list-surface"
+                                 ItemsSource="{Binding Results}"
+                                 SelectedItem="{Binding SelectedResult}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid ColumnDefinitions="Auto,3*,5*,Auto" ColumnSpacing="8">
+                                        <Image Source="/Assets/stations.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Country}" Classes="subtle-text"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2">
+                                            <TextBlock Text="{Binding StreamUrl}" TextWrapping="Wrap"/>
+                                            <TextBlock Text="{Binding Description}" Classes="subtle-text" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <Button Grid.Column="3"
+                                                Classes="command-button"
+                                                VerticalAlignment="Center"
+                                                Click="OnAddResultClick">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <Image Source="/Assets/add.ico" Classes="icon-small"/>
+                                                <TextBlock Text="Add" VerticalAlignment="Center"/>
+                                            </StackPanel>
+                                        </Button>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </Border>
+            </Grid>
         </Grid>
+
+        <Border IsVisible="{Binding IsBusy}" Background="{DynamicResource OverlayBackgroundBrush}">
+            <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                <ProgressBar Width="220" IsIndeterminate="True"/>
+                <TextBlock Text="{Binding Status}" Classes="helper-text" HorizontalAlignment="Center"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </UserControl>
 

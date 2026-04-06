@@ -54,6 +54,12 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
     [ObservableProperty]
     private bool _hasPendingDeletes;
 
+    [ObservableProperty]
+    private bool _isBusy;
+
+    [ObservableProperty]
+    private string _busyText = string.Empty;
+
     public PluginManagementWindowViewModel(
         IPluginManager pluginManager,
         IPluginInstallDisclaimerService pluginInstallDisclaimerService,
@@ -138,7 +144,7 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             return;
         }
 
-        await InstallPluginFromPathAsync(SelectedPluginCandidate.Path, CancellationToken.None).ConfigureAwait(false);
+        await RunBusyAsync("Installing plugin...", () => InstallPluginFromPathAsync(SelectedPluginCandidate.Path, CancellationToken.None)).ConfigureAwait(false);
     }
 
     [RelayCommand]
@@ -150,11 +156,11 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             return;
         }
 
-        await InstallPluginFromPathAsync(PluginDllPath, CancellationToken.None).ConfigureAwait(false);
+        await RunBusyAsync("Installing plugin...", () => InstallPluginFromPathAsync(PluginDllPath, CancellationToken.None)).ConfigureAwait(false);
     }
 
     [RelayCommand]
-    private void DisableSelectedPlugin()
+    private async Task DisableSelectedPlugin()
     {
         var selectedPlugin = SelectedInstalledPlugin;
         if (selectedPlugin is null)
@@ -163,26 +169,22 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             return;
         }
 
-        if (_pluginManager.SetPluginEnabled(selectedPlugin.Id, enabled: false, out var error))
+        if (await SetInstalledPluginEnabledAsync(selectedPlugin, enabled: false).ConfigureAwait(false))
         {
-            Status = $"Plugin '{selectedPlugin.DisplayName}' disabled.";
-            Refresh();
             return;
         }
-
-        Status = "Could not disable plugin: " + (error ?? "Unknown error.");
     }
 
     [RelayCommand]
-    private void RemoveSelectedPlugin()
+    private async Task RemoveSelectedPlugin()
     {
-        RemoveInstalledPlugin(SelectedInstalledPlugin);
+        await RemoveInstalledPluginAsync(SelectedInstalledPlugin).ConfigureAwait(false);
     }
 
     [RelayCommand]
-    private void RemovePlugin(InstalledPluginItem? pluginItem)
+    private async Task RemovePlugin(InstalledPluginItem? pluginItem)
     {
-        RemoveInstalledPlugin(pluginItem);
+        await RemoveInstalledPluginAsync(pluginItem).ConfigureAwait(false);
     }
 
     [RelayCommand]
@@ -280,25 +282,28 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             return;
         }
 
-        var successes = 0;
-        string? lastError = null;
-
-        foreach (var path in paths)
+        await RunBusyAsync("Installing plugins...", async () =>
         {
-            if (await InstallPluginFromPathAsync(path, CancellationToken.None).ConfigureAwait(false))
-            {
-                successes++;
-            }
-            else
-            {
-                lastError = Status;
-            }
-        }
+            var successes = 0;
+            string? lastError = null;
 
-        Refresh();
-        Status = successes > 0
-            ? $"Installed {successes} plugin file(s)."
-            : "Could not install dropped plugins: " + (lastError ?? "Unknown error.");
+            foreach (var path in paths)
+            {
+                if (await InstallPluginFromPathAsync(path, CancellationToken.None).ConfigureAwait(false))
+                {
+                    successes++;
+                }
+                else
+                {
+                    lastError = Status;
+                }
+            }
+
+            Refresh();
+            Status = successes > 0
+                ? $"Installed {successes} plugin file(s)."
+                : "Could not install dropped plugins: " + (lastError ?? "Unknown error.");
+        }).ConfigureAwait(false);
     }
 
     public bool SetInstalledPluginEnabled(InstalledPluginItem? pluginItem, bool enabled)
@@ -322,14 +327,21 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         return false;
     }
 
-    public void ToggleInstalledPlugin(InstalledPluginItem? pluginItem)
+    public async Task<bool> SetInstalledPluginEnabledAsync(InstalledPluginItem? pluginItem, bool enabled)
+    {
+        return await RunBusyAsync(
+            enabled ? "Enabling plugin..." : "Disabling plugin...",
+            () => Task.FromResult(SetInstalledPluginEnabled(pluginItem, enabled))).ConfigureAwait(false);
+    }
+
+    public async Task ToggleInstalledPluginAsync(InstalledPluginItem? pluginItem)
     {
         if (pluginItem is null)
         {
             return;
         }
 
-        SetInstalledPluginEnabled(pluginItem, !pluginItem.IsEnabled);
+        await SetInstalledPluginEnabledAsync(pluginItem, !pluginItem.IsEnabled).ConfigureAwait(false);
     }
 
     public bool RemoveInstalledPlugin(InstalledPluginItem? pluginItem)
@@ -356,6 +368,11 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         return false;
     }
 
+    public async Task<bool> RemoveInstalledPluginAsync(InstalledPluginItem? pluginItem)
+    {
+        return await RunBusyAsync("Removing plugin...", () => Task.FromResult(RemoveInstalledPlugin(pluginItem))).ConfigureAwait(false);
+    }
+
     public async Task InstallCandidate(PluginCandidateItem? candidate, CancellationToken cancellationToken)
     {
         if (candidate is null)
@@ -363,7 +380,7 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             return;
         }
 
-        await InstallPluginFromPathAsync(candidate.Path, cancellationToken).ConfigureAwait(false);
+        await RunBusyAsync("Installing plugin...", () => InstallPluginFromPathAsync(candidate.Path, cancellationToken)).ConfigureAwait(false);
     }
 
     public bool ChangePluginDirectory(string newDirectory, bool migrateExistingPlugins, out string? error)
@@ -414,6 +431,13 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         }
     }
 
+    public async Task<bool> ChangePluginDirectoryAsync(string newDirectory, bool migrateExistingPlugins)
+    {
+        return await RunBusyAsync(
+            "Updating plugin directory...",
+            () => Task.FromResult(ChangePluginDirectory(newDirectory, migrateExistingPlugins, out _))).ConfigureAwait(false);
+    }
+
     [RelayCommand]
     private async Task UpgradeCandidate(PluginCandidateItem? candidate)
     {
@@ -457,7 +481,7 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
             return;
         }
 
-        await InstallPluginFromPathAsync(path, CancellationToken.None).ConfigureAwait(false);
+        await RunBusyAsync("Installing plugin...", () => InstallPluginFromPathAsync(path, CancellationToken.None)).ConfigureAwait(false);
     }
 
     private async Task<bool> ConfirmInstallDisclaimersAsync(HashSet<string> installedBefore, CancellationToken cancellationToken)
@@ -753,6 +777,40 @@ public partial class PluginManagementWindowViewModel : ViewModelBase
         public bool IsOfficial { get; } = isOfficial;
 
         public bool IsExternal { get; } = isExternal;
+    }
+
+    private async Task RunBusyAsync(string message, Func<Task> action)
+    {
+        IsBusy = true;
+        BusyText = message;
+
+        try
+        {
+            await Task.Yield();
+            await action().ConfigureAwait(false);
+        }
+        finally
+        {
+            IsBusy = false;
+            BusyText = string.Empty;
+        }
+    }
+
+    private async Task<T> RunBusyAsync<T>(string message, Func<Task<T>> action)
+    {
+        IsBusy = true;
+        BusyText = message;
+
+        try
+        {
+            await Task.Yield();
+            return await action().ConfigureAwait(false);
+        }
+        finally
+        {
+            IsBusy = false;
+            BusyText = string.Empty;
+        }
     }
 }
 
