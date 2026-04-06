@@ -13,7 +13,7 @@
     </UserControl.KeyBindings>
 
     <Grid Margin="0">
-        <Grid IsEnabled="{Binding !IsBusy}" RowDefinitions="Auto,Auto,*" RowSpacing="6">
+        <Grid IsEnabled="{Binding !IsBusy}" RowDefinitions="Auto,*" RowSpacing="6">
             <Border Grid.Row="0" Classes="toolbar-frame" Margin="0">
                 <Grid RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="8">
                 <Grid Grid.Row="0" ColumnDefinitions="84,2.4*,*" ColumnSpacing="8">
@@ -93,21 +93,7 @@
                 </Grid>
             </Border>
 
-            <Border Grid.Row="1" Classes="status-strip" Margin="0">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                <TextBlock Grid.Column="0"
-                           Text="{Binding Status}"
-                           Classes="helper-text"
-                           TextTrimming="CharacterEllipsis"
-                           VerticalAlignment="Center"/>
-                <TextBlock Grid.Column="1"
-                           Text="Entering query text locks View to Search until query is cleared."
-                           Classes="helper-text"
-                           VerticalAlignment="Center"/>
-                </Grid>
-            </Border>
-
-            <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="0" Margin="4,0,4,4">
+            <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="0" Margin="4,0,4,4">
                 <Border Classes="group-caption-chip">
                     <TextBlock Text="Search Results" Classes="group-title"/>
                 </Border>

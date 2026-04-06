@@ -38,6 +38,7 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
     private string? _currentStationName;
     private string? _nowPlaying;
     private string? _lastError;
+    private bool _isLoading;
 
     public event EventHandler<RadioPlayerState>? StateChanged;
 
@@ -109,6 +110,7 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
 
         lock (_gate)
         {
+            _isLoading = true;
             _lastError = null;
             _nowPlaying = null;
             _currentStationName = station.Name;
@@ -128,6 +130,7 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
 
                 if (_streamHandle == 0)
                 {
+                    _isLoading = false;
                     _lastError = $"BASS failed to open stream: {Bass.LastError}";
                     RaiseStateChanged_NoLock();
                     return;
@@ -137,6 +140,7 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
 
                 if (!Bass.ChannelPlay(_streamHandle))
                 {
+                    _isLoading = false;
                     _lastError = $"BASS failed to start playback: {Bass.LastError}";
                     StopAndFreeCurrentStream_NoLock();
                     RaiseStateChanged_NoLock();
@@ -152,6 +156,7 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
             }
             catch (Exception ex)
             {
+                _isLoading = false;
                 _lastError = ex.Message;
                 StopAndFreeCurrentStream_NoLock();
                 RaiseStateChanged_NoLock();
@@ -458,6 +463,8 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
 
     private void StopAndFreeCurrentStream_NoLock()
     {
+        _isLoading = false;
+
         if (_streamHandle == 0)
         {
             return;
@@ -476,6 +483,18 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
             ? PlaybackState.Stopped
             : Bass.ChannelIsActive(_streamHandle);
 
+        if (_streamHandle == 0 ||
+            playbackState == PlaybackState.Playing ||
+            playbackState == PlaybackState.Paused ||
+            !string.IsNullOrWhiteSpace(_lastError))
+        {
+            _isLoading = false;
+        }
+        else
+        {
+            _isLoading = true;
+        }
+
         if (playbackState != PlaybackState.Playing)
         {
             PausePlaybackClock_NoLock();
@@ -491,7 +510,7 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
         {
             IsPlaying = playbackState == PlaybackState.Playing,
             IsPaused = playbackState == PlaybackState.Paused,
-            IsLoading = false,
+            IsLoading = _isLoading,
             IsMuted = _isMuted,
             Volume = _volume,
             Position = position,
@@ -599,12 +618,11 @@ public sealed class BassRadioPlayer : IRadioPlayer, IDisposable
             }
 
             var playbackState = Bass.ChannelIsActive(_streamHandle);
-            if (playbackState != PlaybackState.Playing && playbackState != PlaybackState.Paused)
+            if (playbackState == PlaybackState.Playing || playbackState == PlaybackState.Paused)
             {
-                return;
+                UpdateNowPlaying_NoLock();
             }
 
-            UpdateNowPlaying_NoLock();
             RaiseStateChanged_NoLock();
         }
     }

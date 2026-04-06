@@ -330,7 +330,7 @@ public sealed class LibVlcRadioPlayer : IRadioPlayer, IDisposable
     {
         lock (_sync)
         {
-            _isLoading = e.Cache < 100f && !_mediaPlayer.IsPlaying;
+            _isLoading = e.Cache < 100f;
         }
 
         RaiseStateChanged();
