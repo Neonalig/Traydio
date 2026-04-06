@@ -50,6 +50,8 @@ public class FmStreamOrgPluginSettingsView : UserControl
 
         var highQualitySetting = _settingsAccessor.GetValue(FmStreamOrgPluginSettings.DEFAULT_HIGH_QUALITY_KEY);
         _defaultHighQualityBox.IsChecked = ParseBool(highQualitySetting, defaultValue: true);
+
+        WirePendingChangeHandlers();
     }
 
     private void BuildLayout()
@@ -108,13 +110,6 @@ public class FmStreamOrgPluginSettingsView : UserControl
         Grid.SetRow(keyGrid, 3);
         root.Children.Add(keyGrid);
 
-        var saveButton = new Button
-        {
-            Content = "Save",
-            HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
-        };
-        saveButton.Click += OnSaveClick;
-
         var siteLinkButton = CreateHyperlinkButton("Open fmstream.org", OnOpenWebsiteClick);
 
         var disclaimerButton = new Button
@@ -130,7 +125,6 @@ public class FmStreamOrgPluginSettingsView : UserControl
             Spacing = 8,
         };
         actionPanel.Children.Add(_defaultHighQualityBox);
-        actionPanel.Children.Add(saveButton);
         Grid.SetRow(actionPanel, 4);
         root.Children.Add(actionPanel);
 
@@ -161,6 +155,35 @@ public class FmStreamOrgPluginSettingsView : UserControl
         root.Children.Add(_statusText);
 
         Content = root;
+    }
+
+    private void WirePendingChangeHandlers()
+    {
+        _apiMethodBox.SelectionChanged += (_, _) => UpdatePendingSettings();
+        _apiKeyNameBox.TextChanged += (_, _) => UpdatePendingSettings();
+        _apiKeyValueBox.TextChanged += (_, _) => UpdatePendingSettings();
+        _defaultHighQualityBox.IsCheckedChanged += (_, _) => UpdatePendingSettings();
+    }
+
+    private void UpdatePendingSettings()
+    {
+        var selectedMethod = _apiMethodBox.SelectedItem?.ToString() ?? "GET";
+        var keyName = _apiKeyNameBox.Text?.Trim();
+        var keyValue = _apiKeyValueBox.Text?.Trim();
+        var highQuality = _defaultHighQualityBox.IsChecked ?? true;
+
+        _settingsAccessor.SetValue(
+            FmStreamOrgPluginSettings.API_METHOD_KEY,
+            string.Equals(selectedMethod, "POST", StringComparison.OrdinalIgnoreCase) ? "POST" : null);
+        _settingsAccessor.SetValue(
+            FmStreamOrgPluginSettings.API_KEY_NAME_KEY,
+            string.IsNullOrWhiteSpace(keyName) || string.Equals(keyName, FmStreamOrgPluginSettings.DEFAULT_API_KEY_NAME, StringComparison.Ordinal)
+                ? null
+                : keyName);
+        _settingsAccessor.SetValue(
+            FmStreamOrgPluginSettings.API_KEY_VALUE_KEY,
+            string.IsNullOrWhiteSpace(keyValue) ? null : keyValue);
+        _settingsAccessor.SetValue(FmStreamOrgPluginSettings.DEFAULT_HIGH_QUALITY_KEY, highQuality ? null : "0");
     }
 
     private static Button CreateHyperlinkButton(string text, EventHandler<RoutedEventArgs> clickHandler)
@@ -217,27 +240,6 @@ public class FmStreamOrgPluginSettingsView : UserControl
         }
     }
 
-    private void OnSaveClick(object? sender, RoutedEventArgs e)
-    {
-        var selectedMethod = _apiMethodBox.SelectedItem?.ToString() ?? "GET";
-        var keyName = _apiKeyNameBox.Text?.Trim();
-        var keyValue = _apiKeyValueBox.Text?.Trim();
-        var highQuality = _defaultHighQualityBox.IsChecked ?? true;
-
-        _settingsAccessor.SetValue(
-            FmStreamOrgPluginSettings.API_METHOD_KEY,
-            string.Equals(selectedMethod, "POST", StringComparison.OrdinalIgnoreCase) ? "POST" : "GET");
-        _settingsAccessor.SetValue(
-            FmStreamOrgPluginSettings.API_KEY_NAME_KEY,
-            string.IsNullOrWhiteSpace(keyName) ? FmStreamOrgPluginSettings.DEFAULT_API_KEY_NAME : keyName);
-        _settingsAccessor.SetValue(
-            FmStreamOrgPluginSettings.API_KEY_VALUE_KEY,
-            string.IsNullOrWhiteSpace(keyValue) ? null : keyValue);
-        _settingsAccessor.SetValue(FmStreamOrgPluginSettings.DEFAULT_HIGH_QUALITY_KEY, highQuality ? "1" : "0");
-        _settingsAccessor.Save();
-
-        _statusText.Text = "Saved FMStream.org settings.";
-    }
 
     private static bool ParseBool(string? value, bool defaultValue)
     {

@@ -336,7 +336,15 @@ public sealed class StationRepository : IStationRepository
                 pair => pair.Value,
                 StringComparer.OrdinalIgnoreCase);
 
-        _settings.PluginSettings[normalizedPluginId] = normalized;
+        if (normalized.Count == 0)
+        {
+            _settings.PluginSettings.Remove(normalizedPluginId);
+        }
+        else
+        {
+            _settings.PluginSettings[normalizedPluginId] = normalized;
+        }
+
         Save();
         RaiseChanged();
     }

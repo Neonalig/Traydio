@@ -144,6 +144,7 @@ public sealed class PluginManager(
             TryDeletePluginFileNow(pluginPath);
             RemovePendingDeletePath(pluginPath);
             RemoveDisabledPluginId(pluginId);
+            ClearPluginSettings(pluginId);
             ReloadPlugins();
             logger.LogInformation("Remove succeeded pluginId={PluginId} path={PluginPath}", pluginId, pluginPath);
             return true;
@@ -151,6 +152,7 @@ public sealed class PluginManager(
         catch (IOException ex)
         {
             QueuePluginForDeleteOnRestart(pluginId, pluginPath);
+            ClearPluginSettings(pluginId);
             ReloadPlugins();
             logger.LogWarning(ex, "Remove deferred (IO) pluginId={PluginId} path={PluginPath}", pluginId, pluginPath);
             return true;
@@ -158,6 +160,7 @@ public sealed class PluginManager(
         catch (UnauthorizedAccessException ex)
         {
             QueuePluginForDeleteOnRestart(pluginId, pluginPath);
+            ClearPluginSettings(pluginId);
             ReloadPlugins();
             logger.LogWarning(ex, "Remove deferred (access denied) pluginId={PluginId} path={PluginPath}", pluginId, pluginPath);
             return true;
@@ -514,6 +517,11 @@ public sealed class PluginManager(
         {
             stationRepository.SaveStationDiscoveryPluginSettings(settings);
         }
+    }
+
+    private void ClearPluginSettings(string pluginId)
+    {
+        stationRepository.SavePluginSettings(pluginId, new Dictionary<string, string>());
     }
 
     private void ProcessPendingDeletesBeforeLoad()

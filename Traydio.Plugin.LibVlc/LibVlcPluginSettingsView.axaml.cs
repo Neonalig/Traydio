@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Avalonia.Controls;
-using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Traydio.Common;
 
@@ -33,18 +32,18 @@ public partial class LibVlcPluginSettingsView : UserControl
 
         _outputModuleBox.Text = _settingsAccessor.GetValue(LibVlcPluginSettings.OUTPUT_MODULE_KEY);
         _outputDeviceIdBox.Text = _settingsAccessor.GetValue(LibVlcPluginSettings.OUTPUT_DEVICE_ID_KEY);
+
+        _outputModuleBox.TextChanged += (_, _) => UpdatePendingSettings();
+        _outputDeviceIdBox.TextChanged += (_, _) => UpdatePendingSettings();
     }
 
-    private void OnSaveClick(object? sender, RoutedEventArgs e)
+    private void UpdatePendingSettings()
     {
         var module = _outputModuleBox.Text?.Trim();
         var deviceId = _outputDeviceIdBox.Text?.Trim();
 
         _settingsAccessor.SetValue(LibVlcPluginSettings.OUTPUT_MODULE_KEY, string.IsNullOrWhiteSpace(module) ? null : module);
         _settingsAccessor.SetValue(LibVlcPluginSettings.OUTPUT_DEVICE_ID_KEY, string.IsNullOrWhiteSpace(deviceId) ? null : deviceId);
-        _settingsAccessor.Save();
-
-        _statusText.Text = "Saved LibVLC output settings. Restart playback to apply changes.";
     }
 
     private sealed class NullPluginSettingsAccessor : IPluginSettingsAccessor

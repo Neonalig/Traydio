@@ -204,13 +204,15 @@ public sealed class WindowManager(
             return false;
         }
 
+        var settingsAccessor = new PluginSettingsAccessor(
+            pluginSettingsProvider,
+            pluginInstallDisclaimerService,
+            plugin.Id);
+
         object? content;
         try
         {
-            content = settingsCapability.CreateSettingsView(new PluginSettingsAccessor(
-                pluginSettingsProvider,
-                pluginInstallDisclaimerService,
-                plugin.Id));
+            content = settingsCapability.CreateSettingsView(settingsAccessor);
         }
         catch (Exception ex)
         {
@@ -228,15 +230,69 @@ public sealed class WindowManager(
         ShowMainWindowCore();
         TraydioTrace.Debug("WindowManager", "Opening plugin settings for pluginId=" + plugin.Id);
 
+        var baseTitle = $"{plugin.DisplayName} Settings";
         var settingsWindow = new Window
         {
-            Title = $"{plugin.DisplayName} Settings",
+            Title = baseTitle,
             Width = 720,
             Height = 420,
             Content = control,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
         };
         WindowThemeHelper.ApplyClassicWindowTheme(settingsWindow);
+
+        void UpdateTitle()
+        {
+            settingsWindow.Title = settingsAccessor.HasPendingChanges
+                ? baseTitle + '*'
+                : baseTitle;
+        }
+
+        settingsAccessor.PendingChangesChanged += UpdateTitle;
+        settingsWindow.Closed += (_, _) => settingsAccessor.PendingChangesChanged -= UpdateTitle;
+        UpdateTitle();
+
+        var isHandlingClosePrompt = false;
+        settingsWindow.Closing += (_, args) =>
+        {
+            if (isHandlingClosePrompt || !settingsAccessor.HasPendingChanges)
+            {
+                return;
+            }
+
+            args.Cancel = true;
+            isHandlingClosePrompt = true;
+            PromptToSaveChangesAsync().ForgetWithErrorHandling("Plugin settings close prompt", showDialog: false);
+
+            async Task PromptToSaveChangesAsync()
+            {
+                try
+                {
+                    var choice = await MessageBox.ShowDialog(
+                        settingsWindow,
+                        "Save changes to this plugin's settings before closing?",
+                        "Save plugin settings",
+                        MessageBoxButtons.YesNoCancel,
+                        MessageBoxIcon.Question);
+
+                    switch (choice)
+                    {
+                        case MessageBoxResult.Yes:
+                            settingsAccessor.Commit();
+                            settingsWindow.Close();
+                            break;
+                        case MessageBoxResult.No:
+                            settingsAccessor.Discard();
+                            settingsWindow.Close();
+                            break;
+                    }
+                }
+                finally
+                {
+                    isHandlingClosePrompt = false;
+                }
+            }
+        };
 
         if (_mainWindow is { IsVisible: true })
         {
@@ -319,6 +375,13 @@ public sealed class WindowManager(
         private readonly Dictionary<string, string> _values = new(
             pluginSettingsProvider.GetPluginSettings(pluginId),
             StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, string> _originalValues = new(
+            pluginSettingsProvider.GetPluginSettings(pluginId),
+            StringComparer.OrdinalIgnoreCase);
+
+        public bool HasPendingChanges => !DictionaryEquals(_values, _originalValues);
+
+        public event Action? PendingChangesChanged;
 
         public string? GetValue(string key)
         {
@@ -327,6 +390,8 @@ public sealed class WindowManager(
 
         public void SetValue(string key, string? value)
         {
+            var hadPendingChanges = HasPendingChanges;
+
             if (string.IsNullOrWhiteSpace(key))
             {
                 return;
@@ -335,20 +400,73 @@ public sealed class WindowManager(
             if (string.IsNullOrWhiteSpace(value))
             {
                 _values.Remove(key.Trim());
+                NotifyPendingChangesChangedIfNeeded(hadPendingChanges);
                 return;
             }
 
             _values[key.Trim()] = value.Trim();
+            NotifyPendingChangesChangedIfNeeded(hadPendingChanges);
         }
 
         public void Save()
         {
+            // Deferred commit: actual persistence happens from the host close prompt.
+        }
+
+        public void Commit()
+        {
+            var hadPendingChanges = HasPendingChanges;
             pluginSettingsProvider.SavePluginSettings(pluginId, _values);
+            _originalValues.Clear();
+            foreach (var pair in _values)
+            {
+                _originalValues[pair.Key] = pair.Value;
+            }
+
+            NotifyPendingChangesChangedIfNeeded(hadPendingChanges);
+        }
+
+        public void Discard()
+        {
+            var hadPendingChanges = HasPendingChanges;
+            _values.Clear();
+            foreach (var pair in _originalValues)
+            {
+                _values[pair.Key] = pair.Value;
+            }
+
+            NotifyPendingChangesChangedIfNeeded(hadPendingChanges);
         }
 
         public Task<bool> ShowInstallDisclaimerAsync(string targetPluginId, PluginInstallDisclaimer disclaimer, bool requireAcceptance)
         {
             return pluginInstallDisclaimerService.ShowAsync(disclaimer, requireAcceptance, CancellationToken.None);
+        }
+
+        private static bool DictionaryEquals(IReadOnlyDictionary<string, string> left, IReadOnlyDictionary<string, string> right)
+        {
+            if (left.Count != right.Count)
+            {
+                return false;
+            }
+
+            foreach (var pair in left)
+            {
+                if (!right.TryGetValue(pair.Key, out var other) || !string.Equals(pair.Value, other, StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private void NotifyPendingChangesChangedIfNeeded(bool previous)
+        {
+            if (previous != HasPendingChanges)
+            {
+                PendingChangesChanged?.Invoke();
+            }
         }
     }
 }

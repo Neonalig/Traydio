@@ -58,7 +58,7 @@
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="vm:PluginManagementWindowViewModel+InstalledPluginItem">
                                     <Border Padding="0,4">
-                                        <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="8">
+                                        <Grid ColumnDefinitions="Auto,Auto,*,108,108" ColumnSpacing="8">
                                             <CheckBox Grid.Column="0"
                                                       IsChecked="{Binding IsEnabled}"
                                                       VerticalAlignment="Center"
@@ -74,6 +74,7 @@
                                             </StackPanel>
                                             <Button Grid.Column="3"
                                                     Classes="command-button plugin-row-button"
+                                                    HorizontalAlignment="Stretch"
                                                     IsVisible="{Binding HasSettings}"
                                                     IsEnabled="{Binding IsEnabled}"
                                                     Command="{Binding #Root.OpenPluginSettingsCommand}"
@@ -85,6 +86,7 @@
                                             </Button>
                                             <Button Grid.Column="4"
                                                     Classes="command-button plugin-row-button"
+                                                    HorizontalAlignment="Stretch"
                                                     IsVisible="{Binding !IsPendingDelete}"
                                                     Command="{Binding #Root.RemovePluginCommand}"
                                                     CommandParameter="{Binding}">
@@ -99,7 +101,7 @@
                             </ListBox.ItemTemplate>
                     </ListBox>
 
-                    <TextBlock Grid.Row="3" Text="Discovered Eligible Plugin DLLs" FontWeight="SemiBold"/>
+                    <TextBlock Grid.Row="3" Text="Available Plugins" FontWeight="SemiBold"/>
                     <ListBox Grid.Row="4"
                                  x:Name="PluginCandidatesList"
                                  Classes="list-surface plugin-list-surface"

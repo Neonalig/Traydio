@@ -35,6 +35,7 @@ public partial class BassPluginSettingsView : UserControl
     private readonly ComboBox _outputDeviceComboBox;
     private readonly TextBlock _statusText;
     private readonly IBrush? _statusNormalForeground;
+    private bool _suppressOutputDeviceSync;
 
     private static readonly IImage _statusLoadedIcon = LoadIcon("avares://Traydio/Assets/play.ico");
     private static readonly IImage _statusWarningIcon = LoadIcon("avares://Traydio/Assets/warning.ico");
@@ -90,6 +91,7 @@ public partial class BassPluginSettingsView : UserControl
 
             ConfigureNativeLibraryPath();
             LoadOutputDeviceOptions();
+            _outputDeviceComboBox.SelectionChanged += OnOutputDeviceSelectionChanged;
             RefreshDependencyStatuses();
         }
         catch (Exception ex)
@@ -122,7 +124,7 @@ public partial class BassPluginSettingsView : UserControl
         RunSafelyAsync(OnBrowseBassClickAsync(), "Browse bass.dll");
     }
 
-    private async System.Threading.Tasks.Task OnBrowseBassClickAsync()
+    private async Task OnBrowseBassClickAsync()
     {
         await PickDependencyPathAsync(_bassPathBox, BassPluginSettings.BASS_DLL_PATH_KEY, "bass.dll");
         ConfigureNativeLibraryPath();
@@ -134,7 +136,7 @@ public partial class BassPluginSettingsView : UserControl
         RunSafelyAsync(OnBrowseBassOpusClickAsync(), "Browse bassopus.dll");
     }
 
-    private async System.Threading.Tasks.Task OnBrowseBassOpusClickAsync()
+    private async Task OnBrowseBassOpusClickAsync()
     {
         await PickDependencyPathAsync(_bassOpusPathBox, BassPluginSettings.BASS_OPUS_DLL_PATH_KEY, "bassopus.dll");
         RefreshDependencyStatuses();
@@ -145,16 +147,20 @@ public partial class BassPluginSettingsView : UserControl
         RunSafelyAsync(OnBrowseTagsClickAsync(), "Browse tags.dll");
     }
 
-    private async System.Threading.Tasks.Task OnBrowseTagsClickAsync()
+    private async Task OnBrowseTagsClickAsync()
     {
         await PickDependencyPathAsync(_tagsPathBox, BassPluginSettings.TAGS_DLL_PATH_KEY, "tags.dll");
         RefreshDependencyStatuses();
     }
 
-    private void OnSaveOutputDeviceClick(object? sender, RoutedEventArgs e)
+    private void OnOutputDeviceSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
+        if (_suppressOutputDeviceSync)
+        {
+            return;
+        }
+
         SaveOutputDeviceIndex();
-        SetStatus("Saved output device setting.");
     }
 
     private void OnDownloadBassClick(object? sender, RoutedEventArgs e)
@@ -162,7 +168,7 @@ public partial class BassPluginSettingsView : UserControl
         RunSafelyAsync(OnDownloadBassClickAsync(), "Download bass.dll");
     }
 
-    private async System.Threading.Tasks.Task OnDownloadBassClickAsync()
+    private async Task OnDownloadBassClickAsync()
     {
         await DownloadDependencyAsync(
             BassPluginSettings.BASS_DOWNLOAD_URL,
@@ -179,7 +185,7 @@ public partial class BassPluginSettingsView : UserControl
         RunSafelyAsync(OnDownloadBassOpusClickAsync(), "Download bassopus.dll");
     }
 
-    private async System.Threading.Tasks.Task OnDownloadBassOpusClickAsync()
+    private async Task OnDownloadBassOpusClickAsync()
     {
         await DownloadDependencyAsync(
             BassPluginSettings.BASS_OPUS_DOWNLOAD_URL,
@@ -195,7 +201,7 @@ public partial class BassPluginSettingsView : UserControl
         RunSafelyAsync(OnDownloadTagsClickAsync(), "Download tags.dll");
     }
 
-    private async System.Threading.Tasks.Task OnDownloadTagsClickAsync()
+    private async Task OnDownloadTagsClickAsync()
     {
         await DownloadDependencyAsync(
             BassPluginSettings.BASS_TAGS_DOWNLOAD_URL,
@@ -206,12 +212,12 @@ public partial class BassPluginSettingsView : UserControl
         RefreshDependencyStatuses();
     }
 
-    private void RunSafelyAsync(System.Threading.Tasks.Task task, string context)
+    private void RunSafelyAsync(Task task, string context)
     {
         _ = RunSafelyCoreAsync(task, context);
     }
 
-    private async System.Threading.Tasks.Task RunSafelyCoreAsync(System.Threading.Tasks.Task task, string context)
+    private async Task RunSafelyCoreAsync(Task task, string context)
     {
         try
         {
@@ -224,7 +230,7 @@ public partial class BassPluginSettingsView : UserControl
         }
     }
 
-    private async System.Threading.Tasks.Task PickDependencyPathAsync(TextBox targetBox, string settingsKey, string expectedDllName)
+    private async Task PickDependencyPathAsync(TextBox targetBox, string settingsKey, string expectedDllName)
     {
         var topLevel = TopLevel.GetTopLevel(this);
         if (topLevel?.StorageProvider is null)
@@ -261,7 +267,7 @@ public partial class BassPluginSettingsView : UserControl
         SetStatus($"Saved {expectedDllName} path.");
     }
 
-    private async System.Threading.Tasks.Task DownloadDependencyAsync(
+    private async Task DownloadDependencyAsync(
         string archiveUrl,
         string dllName,
         TextBox targetPathBox,
@@ -347,7 +353,7 @@ public partial class BassPluginSettingsView : UserControl
         return path.Replace('\\', '/').TrimStart('/');
     }
 
-    private static async System.Threading.Tasks.Task<byte[]> DownloadArchiveBytesAsync(string archiveUrl)
+    private static async Task<byte[]> DownloadArchiveBytesAsync(string archiveUrl)
     {
         return await _http.GetByteArrayAsync(archiveUrl).ConfigureAwait(true);
     }
@@ -356,7 +362,9 @@ public partial class BassPluginSettingsView : UserControl
     {
         if (_outputDeviceComboBox.SelectedItem is OutputDeviceOption { DeviceIndex: { } selectedIndex })
         {
-            _settingsAccessor.SetValue(BassPluginSettings.OUTPUT_DEVICE_INDEX_KEY, selectedIndex.ToString());
+            _settingsAccessor.SetValue(
+                BassPluginSettings.OUTPUT_DEVICE_INDEX_KEY,
+                selectedIndex == 1 ? null : selectedIndex.ToString());
         }
         else
         {
@@ -368,6 +376,7 @@ public partial class BassPluginSettingsView : UserControl
 
     private void LoadOutputDeviceOptions()
     {
+        _suppressOutputDeviceSync = true;
         int? configuredIndex = 1;
 
         try
@@ -413,6 +422,7 @@ public partial class BassPluginSettingsView : UserControl
         _outputDeviceComboBox.ItemsSource = options;
         _outputDeviceComboBox.SelectedItem = options.FirstOrDefault(option => option.DeviceIndex == configuredIndex)
             ?? options.First();
+        _suppressOutputDeviceSync = false;
     }
 
     private sealed record OutputDeviceOption(int? DeviceIndex, string DisplayName)
