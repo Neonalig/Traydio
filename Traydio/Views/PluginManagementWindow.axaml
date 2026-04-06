@@ -60,7 +60,7 @@
                                                 <TextBlock Text="{Binding DisplayName}" VerticalAlignment="Center"/>
                                                 <TextBlock Text="{Binding VersionText, StringFormat='v{0}'}" Classes="subtle-text"/>
                                                 <TextBlock Text="Marked for delete on restart"
-                                                           Foreground="IndianRed"
+                                                           Classes="error-text"
                                                            FontWeight="SemiBold"
                                                            IsVisible="{Binding IsPendingDelete}"/>
                                             </StackPanel>

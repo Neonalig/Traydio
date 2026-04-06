@@ -1,7 +1,6 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:views="using:Traydio.Views"
-             xmlns:controls="using:Traydio.Views.Controls"
              xmlns:vm="using:Traydio.ViewModels"
              x:Class="Traydio.Views.CommandTesterPage"
              x:DataType="vm:CommandTesterPageViewModel">
@@ -13,10 +12,16 @@
                          Watermark="Try: play, volume 35, plugins"
                          Text="{Binding CommandText, Mode=TwoWay}"/>
                 <Button Grid.Column="1" Classes="command-button" Command="{Binding RunCommand}">
-                    <controls:IconLabelContent IconSource="/Assets/Icons9x/play.ico" Text="Run"/>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Image Source="/Assets/Icons9x/play.ico" Classes="icon-small"/>
+                        <TextBlock Text="Run" VerticalAlignment="Center"/>
+                    </StackPanel>
                 </Button>
                 <Button Grid.Column="2" Classes="command-button" Command="{Binding ClearCommand}">
-                    <controls:IconLabelContent IconSource="/Assets/Icons9x/remove.ico" Text="Clear"/>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Image Source="/Assets/Icons9x/remove.ico" Classes="icon-small"/>
+                        <TextBlock Text="Clear" VerticalAlignment="Center"/>
+                    </StackPanel>
                 </Button>
             </Grid>
         </Border>

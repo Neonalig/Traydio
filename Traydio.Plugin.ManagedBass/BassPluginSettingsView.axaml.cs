@@ -556,8 +556,30 @@ public partial class BassPluginSettingsView : UserControl
 
     private void SetErrorStatus(string message)
     {
-        _statusText.Foreground = Brushes.IndianRed;
+        _statusText.Foreground = TryResolveBrushResource("StatusErrorBrush") ?? Brushes.IndianRed;
         _statusText.Text = message;
+    }
+
+    private IBrush? TryResolveBrushResource(string key)
+    {
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            return null;
+        }
+
+        if (this.TryFindResource(key, ActualThemeVariant, out var brush)
+            && brush is IBrush typedBrush)
+        {
+            return typedBrush;
+        }
+
+        if (Avalonia.Application.Current?.TryFindResource(key, ActualThemeVariant, out var appBrush) == true
+            && appBrush is IBrush appTypedBrush)
+        {
+            return appTypedBrush;
+        }
+
+        return null;
     }
 
     private void LogError(string message, Exception? ex = null)

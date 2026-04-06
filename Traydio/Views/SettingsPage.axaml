@@ -95,8 +95,8 @@
                             IsVisible="{Binding IsThemeRestartVisible}"
                             Click="OnApplyThemeClick">
                         <StackPanel Orientation="Horizontal" Spacing="6">
-                            <Image Source="/Assets/Icons9x/apply.ico" Classes="icon-small"/>
-                            <TextBlock Text="Apply" VerticalAlignment="Center"/>
+                            <Image Source="/Assets/Icons9x/save.ico" Classes="icon-small"/>
+                            <TextBlock Text="Save &amp; Apply" VerticalAlignment="Center"/>
                         </StackPanel>
                     </Button>
 

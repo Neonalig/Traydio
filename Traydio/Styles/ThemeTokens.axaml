@@ -1,5 +1,6 @@
 ﻿<Styles xmlns="https://github.com/avaloniaui"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:common="clr-namespace:Classic.CommonControls;assembly=Classic.CommonControls.Avalonia">
     <Styles.Resources>
         <Thickness x:Key="AppWindowPadding">8</Thickness>
         <Thickness x:Key="SurfacePadding">8</Thickness>
@@ -10,15 +11,23 @@
         <x:Double x:Key="ColumnGap">8</x:Double>
         <x:Double x:Key="SectionTitleSize">14</x:Double>
 
-        <SolidColorBrush x:Key="SurfaceBorderBrush">#7A7A7A</SolidColorBrush>
-        <SolidColorBrush x:Key="ToolbarBackgroundBrush">#D4D0C8</SolidColorBrush>
-        <SolidColorBrush x:Key="GroupCaptionBackgroundBrush">#D4D0C8</SolidColorBrush>
-        <SolidColorBrush x:Key="StatusBackgroundBrush">#D4D0C8</SolidColorBrush>
-        <SolidColorBrush x:Key="TipBoxBackgroundBrush">#FFFFE1</SolidColorBrush>
-        <SolidColorBrush x:Key="TipBoxBorderBrush">#8A8A57</SolidColorBrush>
-        <SolidColorBrush x:Key="MutedForegroundBrush">#353535</SolidColorBrush>
-        <SolidColorBrush x:Key="StatusErrorBrush">#9A2020</SolidColorBrush>
-        <SolidColorBrush x:Key="StatusAccentBrush">#003C74</SolidColorBrush>
+        <SolidColorBrush x:Key="SurfaceBorderBrush" Color="{DynamicResource {x:Static common:SystemColors.ControlDarkColorKey}}"/>
+        <SolidColorBrush x:Key="GroupFrameBorderBrush" Color="{DynamicResource {x:Static common:SystemColors.ControlDarkDarkColorKey}}"/>
+        <SolidColorBrush x:Key="ToolbarBackgroundBrush" Color="{DynamicResource {x:Static common:SystemColors.ControlColorKey}}"/>
+        <SolidColorBrush x:Key="GroupCaptionBackgroundBrush" Color="{DynamicResource {x:Static common:SystemColors.ControlColorKey}}"/>
+        <SolidColorBrush x:Key="StatusBackgroundBrush" Color="{DynamicResource {x:Static common:SystemColors.ControlColorKey}}"/>
+        <SolidColorBrush x:Key="OverlayBackgroundBrush" Color="{DynamicResource {x:Static common:SystemColors.ControlColorKey}}" Opacity="0.45"/>
+        <SolidColorBrush x:Key="TipBoxBackgroundBrush" Color="{DynamicResource {x:Static common:SystemColors.InfoColorKey}}"/>
+        <SolidColorBrush x:Key="TipBoxBorderBrush" Color="{DynamicResource {x:Static common:SystemColors.ControlDarkColorKey}}"/>
+        <SolidColorBrush x:Key="MutedForegroundBrush" Color="{DynamicResource {x:Static common:SystemColors.GrayTextColorKey}}"/>
+        <SolidColorBrush x:Key="StatusErrorBrush" Color="{DynamicResource {x:Static common:SystemColors.ActiveCaptionColorKey}}"/>
+        <SolidColorBrush x:Key="StatusAccentBrush" Color="{DynamicResource {x:Static common:SystemColors.HotTrackColorKey}}"/>
+        <SolidColorBrush x:Key="StationPlayingBackgroundBrush" Color="{DynamicResource {x:Static common:SystemColors.InfoColorKey}}"/>
+        <SolidColorBrush x:Key="StationPlayingBorderBrush" Color="{DynamicResource {x:Static common:SystemColors.HotTrackColorKey}}"/>
+        <SolidColorBrush x:Key="StationFailedBackgroundBrush" Color="{DynamicResource {x:Static common:SystemColors.InfoColorKey}}"/>
+        <SolidColorBrush x:Key="StationFailedBorderBrush" Color="{DynamicResource {x:Static common:SystemColors.ActiveCaptionColorKey}}"/>
+        <SolidColorBrush x:Key="SelectedStationForegroundBrush" Color="{DynamicResource {x:Static common:SystemColors.HighlightTextColorKey}}"/>
+        <SolidColorBrush x:Key="PendingDeleteForegroundBrush" Color="{DynamicResource {x:Static common:SystemColors.ActiveCaptionColorKey}}"/>
     </Styles.Resources>
 </Styles>
 

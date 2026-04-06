@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
@@ -328,10 +329,13 @@ public partial class SettingsPageViewModel : ViewModelBase
 
         if (string.Equals(key, "ClassicWAindows", StringComparison.OrdinalIgnoreCase))
         {
-            return "ClassicWindows";
+            return "Classic Windows";
         }
 
-        return key;
+        var withSpaces = Regex.Replace(key, "(?<!^)([A-Z])", " $1").Trim();
+        withSpaces = Regex.Replace(withSpaces, "\\s+", " ");
+        withSpaces = withSpaces.Replace(" And ", " & ", StringComparison.OrdinalIgnoreCase);
+        return withSpaces;
     }
 
     partial void OnSelectedClassicThemeChanged(ClassicThemeOption? value)

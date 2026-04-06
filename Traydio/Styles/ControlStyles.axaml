@@ -74,8 +74,8 @@
     </Style>
 
     <Style Selector="ToggleButton.ribbon-tab:checked">
-        <Setter Property="Background" Value="#FFFFFF"/>
-        <Setter Property="BorderBrush" Value="#5A5A5A"/>
+        <Setter Property="Background" Value="{DynamicResource ToolbarBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
     </Style>
 
     <Style Selector="Border.ribbon-separator">
@@ -107,13 +107,15 @@
 
     <Style Selector="Border.group-frame">
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource GroupFrameBorderBrush}"/>
         <Setter Property="Margin" Value="{DynamicResource SurfaceMargin}"/>
         <Setter Property="Padding" Value="{DynamicResource GroupPadding}"/>
     </Style>
 
     <Style Selector="Border.group-caption-chip">
         <Setter Property="Background" Value="{DynamicResource GroupCaptionBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource GroupFrameBorderBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="4,0,4,2"/>
         <Setter Property="Margin" Value="10,0,0,0"/>
         <Setter Property="HorizontalAlignment" Value="Left"/>
@@ -156,31 +158,31 @@
     </Style>
 
     <Style Selector="Border.station-entry.playing-station">
-        <Setter Property="Background" Value="#E8F2E8"/>
-        <Setter Property="BorderBrush" Value="#2D7A2D"/>
+        <Setter Property="Background" Value="{DynamicResource StationPlayingBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource StationPlayingBorderBrush}"/>
     </Style>
 
     <Style Selector="Border.station-entry.failed-station">
-        <Setter Property="Background" Value="#FBE5E5"/>
-        <Setter Property="BorderBrush" Value="#9A2020"/>
+        <Setter Property="Background" Value="{DynamicResource StationFailedBackgroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource StationFailedBorderBrush}"/>
     </Style>
 
     <Style Selector="ListBoxItem:selected Border.station-entry">
-        <Setter Property="Background" Value="#1E3E74"/>
-        <Setter Property="BorderBrush" Value="#112A4E"/>
+        <Setter Property="Background" Value="{DynamicResource StatusAccentBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
     </Style>
 
     <Style Selector="ListBoxItem:selected Border.station-entry TextBlock">
-        <Setter Property="Foreground" Value="#F6F8FF"/>
+        <Setter Property="Foreground" Value="{DynamicResource SelectedStationForegroundBrush}"/>
     </Style>
 
     <Style Selector="TextBlock.now-playing-badge">
-        <Setter Property="Foreground" Value="#1E7E34"/>
+        <Setter Property="Foreground" Value="{DynamicResource StatusAccentBrush}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
     </Style>
 
     <Style Selector="ListBoxItem:selected TextBlock.now-playing-badge">
-        <Setter Property="Foreground" Value="#9FF2A6"/>
+        <Setter Property="Foreground" Value="{DynamicResource SelectedStationForegroundBrush}"/>
         <Setter Property="FontWeight" Value="Bold"/>
     </Style>
 
@@ -229,22 +231,22 @@
     </Style>
 
     <Style Selector="Border.plugin-candidate-entry.recommended-candidate">
-        <Setter Property="BorderBrush" Value="#D2A500"/>
-        <Setter Property="Background" Value="#20FFE699"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource StatusBackgroundBrush}"/>
     </Style>
 
     <Style Selector="Border.recommended-badge">
         <Setter Property="Padding" Value="4,1"/>
         <Setter Property="BorderThickness" Value="1"/>
-        <Setter Property="BorderBrush" Value="#CC9A00"/>
-        <Setter Property="Background" Value="#FFF5C8"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource SurfaceBorderBrush}"/>
+        <Setter Property="Background" Value="{DynamicResource ToolbarBackgroundBrush}"/>
         <Setter Property="CornerRadius" Value="3"/>
         <Setter Property="HorizontalAlignment" Value="Left"/>
     </Style>
 
     <Style Selector="TextBlock.recommended-badge-text">
         <Setter Property="FontWeight" Value="SemiBold"/>
-        <Setter Property="Foreground" Value="#6E5500"/>
+        <Setter Property="Foreground" Value="{DynamicResource StatusAccentBrush}"/>
         <Setter Property="FontSize" Value="11"/>
     </Style>
 

@@ -1,6 +1,7 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Traydio.Plugin.LibVlc.LibVlcPluginSettingsView">
+
     <Grid Margin="12" RowDefinitions="Auto,Auto,Auto,Auto,*" RowSpacing="10">
         <TextBlock Grid.Row="0" Text="LibVLC Output Settings" FontSize="18" FontWeight="SemiBold"/>
 
@@ -19,7 +20,7 @@
             <TextBox x:Name="OutputDeviceIdBox" Grid.Column="1" Watermark="Blank = system default"/>
         </Grid>
 
-        <TextBlock Grid.Row="4" x:Name="StatusText" Foreground="DodgerBlue" TextWrapping="Wrap"/>
+        <TextBlock Grid.Row="4" x:Name="StatusText" Foreground="{DynamicResource StatusAccentBrush}" TextWrapping="Wrap"/>
     </Grid>
 </UserControl>
 

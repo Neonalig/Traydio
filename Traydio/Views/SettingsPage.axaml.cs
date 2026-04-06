@@ -12,6 +12,8 @@ namespace Traydio.Views;
 [ViewFor(typeof(SettingsPageViewModel))]
 public partial class SettingsPage : UserControl, IMainWindowClosingHandler
 {
+    private bool _suppressNextClosePrompt;
+
     public SettingsPage()
     {
         AvaloniaXamlLoader.Load(this);
@@ -35,33 +37,21 @@ public partial class SettingsPage : UserControl, IMainWindowClosingHandler
             return;
         }
 
-        if (TopLevel.GetTopLevel(this) is not Window owner)
-        {
-            return;
-        }
-
-        var choice = await MessageBox.ShowDialog(
-            owner,
-            "Save before applying theme?",
-            "You changed settings. Save before reloading the main window?\n\nYes = Save then apply\nNo = Apply without saving\nCancel = Stay here",
-            MessageBoxButtons.YesNoCancel,
-            MessageBoxIcon.Question);
-
-        if (choice == MessageBoxResult.Cancel)
-        {
-            return;
-        }
-
-        if (choice == MessageBoxResult.Yes)
-        {
-            viewModel.SaveCommand.Execute(null);
-        }
-
+        // Theme apply now always persists first, then recreates the main window.
+        viewModel.SaveCommand.Execute(null);
+        _suppressNextClosePrompt = true;
         viewModel.ApplyThemeWindowCommand.Execute(null);
+        await Task.CompletedTask;
     }
 
     public async Task<bool> CanCloseMainWindowAsync()
     {
+        if (_suppressNextClosePrompt)
+        {
+            _suppressNextClosePrompt = false;
+            return true;
+        }
+
         if (DataContext is not SettingsPageViewModel viewModel)
         {
             return true;
@@ -79,8 +69,8 @@ public partial class SettingsPage : UserControl, IMainWindowClosingHandler
 
         var choice = await MessageBox.ShowDialog(
             owner,
-            "Save settings before closing?",
-            "You have unsaved settings changes.\n\nYes = Save and close\nNo = Close without saving\nCancel = Stay open",
+            "Save settings changes?",
+            "You have unsaved settings changes.\n\nYes = Save changes\nNo = Discard changes\nCancel = Stay on this page",
             MessageBoxButtons.YesNoCancel,
             MessageBoxIcon.Question);
 
