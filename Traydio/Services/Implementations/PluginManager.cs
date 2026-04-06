@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
 using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -384,18 +383,6 @@ public sealed class PluginManager(
                 yield return plugin;
             }
         }
-
-        var legacyProviderTypes = allTypes
-            .Where(t => !t.IsAbstract && typeof(IRadioStationProviderPlugin).IsAssignableFrom(t))
-            .ToArray();
-
-        foreach (var type in legacyProviderTypes)
-        {
-            if (TryCreateLegacyProvider(type, sourcePath, out var provider) && provider is not null)
-            {
-                yield return new LegacyStationProviderPluginAdapter(provider);
-            }
-        }
     }
 
     private bool TryCreatePlugin(Type pluginType, string? sourcePath, out ITraydioPlugin? plugin)
@@ -427,39 +414,6 @@ public sealed class PluginManager(
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Fallback activation failed for plugin type {PluginType} from {SourcePath}", pluginType.FullName, sourcePath ?? "<referenced>");
-            return false;
-        }
-    }
-
-    private bool TryCreateLegacyProvider(Type providerType, string? sourcePath, out IRadioStationProviderPlugin? provider)
-    {
-        provider = null;
-        try
-        {
-            provider = ActivatorUtilities.CreateInstance(serviceProvider, providerType) as IRadioStationProviderPlugin;
-            if (provider is not null)
-            {
-                return true;
-            }
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "DI activation failed for legacy provider type {ProviderType} from {SourcePath}", providerType.FullName, sourcePath ?? "<referenced>");
-        }
-
-        if (providerType.GetConstructor(Type.EmptyTypes) is null)
-        {
-            return false;
-        }
-
-        try
-        {
-            provider = Activator.CreateInstance(providerType) as IRadioStationProviderPlugin;
-            return provider is not null;
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Fallback activation failed for legacy provider type {ProviderType} from {SourcePath}", providerType.FullName, sourcePath ?? "<referenced>");
             return false;
         }
     }
@@ -639,26 +593,4 @@ public sealed class PluginManager(
         public IReadOnlyList<ITraydioPlugin> Plugins { get; } = plugins;
     }
 
-    private sealed class LegacyStationProviderPluginAdapter(IRadioStationProviderPlugin provider) : ITraydioPlugin
-    {
-        public string Id => "legacy." + provider.Id;
-
-        public string DisplayName => provider.DisplayName;
-
-        public IReadOnlyList<IPluginCapability> Capabilities { get; } = [new LegacyStationDiscoveryCapability(provider)];
-    }
-
-    private sealed class LegacyStationDiscoveryCapability(IRadioStationProviderPlugin provider) : IStationDiscoveryCapability
-    {
-        public string CapabilityId => "station-discovery";
-
-        public string ProviderId => provider.Id;
-
-        public string DisplayName => provider.DisplayName;
-
-        public IAsyncEnumerable<DiscoveredStation> SearchAsync(StationSearchRequest request, CancellationToken cancellationToken)
-        {
-            return provider.SearchAsync(request, cancellationToken);
-        }
-    }
 }

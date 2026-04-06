@@ -16,6 +16,19 @@ namespace Traydio.Plugin.StreamUrlLink;
 public sealed partial class StreamUrlLinkPlugin : ITraydioPlugin
 {
     private static readonly HttpClient _httpClient = new();
+    private static readonly StationSearchProviderFeatures _features = new()
+    {
+        SupportsPagination = false,
+        SupportsModes = false,
+        SupportsCountryFilter = false,
+        SupportsGenreFilter = false,
+        SupportsLanguageFilter = false,
+        SupportsHighQualityPreference = false,
+        SupportsOrderFilter = false,
+        DefaultPageSize = 100,
+        SupportedModes = [StationSearchMode.Query],
+    };
+
     private readonly ILogger<StreamUrlLinkPlugin> _logger;
 
     public StreamUrlLinkPlugin(ILogger<StreamUrlLinkPlugin> logger)
@@ -93,6 +106,8 @@ public sealed partial class StreamUrlLinkPlugin : ITraydioPlugin
     private sealed class StationDiscoveryCapability(StreamUrlLinkPlugin plugin) : IStationDiscoveryCapability
     {
         public string CapabilityId => "station-discovery";
+
+        public StationSearchProviderFeatures Features => _features;
 
         public string ProviderId => _providerId;
 

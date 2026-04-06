@@ -24,8 +24,10 @@ public partial class StationSearchWindowViewModel : ViewModelBase
 
     private CancellationTokenSource? _searchCancellation;
     private readonly List<DiscoveredStation> _lastSearchResults = [];
+    private int _activePageIndex;
 
     public ObservableCollection<ProviderOption> Providers { get; } = [];
+    public ObservableCollection<SearchModeOption> SearchModes { get; } = [];
 
     public ObservableCollection<DiscoveredStation> Results { get; } = [];
 
@@ -39,6 +41,27 @@ public partial class StationSearchWindowViewModel : ViewModelBase
     private string _query = string.Empty;
 
     [ObservableProperty]
+    private SearchModeOption? _selectedSearchMode;
+
+    [ObservableProperty]
+    private string _countryFilter = string.Empty;
+
+    [ObservableProperty]
+    private string _genreFilter = string.Empty;
+
+    [ObservableProperty]
+    private string _languageFilter = string.Empty;
+
+    [ObservableProperty]
+    private string _orderFilter = string.Empty;
+
+    [ObservableProperty]
+    private bool _preferHighQuality = true;
+
+    [ObservableProperty]
+    private int _pageSize = 50;
+
+    [ObservableProperty]
     private string _filterText = string.Empty;
 
     [ObservableProperty]
@@ -49,6 +72,28 @@ public partial class StationSearchWindowViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _isBusy;
+
+    [ObservableProperty]
+    private bool _hasPreviousPage;
+
+    [ObservableProperty]
+    private bool _hasNextPage;
+
+    public int CurrentPage => _activePageIndex + 1;
+
+    public bool SupportsModes => SelectedProvider?.Features.SupportsModes ?? false;
+
+    public bool SupportsCountryFilter => SelectedProvider?.Features.SupportsCountryFilter ?? false;
+
+    public bool SupportsGenreFilter => SelectedProvider?.Features.SupportsGenreFilter ?? false;
+
+    public bool SupportsLanguageFilter => SelectedProvider?.Features.SupportsLanguageFilter ?? false;
+
+    public bool SupportsOrderFilter => SelectedProvider?.Features.SupportsOrderFilter ?? false;
+
+    public bool SupportsHighQualityPreference => SelectedProvider?.Features.SupportsHighQualityPreference ?? false;
+
+    public bool SupportsPagination => SelectedProvider?.Features.SupportsPagination ?? false;
 
     public StationSearchWindowViewModel(
         IStationDiscoveryService stationDiscoveryService,
@@ -68,6 +113,48 @@ public partial class StationSearchWindowViewModel : ViewModelBase
     [RelayCommand]
     private async Task SearchAsync()
     {
+        _activePageIndex = 0;
+        await ExecuteSearchAsync().ConfigureAwait(false);
+    }
+
+    [RelayCommand]
+    private async Task NextPageAsync()
+    {
+        if (!SupportsPagination || !HasNextPage)
+        {
+            return;
+        }
+
+        _activePageIndex++;
+        await ExecuteSearchAsync().ConfigureAwait(false);
+    }
+
+    [RelayCommand]
+    private async Task PreviousPageAsync()
+    {
+        if (!SupportsPagination || _activePageIndex == 0)
+        {
+            return;
+        }
+
+        _activePageIndex--;
+        await ExecuteSearchAsync().ConfigureAwait(false);
+    }
+
+    [RelayCommand]
+    private void ResetAdvancedFilters()
+    {
+        CountryFilter = string.Empty;
+        GenreFilter = string.Empty;
+        LanguageFilter = string.Empty;
+        OrderFilter = string.Empty;
+        PreferHighQuality = true;
+        _activePageIndex = 0;
+        OnPropertyChanged(nameof(CurrentPage));
+    }
+
+    private async Task ExecuteSearchAsync()
+    {
         if (SelectedProvider is null)
         {
             Status = "Select a provider first.";
@@ -79,13 +166,24 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         _searchCancellation = new CancellationTokenSource();
 
         IsBusy = true;
+        HasPreviousPage = _activePageIndex > 0;
+        HasNextPage = false;
         Status = "Searching...";
         try
         {
+            var pageSize = Math.Clamp(PageSize, 1, 200);
+            var mode = SelectedSearchMode?.Mode ?? StationSearchMode.Query;
             var request = new StationSearchRequest
             {
-                Query = string.IsNullOrWhiteSpace(Query) ? "popular" : Query,
-                Limit = 200,
+                Mode = mode,
+                Query = Query,
+                Country = SupportsCountryFilter ? NormalizeFilterValue(CountryFilter) : null,
+                Genre = SupportsGenreFilter ? NormalizeFilterValue(GenreFilter) : null,
+                Language = SupportsLanguageFilter ? NormalizeFilterValue(LanguageFilter) : null,
+                Order = SupportsOrderFilter ? NormalizeFilterValue(OrderFilter) : null,
+                PreferHighQuality = SupportsHighQualityPreference ? PreferHighQuality : null,
+                Offset = SupportsPagination ? _activePageIndex * pageSize : 0,
+                Limit = pageSize,
             };
 
             _lastSearchResults.Clear();
@@ -93,6 +191,7 @@ public partial class StationSearchWindowViewModel : ViewModelBase
             {
                 Results.Clear();
                 Status = "Searching...";
+                OnPropertyChanged(nameof(CurrentPage));
             });
 
             var shown = 0;
@@ -110,9 +209,19 @@ public partial class StationSearchWindowViewModel : ViewModelBase
                 await Dispatcher.UIThread.InvokeAsync(() => Results.Add(station));
             }
 
-            Status = string.IsNullOrWhiteSpace(Query)
-                ? $"Showing popular stations ({shown}/{_lastSearchResults.Count})."
-                : $"Found {_lastSearchResults.Count} station(s), showing {shown}.";
+            HasPreviousPage = SupportsPagination && _activePageIndex > 0;
+            HasNextPage = SupportsPagination && _lastSearchResults.Count >= pageSize;
+
+            var modeLabel = mode switch
+            {
+                StationSearchMode.Featured => "featured",
+                StationSearchMode.Random => "random",
+                _ => "search",
+            };
+
+            Status = SupportsPagination
+                ? $"Loaded {modeLabel} page {CurrentPage} with {_lastSearchResults.Count} station(s), showing {shown}."
+                : $"Loaded {modeLabel} results: {_lastSearchResults.Count} station(s), showing {shown}.";
         }
         catch (OperationCanceledException)
         {
@@ -218,6 +327,61 @@ public partial class StationSearchWindowViewModel : ViewModelBase
                (station.Country?.Contains(filter, StringComparison.OrdinalIgnoreCase) ?? false);
     }
 
+    partial void OnSelectedProviderChanged(ProviderOption? value)
+    {
+        UpdateSearchModes(value?.Features ?? StationSearchProviderFeatures.Basic);
+        OnPropertyChanged(nameof(SupportsModes));
+        OnPropertyChanged(nameof(SupportsCountryFilter));
+        OnPropertyChanged(nameof(SupportsGenreFilter));
+        OnPropertyChanged(nameof(SupportsLanguageFilter));
+        OnPropertyChanged(nameof(SupportsOrderFilter));
+        OnPropertyChanged(nameof(SupportsHighQualityPreference));
+        OnPropertyChanged(nameof(SupportsPagination));
+
+        if (value is not null)
+        {
+            PageSize = Math.Clamp(value.Features.DefaultPageSize, 1, 200);
+        }
+
+        _activePageIndex = 0;
+        HasPreviousPage = false;
+        HasNextPage = false;
+        OnPropertyChanged(nameof(CurrentPage));
+    }
+
+    private void UpdateSearchModes(StationSearchProviderFeatures features)
+    {
+        SearchModes.Clear();
+        var supportedModes = features.SupportsModes
+            ? features.SupportedModes
+            : [StationSearchMode.Query];
+
+        foreach (var mode in supportedModes.Distinct())
+        {
+            SearchModes.Add(new SearchModeOption(mode, ToModeLabel(mode)));
+        }
+
+        SelectedSearchMode = SearchModes.FirstOrDefault(mode => mode.Mode == StationSearchMode.Featured)
+            ?? SearchModes.FirstOrDefault(mode => mode.Mode == StationSearchMode.Query)
+            ?? SearchModes.FirstOrDefault();
+    }
+
+    private static string ToModeLabel(StationSearchMode mode)
+    {
+        return mode switch
+        {
+            StationSearchMode.Featured => "Featured",
+            StationSearchMode.Random => "Random",
+            _ => "Search",
+        };
+    }
+
+    private static string? NormalizeFilterValue(string value)
+    {
+        var trimmed = value.Trim();
+        return string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
+    }
+
     private void RefreshProviders()
     {
         void Update()
@@ -226,7 +390,11 @@ public partial class StationSearchWindowViewModel : ViewModelBase
             var providers = _pluginManager.GetPlugins()
                 .SelectMany(plugin => plugin.Capabilities
                     .OfType<IStationDiscoveryCapability>()
-                    .Select(capability => new ProviderOption(plugin.Id, capability.ProviderId, capability.DisplayName)))
+                    .Select(capability => new ProviderOption(
+                        plugin.Id,
+                        capability.ProviderId,
+                        capability.DisplayName,
+                        capability.Features)))
                 .OrderBy(option => option.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
@@ -252,11 +420,20 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         Dispatcher.UIThread.Post(Update);
     }
 
-    public sealed class ProviderOption(string pluginId, string id, string displayName)
+    public sealed class ProviderOption(string pluginId, string id, string displayName, StationSearchProviderFeatures features)
     {
         public string PluginId { get; } = pluginId;
 
         public string Id { get; } = id;
+
+        public string DisplayName { get; } = displayName;
+
+        public StationSearchProviderFeatures Features { get; } = features;
+    }
+
+    public sealed class SearchModeOption(StationSearchMode mode, string displayName)
+    {
+        public StationSearchMode Mode { get; } = mode;
 
         public string DisplayName { get; } = displayName;
     }

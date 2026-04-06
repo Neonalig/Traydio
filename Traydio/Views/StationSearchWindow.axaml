@@ -13,30 +13,73 @@
 
     <Grid Margin="0" RowDefinitions="Auto,Auto,*" RowSpacing="6">
         <Border Grid.Row="0" Classes="toolbar-frame" Margin="0">
-            <Grid ColumnDefinitions="2*,2*,Auto,Auto,Auto" ColumnSpacing="8">
-                <ComboBox Grid.Column="0"
-                          ItemsSource="{Binding Providers}"
-                          SelectedItem="{Binding SelectedProvider}"
-                          DisplayMemberBinding="{Binding DisplayName}"/>
-                <TextBox Grid.Column="1" Classes="input-standard" Watermark="Search query" Text="{Binding Query}"/>
-                <Button Grid.Column="2" Classes="command-button" Command="{Binding SearchCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Image Source="/Assets/Icons9x/search.ico" Classes="icon-small"/>
-                        <TextBlock Text="Search" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
-                <TextBox Grid.Column="3" Classes="input-standard" Width="180" Watermark="Filter results" Text="{Binding FilterText}"/>
-                <Button Grid.Column="4" Classes="command-button" Command="{Binding ApplyFilterCommand}">
-                    <StackPanel Orientation="Horizontal" Spacing="6">
-                        <Image Source="/Assets/Icons9x/refresh.ico" Classes="icon-small"/>
-                        <TextBlock Text="Apply Filter" VerticalAlignment="Center"/>
-                    </StackPanel>
-                </Button>
+            <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="8">
+                <Grid Grid.Row="0" ColumnDefinitions="2*,1.2*,2.2*,Auto,1.6*,Auto" ColumnSpacing="8">
+                    <ComboBox Grid.Column="0"
+                              ItemsSource="{Binding Providers}"
+                              SelectedItem="{Binding SelectedProvider}"
+                              DisplayMemberBinding="{Binding DisplayName}"/>
+                    <ComboBox Grid.Column="1"
+                              ItemsSource="{Binding SearchModes}"
+                              SelectedItem="{Binding SelectedSearchMode}"
+                              DisplayMemberBinding="{Binding DisplayName}"
+                              IsEnabled="{Binding SupportsModes}"/>
+                    <TextBox Grid.Column="2" Classes="input-standard" Watermark="Search query" Text="{Binding Query}"/>
+                    <Button Grid.Column="3" Classes="command-button" Command="{Binding SearchCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Image Source="/Assets/Icons9x/search.ico" Classes="icon-small"/>
+                            <TextBlock Text="Search" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <TextBox Grid.Column="4" Classes="input-standard" Watermark="Filter results" Text="{Binding FilterText}"/>
+                    <Button Grid.Column="5" Classes="command-button" Command="{Binding ApplyFilterCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Image Source="/Assets/Icons9x/refresh.ico" Classes="icon-small"/>
+                            <TextBlock Text="Apply Filter" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto,*,Auto,*,Auto,*,Auto,*" ColumnSpacing="8">
+                    <TextBlock Grid.Column="0" Text="Country" VerticalAlignment="Center"/>
+                    <TextBox Grid.Column="1" Classes="input-standard" Watermark="ITU code" Text="{Binding CountryFilter}" IsEnabled="{Binding SupportsCountryFilter}"/>
+
+                    <TextBlock Grid.Column="2" Text="Genre" VerticalAlignment="Center"/>
+                    <TextBox Grid.Column="3" Classes="input-standard" Watermark="style" Text="{Binding GenreFilter}" IsEnabled="{Binding SupportsGenreFilter}"/>
+
+                    <TextBlock Grid.Column="4" Text="Language" VerticalAlignment="Center"/>
+                    <TextBox Grid.Column="5" Classes="input-standard" Watermark="ISO-2" Text="{Binding LanguageFilter}" IsEnabled="{Binding SupportsLanguageFilter}"/>
+
+                    <TextBlock Grid.Column="6" Text="Order" VerticalAlignment="Center"/>
+                    <TextBox Grid.Column="7" Classes="input-standard" Watermark="top/big/med/sma" Text="{Binding OrderFilter}" IsEnabled="{Binding SupportsOrderFilter}"/>
+
+                    <CheckBox Grid.Column="8" Grid.ColumnSpan="2"
+                              VerticalAlignment="Center"
+                              Content="Prefer high quality"
+                              IsChecked="{Binding PreferHighQuality}"
+                              IsEnabled="{Binding SupportsHighQualityPreference}"/>
+                </Grid>
+
+                <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,*" ColumnSpacing="8">
+                    <TextBlock Grid.Column="0" VerticalAlignment="Center" Text="Page size"/>
+                    <TextBox Grid.Column="1" Width="72" Text="{Binding PageSize}"/>
+                    <Button Grid.Column="2" Classes="command-button" Command="{Binding PreviousPageCommand}" IsEnabled="{Binding HasPreviousPage}">
+                        <TextBlock Text="Previous"/>
+                    </Button>
+                    <TextBlock Grid.Column="3" VerticalAlignment="Center" Text="{Binding CurrentPage, StringFormat=Page {0}}"/>
+                    <Button Grid.Column="4" Classes="command-button" Command="{Binding NextPageCommand}" IsEnabled="{Binding HasNextPage}">
+                        <TextBlock Text="Next"/>
+                    </Button>
+                    <Button Grid.Column="5" Classes="command-button" Command="{Binding ResetAdvancedFiltersCommand}">
+                        <TextBlock Text="Reset Advanced"/>
+                    </Button>
+                    <TextBlock Grid.Column="6" VerticalAlignment="Center" Classes="subtle-text" Text="Pagination" IsVisible="{Binding SupportsPagination}"/>
+                </Grid>
             </Grid>
         </Border>
 
         <Border Grid.Row="1" Classes="status-strip" Margin="0">
-            <TextBlock Text="Search by name or genre, then narrow with the filter box. Select a result and choose Add Selected Station." Classes="helper-text"/>
+            <TextBlock Text="Choose a provider view (Search/Featured/Random), apply optional provider filters, then page through results." Classes="helper-text"/>
         </Border>
 
         <Grid Grid.Row="2" RowDefinitions="Auto,*" RowSpacing="0" Margin="4,0,4,4">

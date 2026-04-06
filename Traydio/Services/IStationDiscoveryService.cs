@@ -6,7 +6,6 @@ namespace Traydio.Services;
 
 public interface IStationDiscoveryService
 {
-    IReadOnlyList<IRadioStationProviderPlugin> GetProviders();
 
     IAsyncEnumerable<DiscoveredStation> SearchAsync(
         string providerId,

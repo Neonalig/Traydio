@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Net;
 using System.Net.Http;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,153 +12,445 @@ using Traydio.Common;
 namespace Traydio.Plugin.FmStreamOrg;
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-public sealed partial class FmStreamOrgPlugin : ITraydioPlugin
+public sealed class FmStreamOrgPlugin : ITraydioPlugin
 {
-    private static readonly HttpClient _httpClient = new();
-    private readonly ILogger<FmStreamOrgPlugin> _logger;
+    public const string PLUGIN_ID = "plugin.fmstream.org";
 
-    public FmStreamOrgPlugin(ILogger<FmStreamOrgPlugin> logger)
+    private static readonly HttpClient _httpClient = new();
+    private static readonly Uri _apiEndpoint = new("https://fmstream.org/index.php");
+    private static readonly StationSearchProviderFeatures _features = new()
+    {
+        SupportsPagination = true,
+        SupportsModes = true,
+        SupportsCountryFilter = true,
+        SupportsGenreFilter = true,
+        SupportsLanguageFilter = true,
+        SupportsHighQualityPreference = true,
+        SupportsOrderFilter = true,
+        DefaultPageSize = 50,
+        SupportedModes = [StationSearchMode.Query, StationSearchMode.Featured, StationSearchMode.Random],
+    };
+
+    private readonly ILogger<FmStreamOrgPlugin> _logger;
+    private readonly IPluginSettingsProvider? _settingsProvider;
+
+    public FmStreamOrgPlugin(ILogger<FmStreamOrgPlugin> logger, IPluginSettingsProvider? settingsProvider = null)
     {
         _logger = logger;
-        Capabilities = [new StationDiscoveryCapability(this)];
+        _settingsProvider = settingsProvider;
+        Capabilities = [new StationDiscoveryCapability(this), new SettingsCapability()];
     }
 
-    public string Id => "plugin.fmstream.org";
+    public string Id => PLUGIN_ID;
 
     public string DisplayName => "FMStream.org";
 
     public IReadOnlyList<IPluginCapability> Capabilities { get; }
 
     private static string _providerId => "fmstream.org";
+    private const int _MAX_PAGE_COUNT = 10;
+    private const int _MAX_RESULT_COUNT = 500;
 
     private async IAsyncEnumerable<DiscoveredStation> SearchStationsAsync(
         StationSearchRequest request,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var query = Uri.EscapeDataString(request.Query);
+        var targetCount = Math.Clamp(request.Limit, 1, _MAX_RESULT_COUNT);
+        var emitted = 0;
+        var seenStreamUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var offset = 0;
+        var page = 0;
 
-        var jsonResults = await TryJsonApiAsync(query, cancellationToken).ConfigureAwait(false);
-        if (jsonResults.Count > 0)
+        while (emitted < targetCount && page < _MAX_PAGE_COUNT)
         {
-            foreach (var station in jsonResults)
+            var pageResults = await SearchOfficialApiAsync(request, offset, cancellationToken);
+            if (pageResults.Count == 0)
             {
+                yield break;
+            }
+
+            var newlyAdded = 0;
+            foreach (var station in pageResults)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (!seenStreamUrls.Add(station.StreamUrl))
+                {
+                    continue;
+                }
+
                 yield return station;
+                emitted++;
+                newlyAdded++;
+
+                if (emitted >= targetCount)
+                {
+                    yield break;
+                }
+            }
+
+            // If offset paging is ignored by the API, this prevents a duplicate-only loop.
+            if (newlyAdded == 0)
+            {
+                yield break;
+            }
+
+            offset += pageResults.Count;
+            page++;
+        }
+    }
+
+    private IReadOnlyDictionary<string, string> GetSettings()
+    {
+        return _settingsProvider?.GetPluginSettings(PLUGIN_ID) ?? new Dictionary<string, string>();
+    }
+
+    private async Task<List<DiscoveredStation>> SearchOfficialApiAsync(
+        StationSearchRequest request,
+        int offset,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var settings = GetSettings();
+            var queryPairs = BuildApiQueryPairs(request, offset, settings);
+            var usePost = IsPostConfigured(settings);
+
+            using var requestMessage = usePost
+                ? new HttpRequestMessage(HttpMethod.Post, _apiEndpoint)
+                {
+                    Content = new FormUrlEncodedContent(queryPairs),
+                }
+                : new HttpRequestMessage(HttpMethod.Get, BuildApiQueryUri(queryPairs));
+            requestMessage.Headers.Accept.ParseAdd("application/json");
+
+            using (var response = await _httpClient.SendAsync(requestMessage, cancellationToken).ConfigureAwait(false))
+            {
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogDebug(
+                        "fmstream request failed for status={StatusCode}, query={Query}, country={Country}, genre={Genre}, offset={Offset}, method={Method}",
+                        response.StatusCode,
+                        request.Query,
+                        request.Country,
+                        request.Genre,
+                        offset,
+                        requestMessage.Method);
+                    return [];
+                }
+
+                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+                using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
+                return ParseStations(doc.RootElement);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(
+                ex,
+                "fmstream api search failed for query={Query}, country={Country}, genre={Genre}, offset={Offset}",
+                request.Query,
+                request.Country,
+                request.Genre,
+                offset);
+            return [];
+        }
+    }
+
+    private static bool IsPostConfigured(IReadOnlyDictionary<string, string> settings)
+    {
+        if (!settings.TryGetValue(FmStreamOrgPluginSettings.API_METHOD_KEY, out var method) || string.IsNullOrWhiteSpace(method))
+        {
+            return false;
+        }
+
+        return string.Equals(method.Trim(), "POST", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static List<KeyValuePair<string, string>> BuildApiQueryPairs(
+        StationSearchRequest request,
+        int offset,
+        IReadOnlyDictionary<string, string> settings)
+    {
+        var queryPairs = new List<KeyValuePair<string, string>>();
+
+        var country = request.Country?.Trim();
+        if (!string.IsNullOrWhiteSpace(country))
+        {
+            queryPairs.Add(new KeyValuePair<string, string>("c", country.ToUpperInvariant()));
+        }
+
+        var genre = request.Genre?.Trim();
+        if (!string.IsNullOrWhiteSpace(genre))
+        {
+            queryPairs.Add(new KeyValuePair<string, string>("style", genre));
+        }
+
+        var language = request.Language?.Trim();
+        if (!string.IsNullOrWhiteSpace(language))
+        {
+            queryPairs.Add(new KeyValuePair<string, string>("l", language.ToLowerInvariant()));
+        }
+
+        var order = request.Order?.Trim();
+        if (!string.IsNullOrWhiteSpace(order))
+        {
+            queryPairs.Add(new KeyValuePair<string, string>("o", order));
+        }
+
+        var searchText = request.Query.Trim();
+        switch (request.Mode)
+        {
+            case StationSearchMode.Featured:
+                if (string.IsNullOrWhiteSpace(country))
+                {
+                    queryPairs.Add(new KeyValuePair<string, string>("c", "FT"));
+                }
+
+                break;
+            case StationSearchMode.Random:
+                if (string.IsNullOrWhiteSpace(country))
+                {
+                    queryPairs.Add(new KeyValuePair<string, string>("c", "RD"));
+                }
+
+                break;
+            default:
+                if (!string.IsNullOrWhiteSpace(searchText))
+                {
+                    queryPairs.Add(new KeyValuePair<string, string>("s", searchText));
+                }
+                else if (string.IsNullOrWhiteSpace(country))
+                {
+                    queryPairs.Add(new KeyValuePair<string, string>("c", "FT"));
+                }
+
+                break;
+        }
+
+        var defaultHighQuality = true;
+        if (settings.TryGetValue(FmStreamOrgPluginSettings.DEFAULT_HIGH_QUALITY_KEY, out var configuredHighQuality))
+        {
+            defaultHighQuality = ParseBool(configuredHighQuality, true);
+        }
+
+        var preferHighQuality = request.PreferHighQuality ?? defaultHighQuality;
+        queryPairs.Add(new KeyValuePair<string, string>("hq", preferHighQuality ? "1" : "0"));
+
+        var effectiveOffset = Math.Max(0, request.Offset + offset);
+        if (effectiveOffset > 0)
+        {
+            queryPairs.Add(new KeyValuePair<string, string>("n", effectiveOffset.ToString()));
+        }
+
+        if (settings.TryGetValue(FmStreamOrgPluginSettings.API_KEY_VALUE_KEY, out var apiKeyValue) &&
+            !string.IsNullOrWhiteSpace(apiKeyValue))
+        {
+            var apiKeyName = settings.TryGetValue(FmStreamOrgPluginSettings.API_KEY_NAME_KEY, out var configuredKeyName) &&
+                             !string.IsNullOrWhiteSpace(configuredKeyName)
+                ? configuredKeyName.Trim()
+                : FmStreamOrgPluginSettings.DEFAULT_API_KEY_NAME;
+
+            queryPairs.Add(new KeyValuePair<string, string>(apiKeyName, apiKeyValue.Trim()));
+        }
+
+        return queryPairs;
+    }
+
+    private static Uri BuildApiQueryUri(IReadOnlyList<KeyValuePair<string, string>> queryPairs)
+    {
+        var queryParts = new List<string>(queryPairs.Count);
+        foreach (var pair in queryPairs)
+        {
+            queryParts.Add($"{Uri.EscapeDataString(pair.Key)}={Uri.EscapeDataString(pair.Value)}");
+        }
+
+        return new UriBuilder(_apiEndpoint)
+        {
+            Query = string.Join("&", queryParts),
+        }.Uri;
+    }
+
+    private static bool ParseBool(string value, bool defaultValue)
+    {
+        if (bool.TryParse(value, out var parsed))
+        {
+            return parsed;
+        }
+
+        return value.Trim() switch
+        {
+            "1" => true,
+            "0" => false,
+            _ => defaultValue,
+        };
+    }
+
+    private static List<DiscoveredStation> ParseStations(JsonElement root)
+    {
+        var results = new List<DiscoveredStation>();
+        foreach (var item in EnumerateStationElements(root))
+        {
+            var name = FirstString(item, "name", "program", "station", "branding", "title");
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                continue;
+            }
+
+            var description = FirstString(item, "description", "desc", "slogan", "info");
+            var country = FirstString(item, "country", "country_name", "countryName", "nation");
+            var genre = FirstString(item, "genre", "style", "format");
+
+            foreach (var streamUrl in ExtractStreamUrls(item))
+            {
+                results.Add(new DiscoveredStation
+                {
+                    Name = name,
+                    StreamUrl = streamUrl,
+                    Description = description,
+                    Country = country,
+                    Genre = genre,
+                });
+            }
+        }
+
+        return results;
+    }
+
+    private static IEnumerable<JsonElement> EnumerateStationElements(JsonElement root)
+    {
+        if (root.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var element in root.EnumerateArray())
+            {
+                if (element.ValueKind == JsonValueKind.Object)
+                {
+                    yield return element;
+                }
             }
 
             yield break;
         }
 
-        var fallbackResults = await TryHtmlFallbackAsync(query, cancellationToken).ConfigureAwait(false);
-        foreach (var station in fallbackResults)
+        if (root.ValueKind != JsonValueKind.Object)
         {
-            yield return station;
+            yield break;
         }
-    }
 
-    private async Task<List<DiscoveredStation>> TryJsonApiAsync(
-        string query,
-        CancellationToken cancellationToken)
-    {
-        try
+        foreach (var key in new[] { "stations", "results", "items", "data" })
         {
-            using var response = await _httpClient.GetAsync($"https://fmstream.org/api/search?q={query}", cancellationToken).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
+            if (!root.TryGetProperty(key, out var payload) || payload.ValueKind != JsonValueKind.Array)
             {
-                return [];
+                continue;
             }
 
-            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-            var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
-
-            if (doc.RootElement.ValueKind != JsonValueKind.Array)
+            foreach (var element in payload.EnumerateArray())
             {
-                return [];
-            }
-
-            var results = new List<DiscoveredStation>();
-
-            foreach (var item in doc.RootElement.EnumerateArray())
-            {
-                var streamUrl = GetString(item, "stream") ?? GetString(item, "url");
-                var name = GetString(item, "name");
-                if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(streamUrl))
+                if (element.ValueKind == JsonValueKind.Object)
                 {
-                    continue;
+                    yield return element;
                 }
-
-                results.Add(new DiscoveredStation
-                {
-                    Name = name,
-                    StreamUrl = streamUrl,
-                    Description = GetString(item, "description"),
-                    Country = GetString(item, "country"),
-                    Genre = GetString(item, "genre"),
-                });
             }
 
-            return results;
+            yield break;
         }
-        catch (Exception ex)
+
+        // Some responses may return a single station object.
+        yield return root;
+    }
+
+    private static IEnumerable<string> ExtractStreamUrls(JsonElement station)
+    {
+        foreach (var field in new[] { "stream", "url", "stream_url", "streamUrl", "listen_url", "listenUrl" })
         {
-            _logger.LogDebug(ex, "fmstream json search failed for query={Query}", query);
-            return [];
+            var value = GetString(station, field);
+            if (IsValidStreamUrl(value))
+            {
+                yield return value!;
+            }
+        }
+
+        foreach (var field in new[] { "streams", "urls" })
+        {
+            if (!station.TryGetProperty(field, out var streams) || streams.ValueKind != JsonValueKind.Array)
+            {
+                continue;
+            }
+
+            foreach (var entry in streams.EnumerateArray())
+            {
+                switch (entry.ValueKind)
+                {
+                    case JsonValueKind.String:
+                    {
+                        var stream = entry.GetString();
+                        if (IsValidStreamUrl(stream))
+                        {
+                            yield return stream!;
+                        }
+
+                        break;
+                    }
+                    case JsonValueKind.Object:
+                    {
+                        var stream = FirstString(entry, "url", "stream", "link", "src");
+                        if (IsValidStreamUrl(stream))
+                        {
+                            yield return stream!;
+                        }
+
+                        break;
+                    }
+                }
+            }
         }
     }
 
-    private async Task<List<DiscoveredStation>> TryHtmlFallbackAsync(
-        string query,
-        CancellationToken cancellationToken)
+    private static bool IsValidStreamUrl(string? value)
     {
-        try
+        if (string.IsNullOrWhiteSpace(value))
         {
-            var html = await _httpClient.GetStringAsync($"https://fmstream.org/search/{query}", cancellationToken).ConfigureAwait(false);
+            return false;
+        }
 
-            var urlPattern = UrlPattern();
-            var titlePattern = TitlePattern();
+        return Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
+               (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+    }
 
-            var urls = urlPattern.Matches(html)
-                .Select(m => m.Value)
-                .Where(u => u.Contains("stream", StringComparison.OrdinalIgnoreCase) || u.EndsWith(".m3u", StringComparison.OrdinalIgnoreCase) || u.EndsWith(".pls", StringComparison.OrdinalIgnoreCase))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Take(100)
-                .ToArray();
-
-            var titles = titlePattern.Matches(html)
-                .Select(m => WebUtility.HtmlDecode(m.Groups["t"].Value.Trim()))
-                .Where(t => !string.IsNullOrWhiteSpace(t))
-                .ToArray();
-
-            var results = new List<DiscoveredStation>();
-            for (var i = 0; i < urls.Length; i++)
+    private static string? FirstString(JsonElement element, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            var value = GetString(element, name);
+            if (!string.IsNullOrWhiteSpace(value))
             {
-                var title = i < titles.Length ? titles[i] : $"FMStream Station {i + 1}";
-                results.Add(new DiscoveredStation
-                {
-                    Name = title,
-                    StreamUrl = urls[i],
-                    Description = "Discovered via fmstream.org HTML search",
-                });
+                return value;
             }
+        }
 
-            return results;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "fmstream html fallback failed for query={Query}", query);
-            return [];
-        }
+        return null;
     }
 
     private static string? GetString(JsonElement element, string propertyName)
     {
-        return element.TryGetProperty(propertyName, out var value) && value.ValueKind == JsonValueKind.String
-            ? value.GetString()
-            : null;
+        if (!element.TryGetProperty(propertyName, out var value))
+        {
+            return null;
+        }
+
+        return value.ValueKind switch
+        {
+            JsonValueKind.String => value.GetString(),
+            JsonValueKind.Number => value.GetRawText(),
+            _ => null,
+        };
     }
 
     private sealed class StationDiscoveryCapability(FmStreamOrgPlugin plugin) : IStationDiscoveryCapability
     {
         public string CapabilityId => "station-discovery";
+
+        public StationSearchProviderFeatures Features => _features;
 
         public string ProviderId => _providerId;
 
@@ -173,10 +462,17 @@ public sealed partial class FmStreamOrgPlugin : ITraydioPlugin
         }
     }
 
-    [GeneratedRegex("https?://[^\"'\\s<>]+", RegexOptions.IgnoreCase)]
-    private static partial Regex UrlPattern();
+    private sealed class SettingsCapability : IPluginSettingsCapability
+    {
+        public string CapabilityId => "plugin-settings";
 
-    [GeneratedRegex("<h[1-6][^>]*>(?<t>[^<]+)</h[1-6]>", RegexOptions.IgnoreCase)]
-    private static partial Regex TitlePattern();
+        public string DisplayName => "FMStream.org";
+
+        public object CreateSettingsView(IPluginSettingsAccessor settingsAccessor)
+        {
+            return new FmStreamOrgPluginSettingsView(settingsAccessor);
+        }
+    }
+
 }
 
