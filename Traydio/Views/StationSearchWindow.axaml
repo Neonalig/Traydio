@@ -52,7 +52,7 @@
                     </Button>
                 </Grid>
 
-                <Grid Grid.Row="2" ColumnDefinitions="84,*,84,*,84,*,84,*,84,*,Auto,Auto" ColumnSpacing="8">
+                <Grid Grid.Row="2" ColumnDefinitions="84,2.2*,Auto,2.2*,Auto,2.2*,Auto,2.2*,2.2*,Auto,Auto,Auto" ColumnSpacing="8">
                     <TextBlock Grid.Column="0" Text="Country" VerticalAlignment="Center"/>
                     <ComboBox Grid.Column="1"
                               ItemsSource="{Binding CountryOptions}"
@@ -112,40 +112,52 @@
                     <TextBlock Text="Search Results" Classes="group-title"/>
                 </Border>
                 <Border Grid.Row="1" Classes="group-frame" Margin="0,-8,0,0">
-                    <Grid RowDefinitions="*,Auto" RowSpacing="8">
-                        <ListBox x:Name="ResultsList"
-                                 Grid.Row="0"
-                                 Classes="list-surface"
-                                 ItemsSource="{Binding Results}"
-                                 SelectedItem="{Binding SelectedResult}"
-                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                            <ListBox.Styles>
-                                <Style Selector="ListBoxItem">
-                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    <Grid RowDefinitions="Auto,*,Auto" RowSpacing="8">
+                        <Border Grid.Row="0"
+                                Classes="status-strip"
+                                IsVisible="{Binding HasSearchIssue}">
+                            <TextBlock Text="{Binding SearchIssue}"
+                                       Classes="helper-text"
+                                       TextWrapping="Wrap"/>
+                        </Border>
+                        <DataGrid x:Name="ResultsGrid"
+                                  Grid.Row="1"
+                                  Classes="list-surface"
+                                  ItemsSource="{Binding Results}"
+                                  SelectedItem="{Binding SelectedResult}"
+                                  AutoGenerateColumns="False"
+                                  CanUserResizeColumns="True"
+                                  CanUserSortColumns="False"
+                                  IsReadOnly="True"
+                                  HeadersVisibility="Column"
+                                  GridLinesVisibility="Horizontal"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <DataGrid.Styles>
+                                <Style Selector="DataGridColumnHeader">
+                                    <Setter Property="Padding" Value="8,6"/>
                                 </Style>
-                            </ListBox.Styles>
-                            <ListBox.ItemTemplate>
-                                <DataTemplate>
-                                    <Border Background="Transparent" Padding="0,2">
-                                        <Border.ContextMenu>
-                                            <ContextMenu>
-                                                <MenuItem Header="Play / Pause" Click="OnPlayPauseResultClick"/>
-                                                <MenuItem Header="Add to Saved Stations"
-                                                          Click="OnAddResultClick"
-                                                          IsVisible="{Binding ShowAddButton}"/>
-                                                <MenuItem Header="Remove from Saved Stations"
-                                                          Click="OnRemoveResultClick"
-                                                          IsVisible="{Binding ShowLibraryButtons}"/>
-                                                <Separator/>
-                                                <MenuItem Header="Copy Station Name" Click="OnCopyResultNameClick"/>
-                                                <MenuItem Header="Copy Stream URL" Click="OnCopyResultUrlClick"/>
-                                                <MenuItem Header="Copy Name + URL" Click="OnCopyResultNameUrlClick"/>
-                                            </ContextMenu>
-                                        </Border.ContextMenu>
-
-                                        <Grid ColumnDefinitions="Auto,3*,5*,Auto" ColumnSpacing="8">
-                                            <Image Source="/Assets/stations.ico" Classes="icon-small" VerticalAlignment="Top" Margin="0,1,0,0"/>
-                                            <StackPanel Grid.Column="1" MaxWidth="320">
+                                <Style Selector="DataGridCell">
+                                    <Setter Property="Padding" Value="8,6"/>
+                                </Style>
+                                <Style Selector="DataGridRow">
+                                    <Setter Property="ContextMenu">
+                                        <ContextMenu>
+                                            <MenuItem Header="Play / Pause" Click="OnPlayPauseResultClick"/>
+                                            <MenuItem Header="Add to Saved Stations" Click="OnAddResultClick"/>
+                                            <MenuItem Header="Remove from Saved Stations" Click="OnRemoveResultClick"/>
+                                            <Separator/>
+                                            <MenuItem Header="Copy Station Name" Click="OnCopyResultNameClick"/>
+                                            <MenuItem Header="Copy Stream URL" Click="OnCopyResultUrlClick"/>
+                                            <MenuItem Header="Copy Name + URL" Click="OnCopyResultNameUrlClick"/>
+                                        </ContextMenu>
+                                    </Setter>
+                                </Style>
+                            </DataGrid.Styles>
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn Header="Station" Width="2*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Spacing="2" Margin="0,2">
                                                 <TextBlock Text="{Binding Name}"
                                                            FontWeight="SemiBold"
                                                            TextWrapping="WrapWithOverflow"
@@ -155,17 +167,34 @@
                                                            TextWrapping="WrapWithOverflow"
                                                            ToolTip.Tip="{Binding Country}"/>
                                             </StackPanel>
-                                            <StackPanel Grid.Column="2" MaxWidth="640">
-                                                <TextBlock Text="{Binding StreamUrl}"
-                                                           TextWrapping="WrapWithOverflow"
-                                                           ToolTip.Tip="{Binding StreamUrl}"/>
-                                                <TextBlock Text="{Binding Description}"
-                                                           Classes="subtle-text"
-                                                           TextWrapping="WrapWithOverflow"
-                                                           ToolTip.Tip="{Binding Description}"/>
-                                            </StackPanel>
-
-                                            <StackPanel Grid.Column="3" Spacing="6" VerticalAlignment="Top">
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Stream URL" Width="4*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding StreamUrl}"
+                                                       Margin="0,2"
+                                                       TextWrapping="WrapWithOverflow"
+                                                       ToolTip.Tip="{Binding StreamUrl}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Description" Width="3*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Description}"
+                                                       Margin="0,2"
+                                                       Classes="subtle-text"
+                                                       TextWrapping="WrapWithOverflow"
+                                                       ToolTip.Tip="{Binding Description}"/>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Actions" Width="104">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Vertical" Spacing="6" VerticalAlignment="Top" Margin="0,2">
                                                 <Button Classes="command-button"
                                                         IsVisible="{Binding ShowAddButton}"
                                                         Click="OnAddResultClick">
@@ -179,7 +208,12 @@
                                                         IsVisible="{Binding ShowLibraryButtons}"
                                                         Click="OnPlayPauseResultClick">
                                                     <StackPanel Orientation="Horizontal" Spacing="6">
-                                                        <Image Source="/Assets/play.ico" Classes="icon-small"/>
+                                                        <Image Source="/Assets/play.ico"
+                                                               Classes="icon-small"
+                                                               IsVisible="{Binding !IsPlaying}"/>
+                                                        <Image Source="/Assets/pause.ico"
+                                                               Classes="icon-small"
+                                                               IsVisible="{Binding IsPlaying}"/>
                                                         <TextBlock Text="{Binding PlayButtonText}" VerticalAlignment="Center"/>
                                                     </StackPanel>
                                                 </Button>
@@ -193,13 +227,13 @@
                                                     </StackPanel>
                                                 </Button>
                                             </StackPanel>
-                                        </Grid>
-                                    </Border>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
 
-                        <Grid Grid.Row="1" ColumnDefinitions="*,Auto,*" ColumnSpacing="8" Margin="0,4,0,0" IsVisible="{Binding SupportsPagination}">
+                        <Grid Grid.Row="2" ColumnDefinitions="*,Auto,*" ColumnSpacing="8" Margin="0,4,0,0" IsVisible="{Binding SupportsPagination}">
                             <Border Grid.Column="0"/>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center" VerticalAlignment="Center">
                                 <Button Classes="command-button"

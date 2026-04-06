@@ -28,6 +28,7 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
     private const string _OPTION_CODEC = "codec";
     private const string _OPTION_MIN_BITRATE = "minBitrate";
     private const string _OPTION_HIDE_BROKEN = "hideBroken";
+    private const int _FETCH_RETRY_ATTEMPTS = 3;
 
     public static PluginInstallDisclaimer InstallDisclaimer { get; } = new()
     {
@@ -106,7 +107,7 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
         catch (Exception ex)
         {
             _logger.LogDebug(ex, "Radio Browser search failed for mode={Mode}, query={Query}", request.Mode, request.Query);
-            yield break;
+            throw;
         }
 
         foreach (var station in stations)
@@ -138,7 +139,7 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
         }
     }
 
-    private static async Task<IReadOnlyCollection<Station>> FetchStationsAsync(StationSearchRequest request, CancellationToken cancellationToken)
+    private async Task<IReadOnlyCollection<Station>> FetchStationsAsync(StationSearchRequest request, CancellationToken cancellationToken)
     {
         var stationService = _stationService.Value;
         var filter = BuildSearchFilter(request);
@@ -148,23 +149,92 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
         {
             filter.Order = StationSortOrder.Random;
             filter.Reverse = false;
-            return (await stationService.FetchAsync(filter, cancellationToken)).ToArray();
+            return await FetchWithRetryAsync(
+                mode: request.Mode,
+                query: request.Query,
+                cancellationToken,
+                static async (service, token, payload) => (await service.FetchAsync(payload.Filter, token)).ToArray(),
+                stationService,
+                new FetchPayload(filter, null, exactMatch));
         }
 
         if (request.Mode == StationSearchMode.Featured || IsDefaultFeaturedRequest(request))
         {
             filter.Order = StationSortOrder.Votes;
             filter.Reverse = true;
-            return (await stationService.FetchAsync(filter, cancellationToken)).ToArray();
+            return await FetchWithRetryAsync(
+                mode: request.Mode,
+                query: request.Query,
+                cancellationToken,
+                static async (service, token, payload) => (await service.FetchAsync(payload.Filter, token)).ToArray(),
+                stationService,
+                new FetchPayload(filter, null, exactMatch));
         }
 
         if (!string.IsNullOrWhiteSpace(request.Query))
         {
-            return (await stationService.FetchByNameAsync(request.Query.Trim(), exactMatch, filter, cancellationToken)).ToArray();
+            return await FetchWithRetryAsync(
+                mode: request.Mode,
+                query: request.Query,
+                cancellationToken,
+                static async (service, token, payload) =>
+                    (await service.FetchByNameAsync(payload.Query!, payload.ExactMatch, payload.Filter, token)).ToArray(),
+                stationService,
+                new FetchPayload(filter, request.Query.Trim(), exactMatch));
         }
 
         var advanced = BuildAdvancedSearch(request, filter);
-        return (await stationService.AdvancedSearchAsync(advanced, cancellationToken)).ToArray();
+        return await FetchWithRetryAsync(
+            mode: request.Mode,
+            query: request.Query,
+            cancellationToken,
+            static async (service, token, payload) => (await service.AdvancedSearchAsync(payload.Advanced!, token)).ToArray(),
+            stationService,
+            new FetchPayload(filter, null, exactMatch, advanced));
+    }
+
+    private async Task<IReadOnlyCollection<Station>> FetchWithRetryAsync(
+        StationSearchMode mode,
+        string query,
+        CancellationToken cancellationToken,
+        Func<IStationService, CancellationToken, FetchPayload, Task<IReadOnlyCollection<Station>>> fetch,
+        IStationService stationService,
+        FetchPayload payload)
+    {
+        Exception? lastError = null;
+
+        for (var attempt = 1; attempt <= _FETCH_RETRY_ATTEMPTS; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                return await fetch(stationService, cancellationToken, payload);
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
+            }
+            catch (Exception ex) when (attempt < _FETCH_RETRY_ATTEMPTS)
+            {
+                lastError = ex;
+                var backoff = TimeSpan.FromMilliseconds(250 * Math.Pow(2, attempt - 1) + Random.Shared.Next(0, 120));
+                _logger.LogDebug(ex,
+                    "Radio Browser fetch retry {Attempt}/{MaxAttempts} after {DelayMs}ms. mode={Mode}, query={Query}",
+                    attempt,
+                    _FETCH_RETRY_ATTEMPTS,
+                    backoff.TotalMilliseconds,
+                    mode,
+                    query);
+                await Task.Delay(backoff, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                lastError = ex;
+                break;
+            }
+        }
+
+        throw lastError ?? new InvalidOperationException("Radio Browser fetch failed.");
     }
 
     private static bool IsDefaultFeaturedRequest(StationSearchRequest request)
@@ -399,6 +469,12 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
         return Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
     }
+
+    private readonly record struct FetchPayload(
+        StationSearchFilter Filter,
+        string? Query,
+        bool ExactMatch,
+        AdvancedStationSearch? Advanced = null);
 
     private sealed class StationDiscoveryCapability(RadioBrowserPlugin plugin) : IStationDiscoveryCapability
     {

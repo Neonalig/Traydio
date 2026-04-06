@@ -115,6 +115,11 @@ public partial class StationSearchWindowViewModel : ViewModelBase
     [ObservableProperty]
     private bool _hasProviderSearchSettings;
 
+    [ObservableProperty]
+    private string? _searchIssue;
+
+    public bool HasSearchIssue => !string.IsNullOrWhiteSpace(SearchIssue);
+
     public int CurrentPage => _activePageIndex + 1;
 
     public bool SupportsModes => SelectedProvider?.Features.SupportsModes ?? false;
@@ -291,6 +296,7 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         HasPreviousPage = _activePageIndex > 0;
         HasNextPage = false;
         KnownMaxPage = null;
+        SearchIssue = null;
         OnPropertyChanged(nameof(PaginationText));
         OnPropertyChanged(nameof(CanGoToFirstPage));
         OnPropertyChanged(nameof(CanGoToLastPage));
@@ -362,6 +368,11 @@ public partial class StationSearchWindowViewModel : ViewModelBase
             Status = SupportsPagination
                 ? $"Loaded {modeLabel} page {CurrentPage} with {_lastSearchResults.Count} station(s), showing {shown}."
                 : $"Loaded {modeLabel} results: {_lastSearchResults.Count} station(s), showing {shown}.";
+
+            if (_lastSearchResults.Count == 0)
+            {
+                SearchIssue = $"No stations returned from '{SelectedProvider.DisplayName}'. The provider may be temporarily unavailable.";
+            }
         }
         catch (OperationCanceledException)
         {
@@ -373,6 +384,7 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         catch (Exception ex)
         {
             Status = "Search failed: " + ex.Message;
+            SearchIssue = "Search failed for provider '" + SelectedProvider.DisplayName + "': " + ex.Message;
         }
         finally
         {
@@ -1060,6 +1072,12 @@ public partial class StationSearchWindowViewModel : ViewModelBase
 
         // Keep station-search feedback visible, but lower priority than focused actions elsewhere.
         RibbonStatusHub.SetOverride(_STATUS_OVERRIDE_ID, status, priority: 10);
+    }
+
+    partial void OnSearchIssueChanged(string? value)
+    {
+        _ = value;
+        OnPropertyChanged(nameof(HasSearchIssue));
     }
 
     public sealed class ProviderOption(string pluginId, string id, string displayName, StationSearchProviderFeatures features)

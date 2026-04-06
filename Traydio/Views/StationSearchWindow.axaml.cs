@@ -18,10 +18,10 @@ public partial class StationSearchPage : UserControl
     {
         AvaloniaXamlLoader.Load(this);
 
-        var resultsList = this.FindControl<ListBox>("ResultsList");
-        if (resultsList is not null)
+        var resultsGrid = this.FindControl<DataGrid>("ResultsGrid");
+        if (resultsGrid is not null)
         {
-            resultsList.DoubleTapped += OnResultsListDoubleTapped;
+            resultsGrid.DoubleTapped += OnResultsListDoubleTapped;
         }
     }
 
@@ -38,12 +38,12 @@ public partial class StationSearchPage : UserControl
             return;
         }
 
-        if (sender is not ListBox listBox)
+        if (sender is not DataGrid grid)
         {
             return;
         }
 
-        if (listBox.SelectedItem is not StationSearchWindowViewModel.SearchResultItem station)
+        if (grid.SelectedItem is not StationSearchWindowViewModel.SearchResultItem station)
         {
             return;
         }

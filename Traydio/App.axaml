@@ -12,5 +12,6 @@
         <ClassicTheme />
         <StyleInclude Source="avares://Traydio/Styles/ThemeTokens.axaml"/>
         <StyleInclude Source="avares://Traydio/Styles/ControlStyles.axaml"/>
+        <StyleInclude Source="avares://Classic.Avalonia.Theme.DataGrid/Classic.axaml"/>
     </Application.Styles>
 </Application>

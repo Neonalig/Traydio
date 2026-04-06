@@ -44,6 +44,7 @@
 
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="11.3.8"/>
+        <PackageReference Include="Avalonia.Controls.DataGrid" Version="11.3.8"/>
         <PackageReference Include="Avalonia.Desktop" Version="11.3.8"/>
         <PackageReference Include="Classic.Avalonia.Theme" Version="11.3.0.3"/>
         <!--Condition below is needed to remove Avalonia.Diagnostics package from build output in Release configuration.-->
@@ -61,38 +62,47 @@
 
     <ItemGroup>
         <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+            <!-- [*] Traydio.Plugin.RadioBrowser -->
             <_Parameter1>Traydio.FeaturedPluginAssemblyNameHash</_Parameter1>
-            <_Parameter2>27a25b1c13d488acd2b8044a02a1df2384570abaaf87728be08c0f47ccd7db46</_Parameter2>
+            <_Parameter2>f8238cb4a728863dfb231e626e4423b4d9c02b3f3d52afa655894267073306ac</_Parameter2>
         </AssemblyAttribute>
         <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+            <!-- [*] Traydio.Plugin.ManagedBass -->
             <_Parameter1>Traydio.FeaturedPluginAssemblyNameHash</_Parameter1>
             <_Parameter2>665c627788c7ee8096f4e560ebee9addb642dd516726a00f3245c3da9bc588ee</_Parameter2>
         </AssemblyAttribute>
         <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+            <!-- Traydio.Plugin.FmStreamOrg -->
             <_Parameter1>Traydio.OfficialPluginAssemblyNameHash</_Parameter1>
             <_Parameter2>27a25b1c13d488acd2b8044a02a1df2384570abaaf87728be08c0f47ccd7db46</_Parameter2>
         </AssemblyAttribute>
         <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+            <!-- Traydio.Plugin.LibVlc -->
             <_Parameter1>Traydio.OfficialPluginAssemblyNameHash</_Parameter1>
             <_Parameter2>fcb4832876f6988ab1968f7200362ff80322ff70f1b4c2b9492c7aa7f1bf7623</_Parameter2>
         </AssemblyAttribute>
         <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+            <!-- Traydio.Plugin.ManagedBass -->
             <_Parameter1>Traydio.OfficialPluginAssemblyNameHash</_Parameter1>
             <_Parameter2>665c627788c7ee8096f4e560ebee9addb642dd516726a00f3245c3da9bc588ee</_Parameter2>
         </AssemblyAttribute>
         <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+            <!-- Traydio.Plugin.StreamUrlLink -->
             <_Parameter1>Traydio.OfficialPluginAssemblyNameHash</_Parameter1>
             <_Parameter2>ff01a230df8408f1be752f89f85be597ed590001d15cc5f380f1c94af7399aca</_Parameter2>
         </AssemblyAttribute>
         <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+            <!-- Traydio.Plugin.RadioBrowser -->
             <_Parameter1>Traydio.OfficialPluginAssemblyNameHash</_Parameter1>
             <_Parameter2>f8238cb4a728863dfb231e626e4423b4d9c02b3f3d52afa655894267073306ac</_Parameter2>
         </AssemblyAttribute>
         <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+            <!-- Traydio.Plugin.RadioDirectory -->
             <_Parameter1>Traydio.OfficialPluginAssemblyNameHash</_Parameter1>
             <_Parameter2>175898a9fbb4ba33e29a9f2346cabd56675c8aa7af89fdaf9f8d58373327bd3d</_Parameter2>
         </AssemblyAttribute>
         <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+            <!-- Traydio.Plugin.Shoutcast -->
             <_Parameter1>Traydio.OfficialPluginAssemblyNameHash</_Parameter1>
             <_Parameter2>775d13e41ba9d5bbb03527054cb1c8f4e965fb10a69e1f275f12bf69c110ab45</_Parameter2>
         </AssemblyAttribute>
