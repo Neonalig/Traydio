@@ -39,6 +39,11 @@ public partial class BassPluginSettingsView : UserControl
     private static readonly IImage _statusWarningIcon = LoadIcon("avares://Traydio/Assets/Icons9x/warning.ico");
     private static readonly IImage _statusInvalidIcon = LoadIcon("avares://Traydio/Assets/Icons9x/stop.ico");
 
+    public BassPluginSettingsView()
+        : this(new NullPluginSettingsAccessor(), NullLogger<BassPluginSettingsView>.Instance)
+    {
+    }
+
     public BassPluginSettingsView(IPluginSettingsAccessor settingsAccessor)
         : this(settingsAccessor, NullLogger<BassPluginSettingsView>.Instance)
     {
@@ -588,6 +593,19 @@ public partial class BassPluginSettingsView : UserControl
 
     [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
     private static extern bool SetDllDirectory(string lpPathName);
+
+    private sealed class NullPluginSettingsAccessor : IPluginSettingsAccessor
+    {
+        public string? GetValue(string key) => null;
+
+        public void SetValue(string key, string? value)
+        {
+        }
+
+        public void Save()
+        {
+        }
+    }
 }
 
 

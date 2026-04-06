@@ -2,8 +2,10 @@
 using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Controls.ApplicationLifetimes;
 using Traydio.Models;
 using Traydio.Services;
 using Traydio.Common;
@@ -19,6 +21,7 @@ public partial class SettingsPageViewModel : ViewModelBase
     private readonly IRadioPlayer _radioPlayer;
     private readonly IPluginManager _pluginManager;
     private readonly IWmicExtendedFunctionalityService _wmicExtendedFunctionalityService;
+    private string? _appliedClassicThemeKey;
 
     [ObservableProperty]
     private bool _enableNamedPipeRelay;
@@ -61,6 +64,9 @@ public partial class SettingsPageViewModel : ViewModelBase
 
     [ObservableProperty]
     private ClassicThemeOption? _selectedClassicTheme;
+
+    [ObservableProperty]
+    private bool _isThemeRestartVisible;
 
     [ObservableProperty]
     private bool _isWmicSupported;
@@ -110,6 +116,8 @@ public partial class SettingsPageViewModel : ViewModelBase
         _stationRepository.RadioPlayerEngineId = SelectedRadioPlayerEngine?.Id;
         _stationRepository.ClassicThemeKey = SelectedClassicTheme?.Key;
         ClassicThemeService.Apply(_stationRepository.ClassicThemeKey);
+        _appliedClassicThemeKey = _stationRepository.ClassicThemeKey;
+        UpdateThemeRestartVisibility();
 
         RefreshProtocolRegistration();
 
@@ -200,6 +208,50 @@ public partial class SettingsPageViewModel : ViewModelBase
         }
     }
 
+    [RelayCommand]
+    private void RestartApp()
+    {
+        var processPath = Environment.ProcessPath;
+        if (string.IsNullOrWhiteSpace(processPath))
+        {
+            Status = "Could not determine application path for restart.";
+            return;
+        }
+
+        var restartArguments = "--cmd settings";
+        if (Debugger.IsAttached)
+        {
+            restartArguments += " --debugger-launch";
+        }
+
+        if (OperatingSystem.IsWindows())
+        {
+            var escapedPath = processPath.Replace("\"", "\"\"");
+            var delayedCommand = $"/c timeout /t 1 /nobreak >nul && start \"\" \"{escapedPath}\" {restartArguments}";
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = delayedCommand,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            });
+        }
+        else
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = processPath,
+                Arguments = restartArguments,
+                UseShellExecute = true,
+            });
+        }
+
+        if (Avalonia.Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime lifetime)
+        {
+            lifetime.Shutdown();
+        }
+    }
+
     private void Refresh()
     {
         EnableNamedPipeRelay = _stationRepository.Communication.EnableNamedPipeRelay;
@@ -220,9 +272,11 @@ public partial class SettingsPageViewModel : ViewModelBase
             ?? AudioOutputDevices.FirstOrDefault();
 
         ClassicThemes = BuildClassicThemeOptions();
+        _appliedClassicThemeKey = _stationRepository.ClassicThemeKey;
         SelectedClassicTheme = ClassicThemes.FirstOrDefault(option =>
             string.Equals(option.Key, _stationRepository.ClassicThemeKey, StringComparison.OrdinalIgnoreCase))
             ?? ClassicThemes.FirstOrDefault();
+        UpdateThemeRestartVisibility();
 
         RefreshProtocolRegistration();
         RefreshWmicStatus();
@@ -285,6 +339,20 @@ public partial class SettingsPageViewModel : ViewModelBase
         return ClassicThemeService.SupportedThemeKeys
             .Select(key => new ClassicThemeOption(key, key))
             .ToArray();
+    }
+
+    partial void OnSelectedClassicThemeChanged(ClassicThemeOption? value)
+    {
+        _ = value;
+        UpdateThemeRestartVisibility();
+    }
+
+    private void UpdateThemeRestartVisibility()
+    {
+        IsThemeRestartVisible = !string.Equals(
+            SelectedClassicTheme?.Key,
+            _appliedClassicThemeKey,
+            StringComparison.OrdinalIgnoreCase);
     }
 }
 

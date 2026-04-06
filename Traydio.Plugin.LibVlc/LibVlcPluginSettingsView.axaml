@@ -19,7 +19,7 @@
             <TextBox x:Name="OutputDeviceIdBox" Grid.Column="1" Watermark="Blank = system default"/>
         </Grid>
 
-        <TextBlock Grid.Row="4" x:Name="StatusText" Classes="accent-text" TextWrapping="Wrap"/>
+        <TextBlock Grid.Row="4" x:Name="StatusText" Foreground="DodgerBlue" TextWrapping="Wrap"/>
     </Grid>
 </UserControl>
 

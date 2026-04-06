@@ -13,6 +13,11 @@ public partial class LibVlcPluginSettingsView : UserControl
     private readonly TextBox _outputDeviceIdBox;
     private readonly TextBlock _statusText;
 
+    public LibVlcPluginSettingsView()
+        : this(new NullPluginSettingsAccessor())
+    {
+    }
+
     public LibVlcPluginSettingsView(IPluginSettingsAccessor settingsAccessor)
     {
         _settingsAccessor = settingsAccessor;
@@ -39,6 +44,19 @@ public partial class LibVlcPluginSettingsView : UserControl
         _settingsAccessor.Save();
 
         _statusText.Text = "Saved LibVLC output settings. Restart playback to apply changes.";
+    }
+
+    private sealed class NullPluginSettingsAccessor : IPluginSettingsAccessor
+    {
+        public string? GetValue(string key) => null;
+
+        public void SetValue(string key, string? value)
+        {
+        }
+
+        public void Save()
+        {
+        }
     }
 }
 
