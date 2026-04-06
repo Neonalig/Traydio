@@ -1,14 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Net.Http;
+using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using JetBrains.Annotations;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using RadioBrowser.Net.Entities;
+using RadioBrowser.Net.Services;
 using Traydio.Common;
 
 namespace Traydio.Plugin.RadioBrowser;
@@ -17,6 +20,8 @@ namespace Traydio.Plugin.RadioBrowser;
 public sealed class RadioBrowserPlugin : ITraydioPlugin
 {
     public const string PLUGIN_ID = "plugin.radio-browser.info";
+
+    private const string _USER_AGENT = "Traydio/2026";
 
     public static PluginInstallDisclaimer InstallDisclaimer { get; } = new()
     {
@@ -31,7 +36,9 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
         RejectButtonText = "Reject",
     };
 
-    private static readonly HttpClient _httpClient = new();
+    private static readonly Lazy<ServiceProvider> _serviceProvider = new(CreateServiceProvider, isThreadSafe: true);
+    private static readonly Lazy<IStationService> _stationService = new(() => _serviceProvider.Value.GetRequiredService<IStationService>(), isThreadSafe: true);
+
     private static readonly StationSearchProviderFeatures _features = new()
     {
         SupportsPagination = true,
@@ -39,7 +46,7 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
         SupportsCountryFilter = true,
         SupportsGenreFilter = true,
         SupportsLanguageFilter = true,
-        SupportsHighQualityPreference = false,
+        SupportsHighQualityPreference = true,
         SupportsOrderFilter = true,
         DefaultPageSize = 50,
         SupportedModes = [StationSearchMode.Query, StationSearchMode.Featured, StationSearchMode.Random],
@@ -68,134 +75,253 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
         return _settingsProvider?.GetPluginSettings(PLUGIN_ID) ?? new Dictionary<string, string>();
     }
 
+    private static ServiceProvider CreateServiceProvider()
+    {
+        var services = new ServiceCollection();
+        services.AddRadioBrowserServices(_USER_AGENT);
+        return services.BuildServiceProvider();
+    }
+
     private async IAsyncEnumerable<DiscoveredStation> SearchStationsAsync(
         StationSearchRequest request,
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        var settings = GetSettings();
-        var requestUri = BuildRequestUri(GetBaseUrl(settings), request);
         var seenUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        IReadOnlyCollection<Station> stations;
 
-        JsonDocument? document;
         try
         {
-            using var response = await _httpClient.GetAsync(requestUri, cancellationToken);
-            if (!response.IsSuccessStatusCode)
-            {
-                yield break;
-            }
-
-            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
+            stations = await FetchStationsAsync(request, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            yield break;
         }
         catch (Exception ex)
         {
-            _logger.LogDebug(ex, "Radio Browser search failed. url={Url}", requestUri);
+            _logger.LogDebug(ex, "Radio Browser search failed for mode={Mode}, query={Query}", request.Mode, request.Query);
             yield break;
         }
 
-        using (document)
+        foreach (var station in stations)
         {
-            if (document.RootElement.ValueKind != JsonValueKind.Array)
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var streamUrl = GetStreamUrl(station);
+            if (!IsValidStreamUrl(streamUrl))
             {
-                yield break;
+                continue;
             }
 
-            foreach (var item in document.RootElement.EnumerateArray())
+            if (!seenUrls.Add(NormalizeUrl(streamUrl!)))
             {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                if (item.ValueKind != JsonValueKind.Object)
-                {
-                    continue;
-                }
-
-                var streamUrl = FirstString(item, "url_resolved", "url");
-                if (!IsValidStreamUrl(streamUrl))
-                {
-                    continue;
-                }
-
-                if (!seenUrls.Add(NormalizeUrl(streamUrl!)))
-                {
-                    continue;
-                }
-
-                yield return new DiscoveredStation
-                {
-                    Name = FirstString(item, "name") ?? "Unknown Station",
-                    StreamUrl = streamUrl!,
-                    Description = BuildDescription(FirstString(item, "language"), FirstInt(item, "bitrate")),
-                    Genre = FirstString(item, "tags"),
-                    Country = FirstString(item, "country"),
-                };
+                continue;
             }
+
+            var genre = JoinValues(station.Tags, maxCount: 4);
+            var country = !string.IsNullOrWhiteSpace(station.Country)
+                ? station.Country
+                : station.CountryCode;
+
+            yield return new DiscoveredStation
+            {
+                Name = string.IsNullOrWhiteSpace(station.Name) ? "Unknown Station" : station.Name,
+                StreamUrl = streamUrl!,
+                Description = BuildDescription(station),
+                Genre = genre,
+                Country = country,
+            };
         }
     }
 
-    private static string GetBaseUrl(IReadOnlyDictionary<string, string> settings)
+    private static async Task<IReadOnlyCollection<Station>> FetchStationsAsync(StationSearchRequest request, CancellationToken cancellationToken)
     {
-        if (settings.TryGetValue(RadioBrowserPluginSettings.API_BASE_URL_KEY, out var configured) &&
-            !string.IsNullOrWhiteSpace(configured))
-        {
-            return configured.Trim().TrimEnd('/');
-        }
-
-        return RadioBrowserPluginSettings.DEFAULT_API_BASE_URL;
-    }
-
-    private static Uri BuildRequestUri(string baseUrl, StationSearchRequest request)
-    {
-        var endpoint = request.Mode switch
-        {
-            StationSearchMode.Featured => baseUrl + "/json/stations/topclick",
-            StationSearchMode.Random => baseUrl + "/json/stations",
-            _ => baseUrl + "/json/stations/search",
-        };
-
-        var queryPairs = new List<KeyValuePair<string, string>>
-        {
-            new("hidebroken", "true"),
-            new("limit", Math.Clamp(request.Limit, 1, 500).ToString()),
-            new("offset", Math.Max(0, request.Offset).ToString()),
-        };
+        var stationService = _stationService.Value;
+        var filter = BuildSearchFilter(request);
 
         if (request.Mode == StationSearchMode.Random)
         {
-            queryPairs.Add(new("order", "random"));
-        }
-        else if (!string.IsNullOrWhiteSpace(request.Order))
-        {
-            queryPairs.Add(new("order", request.Order.Trim()));
+            filter.Order = StationSortOrder.Random;
+            filter.Reverse = false;
+            return (await stationService.FetchAsync(filter, cancellationToken)).ToArray();
         }
 
-        if (!string.IsNullOrWhiteSpace(request.Query))
+        if (request.Mode == StationSearchMode.Featured || IsDefaultFeaturedRequest(request))
         {
-            queryPairs.Add(new("name", request.Query.Trim()));
+            filter.Order = StationSortOrder.Votes;
+            filter.Reverse = true;
+            return (await stationService.FetchAsync(filter, cancellationToken)).ToArray();
         }
 
-        if (!string.IsNullOrWhiteSpace(request.Country))
+        var advanced = BuildAdvancedSearch(request, filter);
+        return (await stationService.AdvancedSearchAsync(advanced, cancellationToken)).ToArray();
+    }
+
+    private static bool IsDefaultFeaturedRequest(StationSearchRequest request)
+    {
+        return string.IsNullOrWhiteSpace(request.Query)
+               && string.IsNullOrWhiteSpace(request.Country)
+               && string.IsNullOrWhiteSpace(request.Genre)
+               && string.IsNullOrWhiteSpace(request.Language);
+    }
+
+    private static StationSearchFilter BuildSearchFilter(StationSearchRequest request)
+    {
+        var filter = new StationSearchFilter
         {
-            queryPairs.Add(new("country", request.Country.Trim()));
+            HideBroken = true,
+            Offset = Math.Max(0, request.Offset),
+            Limit = Math.Clamp(request.Limit, 1, 500),
+        };
+
+        if (TryParseSortOrder(request.Order, out var parsedOrder, out var reverse))
+        {
+            filter.Order = parsedOrder;
+            filter.Reverse = reverse;
         }
 
-        if (!string.IsNullOrWhiteSpace(request.Genre))
+        return filter;
+    }
+
+    private static AdvancedStationSearch BuildAdvancedSearch(StationSearchRequest request, StationSearchFilter filter)
+    {
+        var genre = request.Genre?.Trim() ?? string.Empty;
+        var language = request.Language?.Trim() ?? string.Empty;
+        var country = request.Country?.Trim() ?? string.Empty;
+
+        var advanced = new AdvancedStationSearch
         {
-            queryPairs.Add(new("tag", request.Genre.Trim()));
+            Name = request.Query?.Trim() ?? string.Empty,
+            NameExact = false,
+            Language = language,
+            LanguageExact = false,
+            Tag = genre,
+            TagExact = false,
+            TagList = SplitValues(genre),
+            Offset = filter.Offset,
+            Limit = filter.Limit,
+            HideBroken = filter.HideBroken,
+            Order = filter.Order,
+            Reverse = filter.Reverse,
+            MinimumBitrate = request.PreferHighQuality == true ? 96 : 0,
+            MaximumBitrate = 1_000_000,
+        };
+
+        if (country.Length == 2)
+        {
+            advanced.CountryCode = country;
+        }
+        else
+        {
+            advanced.Country = country;
         }
 
-        if (!string.IsNullOrWhiteSpace(request.Language))
+        return advanced;
+    }
+
+    private static bool TryParseSortOrder(string? rawOrder, out StationSortOrder order, out bool reverse)
+    {
+        order = default;
+        reverse = false;
+
+        if (string.IsNullOrWhiteSpace(rawOrder))
         {
-            queryPairs.Add(new("language", request.Language.Trim()));
+            return false;
         }
 
-        var encoded = new List<string>(queryPairs.Count);
-        foreach (var pair in queryPairs)
+        var token = rawOrder.Trim();
+        if (token.StartsWith('-'))
         {
-            encoded.Add($"{Uri.EscapeDataString(pair.Key)}={Uri.EscapeDataString(pair.Value)}");
+            reverse = true;
+            token = token[1..];
         }
 
-        return new Uri(endpoint + "?" + string.Join("&", encoded));
+        if (token.EndsWith("_desc", StringComparison.OrdinalIgnoreCase))
+        {
+            reverse = true;
+            token = token[..^5];
+        }
+        else if (token.EndsWith("_asc", StringComparison.OrdinalIgnoreCase))
+        {
+            token = token[..^4];
+        }
+
+        token = token.Trim();
+        if (string.Equals(token, "top", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(token, "popular", StringComparison.OrdinalIgnoreCase))
+        {
+            order = StationSortOrder.Votes;
+            reverse = true;
+            return true;
+        }
+
+        if (Enum.TryParse<StationSortOrder>(token, ignoreCase: true, out var parsed))
+        {
+            order = parsed;
+            return true;
+        }
+
+        return false;
+    }
+
+    private static IEnumerable<string> SplitValues(string value)
+    {
+        return value
+            .Split([',', ';', '|'], StringSplitOptions.RemoveEmptyEntries)
+            .Select(v => v.Trim())
+            .Where(v => !string.IsNullOrWhiteSpace(v));
+    }
+
+    private static string? BuildDescription(Station station)
+    {
+        var chunks = new List<string>();
+
+        var languages = JoinValues(station.Languages, maxCount: 2);
+        if (!string.IsNullOrWhiteSpace(languages))
+        {
+            chunks.Add("Lang: " + languages);
+        }
+
+        if (station.Bitrate > 0)
+        {
+            chunks.Add("Bitrate: " + station.Bitrate + " kbps");
+        }
+
+        if (station.Votes > 0)
+        {
+            chunks.Add("Votes: " + station.Votes);
+        }
+
+        return chunks.Count == 0 ? null : string.Join(" | ", chunks);
+    }
+
+    private static string? JoinValues(IEnumerable<string>? values, int maxCount)
+    {
+        if (values is null)
+        {
+            return null;
+        }
+
+        var selected = values
+            .Where(v => !string.IsNullOrWhiteSpace(v))
+            .Select(v => v.Trim())
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(maxCount)
+            .ToArray();
+
+        return selected.Length == 0 ? null : string.Join(", ", selected);
+    }
+
+    private static string? GetStreamUrl(Station station)
+    {
+        if (IsValidStreamUrl(station.ResolvedUrl))
+        {
+            return station.ResolvedUrl;
+        }
+
+        return IsValidStreamUrl(station.Url)
+            ? station.Url
+            : null;
     }
 
     private static string NormalizeUrl(string value)
@@ -212,68 +338,6 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
 
         return Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
-    }
-
-    private static string? FirstString(JsonElement element, params string[] names)
-    {
-        foreach (var name in names)
-        {
-            if (!element.TryGetProperty(name, out var value) || value.ValueKind != JsonValueKind.String)
-            {
-                continue;
-            }
-
-            var text = value.GetString();
-            if (!string.IsNullOrWhiteSpace(text))
-            {
-                return text;
-            }
-        }
-
-        return null;
-    }
-
-    private static int? FirstInt(JsonElement element, params string[] names)
-    {
-        foreach (var name in names)
-        {
-            if (!element.TryGetProperty(name, out var value))
-            {
-                continue;
-            }
-
-            if (value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var parsed) && parsed > 0)
-            {
-                return parsed;
-            }
-
-            if (value.ValueKind == JsonValueKind.String && int.TryParse(value.GetString(), out parsed) && parsed > 0)
-            {
-                return parsed;
-            }
-        }
-
-        return null;
-    }
-
-    private static string? BuildDescription(string? language, int? bitrate)
-    {
-        if (string.IsNullOrWhiteSpace(language) && bitrate is null)
-        {
-            return null;
-        }
-
-        if (string.IsNullOrWhiteSpace(language))
-        {
-            return "Bitrate: " + bitrate + " kbps";
-        }
-
-        if (bitrate is null)
-        {
-            return "Language: " + language;
-        }
-
-        return "Language: " + language + ", Bitrate: " + bitrate + " kbps";
     }
 
     private sealed class StationDiscoveryCapability(RadioBrowserPlugin plugin) : IStationDiscoveryCapability
@@ -304,7 +368,6 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
         }
     }
 
-
     private sealed class RadioBrowserPluginSettingsView : UserControl
     {
         private readonly IPluginSettingsAccessor _settingsAccessor;
@@ -332,7 +395,7 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
 
             var description = new TextBlock
             {
-                Text = "Configure the Radio Browser API mirror host.",
+                Text = "RadioBrowser.Net selects official mirrors automatically. This custom endpoint field is kept for compatibility but is not currently used by the package client.",
                 TextWrapping = Avalonia.Media.TextWrapping.Wrap,
             };
             Grid.SetRow(description, 1);
@@ -348,7 +411,7 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
             _baseUrlTextBox.LostFocus += OnBaseUrlLostFocus;
 
             var baseUrlPanel = new StackPanel { Spacing = 6 };
-            baseUrlPanel.Children.Add(new TextBlock { Text = "API Base URL" });
+            baseUrlPanel.Children.Add(new TextBlock { Text = "Legacy API Base URL (not used)" });
             baseUrlPanel.Children.Add(_baseUrlTextBox);
             Grid.SetRow(baseUrlPanel, 2);
             root.Children.Add(baseUrlPanel);
