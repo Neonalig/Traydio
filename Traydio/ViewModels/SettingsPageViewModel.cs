@@ -82,7 +82,54 @@ public partial class SettingsPageViewModel : ViewModelBase
     [ObservableProperty]
     private string _wmicStatus = string.Empty;
 
-    public bool HasUnsavedChanges => ComputeHasUnsavedChanges();
+    [ObservableProperty]
+    private bool _isNamedPipeRelayDirty;
+
+    [ObservableProperty]
+    private bool _isLoopbackRelayDirty;
+
+    [ObservableProperty]
+    private bool _isLoopbackHostDirty;
+
+    [ObservableProperty]
+    private bool _isLoopbackPortDirty;
+
+    [ObservableProperty]
+    private bool _isProtocolUrlRelayDirty;
+
+    [ObservableProperty]
+    private bool _isProtocolSchemeDirty;
+
+    [ObservableProperty]
+    private bool _isAudioOutputDeviceDirty;
+
+    [ObservableProperty]
+    private bool _isRadioPlayerEngineDirty;
+
+    [ObservableProperty]
+    private bool _isClassicThemeDirty;
+
+    public bool HasUnsavedChanges => IsNamedPipeRelayDirty
+                                     || IsLoopbackRelayDirty
+                                     || IsLoopbackHostDirty
+                                     || IsLoopbackPortDirty
+                                     || IsProtocolUrlRelayDirty
+                                     || IsProtocolSchemeDirty
+                                     || IsAudioOutputDeviceDirty
+                                     || IsRadioPlayerEngineDirty
+                                     || IsClassicThemeDirty;
+
+    public string DirtySummaryText => HasUnsavedChanges
+        ? "Unsaved changes are highlighted with reset buttons."
+        : "All settings are currently saved.";
+
+    public string ProtocolActionText => IsProtocolRegistered
+        ? "Uninstall URL Handler"
+        : "Install URL Handler";
+
+    public string ProtocolActionIconPath => IsProtocolRegistered
+        ? "/Assets/Icons9x/remove.ico"
+        : "/Assets/Icons9x/add.ico";
 
     public SettingsPageViewModel(
         IStationRepository stationRepository,
@@ -131,6 +178,87 @@ public partial class SettingsPageViewModel : ViewModelBase
         Status = engineChanged
             ? "Settings saved. Restart Traydio to apply the new playback engine."
             : "Settings saved.";
+
+        RefreshDirtyState();
+    }
+
+    [RelayCommand]
+    private void DiscardChanges()
+    {
+        Refresh();
+        Status = "Discarded unsaved changes.";
+    }
+
+    [RelayCommand]
+    private void ResetAllDefaults()
+    {
+        EnableNamedPipeRelay = true;
+        EnableLoopbackRelay = false;
+        LoopbackHost = "127.0.0.1";
+        LoopbackPort = 38473;
+        EnableProtocolUrlRelay = true;
+        ProtocolScheme = "traydio";
+        SelectedAudioOutputDevice = AudioOutputDevices.FirstOrDefault(option => option.Id is null) ?? AudioOutputDevices.FirstOrDefault();
+        SelectedRadioPlayerEngine = RadioPlayerEngines.FirstOrDefault(option => string.IsNullOrWhiteSpace(option.Id)) ?? RadioPlayerEngines.FirstOrDefault();
+        SelectedClassicTheme = ClassicThemes.FirstOrDefault(option => string.Equals(option.Key, "Default", StringComparison.OrdinalIgnoreCase))
+                               ?? ClassicThemes.FirstOrDefault();
+        RefreshDirtyState();
+        Status = "Reset settings to defaults. Save to persist.";
+    }
+
+    [RelayCommand]
+    private void ResetNamedPipeRelaySetting()
+    {
+        EnableNamedPipeRelay = true;
+    }
+
+    [RelayCommand]
+    private void ResetLoopbackRelaySetting()
+    {
+        EnableLoopbackRelay = false;
+    }
+
+    [RelayCommand]
+    private void ResetLoopbackHostSetting()
+    {
+        LoopbackHost = "127.0.0.1";
+    }
+
+    [RelayCommand]
+    private void ResetLoopbackPortSetting()
+    {
+        LoopbackPort = 38473;
+    }
+
+    [RelayCommand]
+    private void ResetProtocolUrlRelaySetting()
+    {
+        EnableProtocolUrlRelay = true;
+    }
+
+    [RelayCommand]
+    private void ResetProtocolSchemeSetting()
+    {
+        ProtocolScheme = "traydio";
+    }
+
+    [RelayCommand]
+    private void ResetAudioOutputDeviceSetting()
+    {
+        SelectedAudioOutputDevice = AudioOutputDevices.FirstOrDefault(option => option.Id is null) ?? AudioOutputDevices.FirstOrDefault();
+    }
+
+    [RelayCommand]
+    private void ResetPlaybackEngineSetting()
+    {
+        SelectedRadioPlayerEngine = RadioPlayerEngines.FirstOrDefault(option => string.IsNullOrWhiteSpace(option.Id)) ?? RadioPlayerEngines.FirstOrDefault();
+    }
+
+    [RelayCommand]
+    private void ResetClassicThemeSetting()
+    {
+        SelectedClassicTheme = ClassicThemes.FirstOrDefault(option => string.Equals(option.Key, "Default", StringComparison.OrdinalIgnoreCase))
+                               ?? ClassicThemes.FirstOrDefault();
     }
 
     [RelayCommand]
@@ -266,6 +394,18 @@ public partial class SettingsPageViewModel : ViewModelBase
         IsProtocolRegistered = _protocolRegistrationService.IsRegistered(ProtocolScheme.Trim().ToLowerInvariant());
     }
 
+    [RelayCommand]
+    private void ToggleProtocolRegistration()
+    {
+        if (IsProtocolRegistered)
+        {
+            UninstallProtocol();
+            return;
+        }
+
+        InstallProtocol();
+    }
+
     private void RefreshWmicStatus()
     {
         IsWmicSupported = _wmicExtendedFunctionalityService.IsSupported;
@@ -304,12 +444,13 @@ public partial class SettingsPageViewModel : ViewModelBase
 
     private IReadOnlyList<RadioPlayerEngineOption> BuildRadioPlayerEngineOptions()
     {
-        return _pluginManager.GetPlugins()
+        return new[] { new RadioPlayerEngineOption(null, "Auto (default)") }
+            .Concat(_pluginManager.GetPlugins()
             .SelectMany(plugin => plugin.Capabilities.OfType<IRadioPlayerEngineCapability>())
             .GroupBy(capability => capability.EngineId, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
             .OrderBy(capability => capability.DisplayName, StringComparer.OrdinalIgnoreCase)
-            .Select(capability => new RadioPlayerEngineOption(capability.EngineId, capability.DisplayName))
+            .Select(capability => new RadioPlayerEngineOption(capability.EngineId, capability.DisplayName)))
             .ToArray();
     }
 
@@ -342,6 +483,62 @@ public partial class SettingsPageViewModel : ViewModelBase
     {
         _ = value;
         UpdateThemeRestartVisibility();
+        RefreshDirtyState();
+    }
+
+    partial void OnEnableNamedPipeRelayChanged(bool value)
+    {
+        _ = value;
+        RefreshDirtyState();
+    }
+
+    partial void OnEnableLoopbackRelayChanged(bool value)
+    {
+        _ = value;
+        RefreshDirtyState();
+    }
+
+    partial void OnLoopbackHostChanged(string value)
+    {
+        _ = value;
+        RefreshDirtyState();
+    }
+
+    partial void OnLoopbackPortChanged(int value)
+    {
+        _ = value;
+        RefreshDirtyState();
+    }
+
+    partial void OnEnableProtocolUrlRelayChanged(bool value)
+    {
+        _ = value;
+        RefreshDirtyState();
+    }
+
+    partial void OnProtocolSchemeChanged(string value)
+    {
+        _ = value;
+        RefreshDirtyState();
+    }
+
+    partial void OnSelectedAudioOutputDeviceChanged(AudioOutputDeviceOption? value)
+    {
+        _ = value;
+        RefreshDirtyState();
+    }
+
+    partial void OnSelectedRadioPlayerEngineChanged(RadioPlayerEngineOption? value)
+    {
+        _ = value;
+        RefreshDirtyState();
+    }
+
+    partial void OnIsProtocolRegisteredChanged(bool value)
+    {
+        _ = value;
+        OnPropertyChanged(nameof(ProtocolActionText));
+        OnPropertyChanged(nameof(ProtocolActionIconPath));
     }
 
     private void UpdateThemeRestartVisibility()
@@ -373,11 +570,27 @@ public partial class SettingsPageViewModel : ViewModelBase
 
         return false;
     }
+
+    private void RefreshDirtyState()
+    {
+        IsNamedPipeRelayDirty = EnableNamedPipeRelay != _stationRepository.Communication.EnableNamedPipeRelay;
+        IsLoopbackRelayDirty = EnableLoopbackRelay != _stationRepository.Communication.EnableLoopbackRelay;
+        IsLoopbackHostDirty = !string.Equals(LoopbackHost.Trim(), _stationRepository.Communication.LoopbackHost, StringComparison.Ordinal);
+        IsLoopbackPortDirty = LoopbackPort != _stationRepository.Communication.LoopbackPort;
+        IsProtocolUrlRelayDirty = EnableProtocolUrlRelay != _stationRepository.Communication.EnableProtocolUrlRelay;
+        IsProtocolSchemeDirty = !string.Equals(ProtocolScheme.Trim(), _stationRepository.Communication.ProtocolScheme, StringComparison.OrdinalIgnoreCase);
+        IsAudioOutputDeviceDirty = !string.Equals(SelectedAudioOutputDevice?.Id, _stationRepository.AudioOutputDeviceId, StringComparison.Ordinal);
+        IsRadioPlayerEngineDirty = !string.Equals(SelectedRadioPlayerEngine?.Id, _stationRepository.RadioPlayerEngineId, StringComparison.OrdinalIgnoreCase);
+        IsClassicThemeDirty = !string.Equals(SelectedClassicTheme?.Key, _stationRepository.ClassicThemeKey, StringComparison.OrdinalIgnoreCase);
+
+        OnPropertyChanged(nameof(HasUnsavedChanges));
+        OnPropertyChanged(nameof(DirtySummaryText));
+    }
 }
 
 public sealed record AudioOutputDeviceOption(string? Id, string Name);
 
-public sealed record RadioPlayerEngineOption(string Id, string Name);
+public sealed record RadioPlayerEngineOption(string? Id, string Name);
 
 public sealed record ClassicThemeOption(string Key, string Name);
 
