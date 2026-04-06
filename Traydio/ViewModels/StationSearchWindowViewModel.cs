@@ -10,7 +10,9 @@ using Avalonia.Controls;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Traydio.Commands;
 using Traydio.Common;
+using Traydio.Models;
 using Traydio.Services;
 using Traydio.Views;
 
@@ -26,11 +28,14 @@ public partial class StationSearchWindowViewModel : ViewModelBase
     private readonly IPluginManager _pluginManager;
     private readonly IPluginInstallDisclaimerService _pluginInstallDisclaimerService;
     private readonly IStationRepository _stationRepository;
+    private readonly IRadioPlayer _radioPlayer;
+    private readonly IAppCommandDispatcher _commandDispatcher;
 
     private CancellationTokenSource? _searchCancellation;
-    private readonly List<DiscoveredStation> _lastSearchResults = [];
+    private readonly List<SearchResultItem> _lastSearchResults = [];
     private readonly Dictionary<string, Dictionary<string, string>> _providerSearchOptionsByProviderId = new(StringComparer.OrdinalIgnoreCase);
     private Dictionary<string, string>? _activeProviderSearchOptions;
+    private string? _activeTransientStreamUrl;
     private int _activePageIndex;
 
     public ObservableCollection<ProviderOption> Providers { get; } = [];
@@ -38,13 +43,13 @@ public partial class StationSearchWindowViewModel : ViewModelBase
     public ObservableCollection<CodeOption> CountryOptions { get; } = [];
     public ObservableCollection<CodeOption> LanguageOptions { get; } = [];
 
-    public ObservableCollection<DiscoveredStation> Results { get; } = [];
+    public ObservableCollection<SearchResultItem> Results { get; } = [];
 
     [ObservableProperty]
     private ProviderOption? _selectedProvider;
 
     [ObservableProperty]
-    private DiscoveredStation? _selectedResult;
+    private SearchResultItem? _selectedResult;
 
     [ObservableProperty]
     private string _query = string.Empty;
@@ -157,14 +162,20 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         IStationDiscoveryService stationDiscoveryService,
         IPluginManager pluginManager,
         IPluginInstallDisclaimerService pluginInstallDisclaimerService,
-        IStationRepository stationRepository)
+        IStationRepository stationRepository,
+        IRadioPlayer radioPlayer,
+        IAppCommandDispatcher commandDispatcher)
     {
         _stationDiscoveryService = stationDiscoveryService;
         _pluginManager = pluginManager;
         _pluginInstallDisclaimerService = pluginInstallDisclaimerService;
         _stationRepository = stationRepository;
+        _radioPlayer = radioPlayer;
+        _commandDispatcher = commandDispatcher;
 
         _pluginManager.PluginsChanged += (_, _) => RefreshProviders();
+        _stationRepository.Changed += (_, _) => RefreshResultStates();
+        _radioPlayer.StateChanged += (_, _) => RefreshResultStates();
         InitializeLanguageOptions();
         LoadCountryOptionsAsync().ForgetWithErrorHandling("Load station search country list", showDialog: false);
         RefreshProviders();
@@ -315,15 +326,18 @@ public partial class StationSearchWindowViewModel : ViewModelBase
                 .SearchAsync(SelectedProvider.Id, request, currentSearchCancellation.Token)
                                .ConfigureAwait(false))
             {
-                _lastSearchResults.Add(station);
-                if (!MatchesFilter(station, FilterText))
+                var resultItem = CreateResultItem(station);
+                _lastSearchResults.Add(resultItem);
+                if (!MatchesFilter(resultItem, FilterText))
                 {
                     continue;
                 }
 
                 shown++;
-                await Dispatcher.UIThread.InvokeAsync(() => Results.Add(station));
+                await Dispatcher.UIThread.InvokeAsync(() => Results.Add(resultItem));
             }
+
+            await Dispatcher.UIThread.InvokeAsync(RefreshResultStates);
 
             HasPreviousPage = SupportsPagination && _activePageIndex > 0;
             HasNextPage = SupportsPagination && _lastSearchResults.Count >= pageSize;
@@ -390,7 +404,7 @@ public partial class StationSearchWindowViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void AddStation(DiscoveredStation? station)
+    private void AddStation(SearchResultItem? station)
     {
         var target = station ?? SelectedResult;
         if (target is null)
@@ -399,8 +413,78 @@ public partial class StationSearchWindowViewModel : ViewModelBase
             return;
         }
 
+        if (target.IsInLibrary)
+        {
+            Status = $"Station '{target.Name}' is already in your list.";
+            return;
+        }
+
         _stationRepository.AddStation(target.Name, target.StreamUrl);
+        RefreshResultStates();
         Status = $"Added station '{target.Name}'.";
+    }
+
+    [RelayCommand]
+    private void RemoveResult(SearchResultItem? station)
+    {
+        var target = station ?? SelectedResult;
+        if (target?.ExistingStationId is null)
+        {
+            Status = "Station is not in your list.";
+            return;
+        }
+
+        if (_stationRepository.RemoveStation(target.ExistingStationId))
+        {
+            RefreshResultStates();
+            Status = $"Removed station '{target.Name}'.";
+            return;
+        }
+
+        Status = "Could not remove station from your list.";
+    }
+
+    [RelayCommand]
+    private void PlayOrPauseResult(SearchResultItem? station)
+    {
+        var target = station ?? SelectedResult;
+        if (target is null)
+        {
+            Status = "Select a station result first.";
+            return;
+        }
+
+        if (target.IsPlaying)
+        {
+            _commandDispatcher.Dispatch(new AppCommand { Kind = AppCommandKind.Pause });
+            Status = $"Paused '{target.Name}'.";
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(target.ExistingStationId))
+        {
+            _activeTransientStreamUrl = null;
+            _commandDispatcher.Dispatch(new AppCommand
+            {
+                Kind = AppCommandKind.PlayStation,
+                StationId = target.ExistingStationId,
+            });
+            Status = $"Playing '{target.Name}'.";
+            return;
+        }
+
+        var transientStation = new RadioStation
+        {
+            Id = "search-" + Guid.NewGuid().ToString("N"),
+            Name = target.Name,
+            StreamUrl = target.StreamUrl,
+        };
+
+        _stationRepository.ActiveStationId = null;
+        _activeTransientStreamUrl = NormalizeStreamUrl(target.StreamUrl);
+        _radioPlayer.Play(transientStation);
+        Status = $"Playing transient station '{target.Name}'.";
+        RefreshResultStates();
     }
 
     [RelayCommand]
@@ -507,11 +591,13 @@ public partial class StationSearchWindowViewModel : ViewModelBase
                 Results.Add(station);
             }
 
+            RefreshResultStates();
+
             Status = $"Showing {Results.Count} filtered station(s) from {_lastSearchResults.Count}.";
         });
     }
 
-    private static bool MatchesFilter(DiscoveredStation station, string filter)
+    private static bool MatchesFilter(SearchResultItem station, string filter)
     {
         if (string.IsNullOrWhiteSpace(filter))
         {
@@ -889,6 +975,79 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         }
     }
 
+    private SearchResultItem CreateResultItem(DiscoveredStation station)
+    {
+        var normalized = NormalizeStreamUrl(station.StreamUrl);
+        var existing = _stationRepository.GetStations()
+            .FirstOrDefault(saved => string.Equals(NormalizeStreamUrl(saved.StreamUrl), normalized, StringComparison.OrdinalIgnoreCase));
+
+        return new SearchResultItem
+        {
+            Name = station.Name,
+            StreamUrl = station.StreamUrl,
+            Description = station.Description,
+            Genre = station.Genre,
+            Country = station.Country,
+            ExistingStationId = existing?.Id,
+            IsPlaying = IsResultCurrentlyPlaying(existing?.Id, station.StreamUrl),
+        };
+    }
+
+    private void RefreshResultStates()
+    {
+        void Update()
+        {
+            var savedStationsByUrl = _stationRepository.GetStations()
+                .GroupBy(station => NormalizeStreamUrl(station.StreamUrl), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
+
+            foreach (var item in Results)
+            {
+                if (savedStationsByUrl.TryGetValue(NormalizeStreamUrl(item.StreamUrl), out var saved))
+                {
+                    item.ExistingStationId = saved.Id;
+                }
+                else
+                {
+                    item.ExistingStationId = null;
+                }
+
+                item.IsPlaying = IsResultCurrentlyPlaying(item.ExistingStationId, item.StreamUrl);
+                item.OnStateUpdated();
+            }
+        }
+
+        if (Dispatcher.UIThread.CheckAccess())
+        {
+            Update();
+            return;
+        }
+
+        Dispatcher.UIThread.Post(Update);
+    }
+
+    private bool IsResultCurrentlyPlaying(string? existingStationId, string streamUrl)
+    {
+        var state = _radioPlayer.State;
+        if (!state.IsPlaying && !state.IsLoading)
+        {
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(existingStationId) &&
+            string.Equals(_stationRepository.ActiveStationId, existingStationId, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        return string.Equals(_activeTransientStreamUrl, NormalizeStreamUrl(streamUrl), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeStreamUrl(string value)
+    {
+        return value.Trim().TrimEnd('/');
+    }
+
 
     partial void OnStatusChanged(string value)
     {
@@ -928,6 +1087,53 @@ public partial class StationSearchWindowViewModel : ViewModelBase
         public string Code { get; } = code;
 
         public string DisplayName { get; } = displayName;
+    }
+
+    public sealed partial class SearchResultItem : ObservableObject
+    {
+        [ObservableProperty]
+        private string? _existingStationId;
+
+        [ObservableProperty]
+        private bool _isPlaying;
+
+        public required string Name { get; init; }
+
+        public required string StreamUrl { get; init; }
+
+        public string? Description { get; init; }
+
+        public string? Genre { get; init; }
+
+        public string? Country { get; init; }
+
+        public bool IsInLibrary => !string.IsNullOrWhiteSpace(ExistingStationId);
+
+        public bool ShowAddButton => !IsInLibrary;
+
+        public bool ShowLibraryButtons => IsInLibrary;
+
+        public string PlayButtonText => IsPlaying ? "Pause" : "Play";
+
+        public void OnStateUpdated()
+        {
+            OnPropertyChanged(nameof(IsInLibrary));
+            OnPropertyChanged(nameof(ShowAddButton));
+            OnPropertyChanged(nameof(ShowLibraryButtons));
+            OnPropertyChanged(nameof(PlayButtonText));
+        }
+
+        partial void OnExistingStationIdChanged(string? value)
+        {
+            _ = value;
+            OnStateUpdated();
+        }
+
+        partial void OnIsPlayingChanged(bool value)
+        {
+            _ = value;
+            OnStateUpdated();
+        }
     }
 }
 

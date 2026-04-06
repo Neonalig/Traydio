@@ -43,14 +43,14 @@ public partial class StationSearchPage : UserControl
             return;
         }
 
-        if (listBox.SelectedItem is not DiscoveredStation station)
+        if (listBox.SelectedItem is not StationSearchWindowViewModel.SearchResultItem station)
         {
             return;
         }
 
-        if (viewModel.AddStationCommand.CanExecute(station))
+        if (viewModel.PlayOrPauseResultCommand.CanExecute(station))
         {
-            viewModel.AddStationCommand.Execute(station);
+            viewModel.PlayOrPauseResultCommand.Execute(station);
         }
     }
 
@@ -61,7 +61,7 @@ public partial class StationSearchPage : UserControl
             return;
         }
 
-        if (sender is not Control { DataContext: DiscoveredStation station })
+        if (sender is not Control { DataContext: StationSearchWindowViewModel.SearchResultItem station })
         {
             return;
         }
@@ -69,6 +69,42 @@ public partial class StationSearchPage : UserControl
         if (viewModel.AddStationCommand.CanExecute(station))
         {
             viewModel.AddStationCommand.Execute(station);
+        }
+    }
+
+    private void OnPlayPauseResultClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not StationSearchWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        if (TryGetResultItem(sender) is not { } station)
+        {
+            return;
+        }
+
+        if (viewModel.PlayOrPauseResultCommand.CanExecute(station))
+        {
+            viewModel.PlayOrPauseResultCommand.Execute(station);
+        }
+    }
+
+    private void OnRemoveResultClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not StationSearchWindowViewModel viewModel)
+        {
+            return;
+        }
+
+        if (TryGetResultItem(sender) is not { } station)
+        {
+            return;
+        }
+
+        if (viewModel.RemoveResultCommand.CanExecute(station))
+        {
+            viewModel.RemoveResultCommand.Execute(station);
         }
     }
 
@@ -112,14 +148,14 @@ public partial class StationSearchPage : UserControl
             .ForgetWithErrorHandling("Copy station result name+URL", showDialog: false);
     }
 
-    private async Task CopyResultAsync(object? sender, Func<DiscoveredStation, string> selector, string label)
+    private async Task CopyResultAsync(object? sender, Func<StationSearchWindowViewModel.SearchResultItem, string> selector, string label)
     {
         if (DataContext is not StationSearchWindowViewModel viewModel)
         {
             return;
         }
 
-        var station = TryGetStation(sender);
+        var station = TryGetResultItem(sender);
         if (station is null)
         {
             viewModel.Status = "Select a station result first.";
@@ -142,14 +178,14 @@ public partial class StationSearchPage : UserControl
         viewModel.Status = "Copied " + label + ": " + station.Name;
     }
 
-    private static DiscoveredStation? TryGetStation(object? sender)
+    private static StationSearchWindowViewModel.SearchResultItem? TryGetResultItem(object? sender)
     {
-        if (sender is Control { DataContext: DiscoveredStation station })
+        if (sender is Control { DataContext: StationSearchWindowViewModel.SearchResultItem station })
         {
             return station;
         }
 
-        if (sender is ContextMenu { PlacementTarget.DataContext: DiscoveredStation placementStation })
+        if (sender is ContextMenu { PlacementTarget.DataContext: StationSearchWindowViewModel.SearchResultItem placementStation })
         {
             return placementStation;
         }
