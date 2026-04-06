@@ -19,15 +19,18 @@ public sealed class NamedPipeCommandRelayServer(IStationRepository stationReposi
     {
         if (_listenerTask is not null || !stationRepository.Communication.EnableNamedPipeRelay)
         {
+            TraydioTrace.Debug("NamedPipeRelay", "Start skipped.");
             return;
         }
 
         _cts = new CancellationTokenSource();
         _listenerTask = Task.Run(() => ListenLoopAsync(_cts.Token));
+        TraydioTrace.Info("NamedPipeRelay", "Listener started.");
     }
 
     public void Stop()
     {
+        TraydioTrace.Debug("NamedPipeRelay", "Stopping listener.");
         _cts?.Cancel();
 
         try
@@ -42,6 +45,7 @@ public sealed class NamedPipeCommandRelayServer(IStationRepository stationReposi
         _cts?.Dispose();
         _cts = null;
         _listenerTask = null;
+        TraydioTrace.Info("NamedPipeRelay", "Listener stopped.");
     }
 
     public void Dispose()
@@ -68,15 +72,17 @@ public sealed class NamedPipeCommandRelayServer(IStationRepository stationReposi
                 var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
                 if (!string.IsNullOrWhiteSpace(line))
                 {
-                    commandTextRouter.TryDispatch(line);
+                    var dispatched = commandTextRouter.TryDispatch(line);
+                    TraydioTrace.Debug("NamedPipeRelay", "Received command, dispatched=" + dispatched + ": " + line);
                 }
             }
             catch (OperationCanceledException)
             {
                 break;
             }
-            catch
+            catch (Exception ex)
             {
+                TraydioTrace.Warn("NamedPipeRelay", "Listener loop exception: " + ex.Message);
                 await Task.Delay(150, cancellationToken).ConfigureAwait(false);
             }
         }

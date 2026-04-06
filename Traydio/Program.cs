@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using Classic.CommonControls;
 using JetBrains.Annotations;
 using Traydio.Commands;
@@ -42,7 +41,21 @@ sealed class Program
     {
         try
         {
-            if (args.Any(arg => string.Equals(arg, "--debugger-launch", StringComparison.OrdinalIgnoreCase)) && !Debugger.IsAttached)
+            TraydioTrace.Info("Program", "Startup begin.");
+
+            var hasDebuggerLaunchArg = false;
+            foreach (var arg in args)
+            {
+                if (!string.Equals(arg, "--debugger-launch", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                hasDebuggerLaunchArg = true;
+                break;
+            }
+
+            if (hasDebuggerLaunchArg && !Debugger.IsAttached)
             {
                 try
                 {
@@ -61,18 +74,22 @@ sealed class Program
             var instanceGate = services.GetRequiredService<IInstanceGate>();
             var startupCommandBridges = services.GetServices<IStartupCommandBridge>();
             var startupCommand = ParseStartupCommand(args, startupCommandBridges);
+            TraydioTrace.Debug("Program", "Parsed startup command: " + (startupCommand ?? "<none>"));
 
             if (!instanceGate.TryAcquire())
             {
+                TraydioTrace.Info("Program", "Secondary instance detected, relaying command to primary.");
                 commandRelayCoordinator.TryRelayToPrimary(startupCommand ?? "open");
                 return;
             }
 
             _pendingStartupCommand = startupCommand;
+            TraydioTrace.Debug("Program", "Stored pending startup command for post-init dispatch.");
 
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(
                 args,
                 ShutdownMode.OnExplicitShutdown);
+            TraydioTrace.Info("Program", "Desktop lifetime exited.");
         }
         catch (Exception ex)
         {

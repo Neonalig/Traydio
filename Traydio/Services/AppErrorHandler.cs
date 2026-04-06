@@ -47,6 +47,7 @@ public static class AppErrorHandler
         var message = $"[Traydio][Error] {context}: {ex}";
         Console.Error.WriteLine(message);
         Trace.WriteLine(message);
+        TraydioTrace.Debug("Error", "Reported exception in context: " + context + ". showDialog=" + showDialog);
 
         if (!showDialog)
         {
@@ -75,6 +76,7 @@ public static class AppErrorHandler
     {
         if (Application.Current?.ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime desktop)
         {
+            TraydioTrace.Debug("Error", "Skipped error dialog because desktop lifetime is unavailable.");
             return;
         }
 
@@ -131,6 +133,7 @@ public static class AppErrorHandler
             return;
         }
 
+        TraydioTrace.Debug("Error", "Showing unowned error dialog.");
         dialog.Show();
     }
 }

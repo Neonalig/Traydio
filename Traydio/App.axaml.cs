@@ -12,6 +12,9 @@ namespace Traydio;
 
 public class App : Application
 {
+    private IPluginManager? _pluginManager;
+    private ICommandRelayCoordinator? _relayCoordinator;
+
     public override void Initialize()
     {
         AvaloniaXamlLoader.Load(this);
@@ -19,6 +22,7 @@ public class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        TraydioTrace.Info("App", "Framework initialization started.");
         AppErrorHandler.InstallGlobalHandlers();
 
         if (DataTemplates.OfType<ViewLocator>().FirstOrDefault() is { } viewLocator)
@@ -33,7 +37,9 @@ public class App : Application
             DisableAvaloniaDataAnnotationValidation();
 
             var pluginManager = Program.Services.GetRequiredService<IPluginManager>();
+            _pluginManager = pluginManager;
             pluginManager.Start();
+            TraydioTrace.Info("App", "Plugin manager started.");
 
             var stationRepository = Program.Services.GetRequiredService<IStationRepository>();
             ClassicThemeService.Apply(stationRepository.ClassicThemeKey);
@@ -42,33 +48,42 @@ public class App : Application
             commandDispatcher.Initialize(desktop);
 
             var relayCoordinator = Program.Services.GetRequiredService<ICommandRelayCoordinator>();
+            _relayCoordinator = relayCoordinator;
             relayCoordinator.StartPrimaryRelay();
+            TraydioTrace.Info("App", "Primary relay started.");
 
 
             var trayController = Program.Services.GetRequiredService<ITrayController>();
             trayController.Initialize(desktop);
+            TraydioTrace.Info("App", "Tray controller initialized.");
 
             var pendingStartupCommand = Program.TakePendingStartupCommand();
             if (!string.IsNullOrWhiteSpace(pendingStartupCommand))
             {
+                TraydioTrace.Info("App", "Dispatching pending startup command.");
                 relayCoordinator.DispatchLocal(pendingStartupCommand);
             }
 
-            desktop.Exit += (_, _) =>
-            {
-                try
-                {
-                    relayCoordinator.StopPrimaryRelay();
-                    pluginManager.Stop();
-                }
-                catch (Exception ex)
-                {
-                    AppErrorHandler.Report(ex, "Desktop exit cleanup", showDialog: false);
-                }
-            };
+            desktop.Exit += OnDesktopExit;
         }
 
+        TraydioTrace.Info("App", "Framework initialization completed.");
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private void OnDesktopExit(object? sender, ControlledApplicationLifetimeExitEventArgs e)
+    {
+        TraydioTrace.Info("App", "Desktop exit cleanup started.");
+        try
+        {
+            _relayCoordinator?.StopPrimaryRelay();
+            _pluginManager?.Stop();
+            TraydioTrace.Info("App", "Desktop exit cleanup completed.");
+        }
+        catch (Exception ex)
+        {
+            AppErrorHandler.Report(ex, "Desktop exit cleanup", showDialog: false);
+        }
     }
 
     private static void DisableAvaloniaDataAnnotationValidation()

@@ -18,15 +18,18 @@ public sealed class LoopbackCommandRelayServer(IStationRepository stationReposit
     {
         if (_listenerTask is not null || !stationRepository.Communication.EnableLoopbackRelay)
         {
+            TraydioTrace.Debug("LoopbackRelay", "Start skipped.");
             return;
         }
 
         _cts = new CancellationTokenSource();
         _listenerTask = Task.Run(() => ListenLoopAsync(_cts.Token));
+        TraydioTrace.Info("LoopbackRelay", "Listener started.");
     }
 
     public void Stop()
     {
+        TraydioTrace.Debug("LoopbackRelay", "Stopping listener.");
         _cts?.Cancel();
 
         try
@@ -41,6 +44,7 @@ public sealed class LoopbackCommandRelayServer(IStationRepository stationReposit
         _cts?.Dispose();
         _cts = null;
         _listenerTask = null;
+        TraydioTrace.Info("LoopbackRelay", "Listener stopped.");
     }
 
     public void Dispose()
@@ -69,15 +73,17 @@ public sealed class LoopbackCommandRelayServer(IStationRepository stationReposit
                     var line = await reader.ReadLineAsync(cancellationToken).ConfigureAwait(false);
                     if (!string.IsNullOrWhiteSpace(line))
                     {
-                        commandTextRouter.TryDispatch(line);
+                        var dispatched = commandTextRouter.TryDispatch(line);
+                        TraydioTrace.Debug("LoopbackRelay", "Received command, dispatched=" + dispatched + ": " + line);
                     }
                 }
                 catch (OperationCanceledException)
                 {
                     break;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    TraydioTrace.Warn("LoopbackRelay", "Listener loop exception: " + ex.Message);
                     await Task.Delay(150, cancellationToken).ConfigureAwait(false);
                 }
                 finally
@@ -86,9 +92,10 @@ public sealed class LoopbackCommandRelayServer(IStationRepository stationReposit
                 }
             }
         }
-        catch
+        catch (Exception ex)
         {
             // Start failures are non-fatal; named pipe relay is still available.
+            TraydioTrace.Warn("LoopbackRelay", "Listener start failed: " + ex.Message);
         }
     }
 

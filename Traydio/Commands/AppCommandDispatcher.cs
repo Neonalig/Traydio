@@ -28,12 +28,14 @@ public sealed class AppCommandDispatcher(
     {
         if (!Dispatcher.UIThread.CheckAccess())
         {
+            TraydioTrace.Debug("CommandDispatch", "Marshalling command to UI thread: " + command.Kind);
             Dispatcher.UIThread.Post(() => Dispatch(command), DispatcherPriority.Normal);
             return;
         }
 
         try
         {
+            TraydioTrace.Debug("CommandDispatch", "Executing command: " + command.Kind);
             switch (command.Kind)
             {
                 case AppCommandKind.Play:
@@ -97,6 +99,8 @@ public sealed class AppCommandDispatcher(
                     break;
                 }
             }
+
+            TraydioTrace.Debug("CommandDispatch", "Executed command: " + command.Kind);
         }
         catch (Exception ex)
         {

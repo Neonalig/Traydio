@@ -23,6 +23,7 @@ public sealed class TrayController : ITrayController
 
     public void Initialize(IClassicDesktopStyleApplicationLifetime lifetime)
     {
+        TraydioTrace.Info("Tray", "Initializing tray icon.");
         using var iconStream = AssetLoader.Open(new Uri("avares://Traydio/Assets/Icons9x/stations.ico"));
 
         _trayIcon = new TrayIcon
@@ -33,6 +34,7 @@ public sealed class TrayController : ITrayController
             Menu = BuildMenu(),
             Command = new RelayCommand(() => Dispatch(AppCommandKind.ToggleMuteOrOpenStationManager)),
         };
+        TraydioTrace.Info("Tray", "Tray icon initialized.");
     }
 
     private NativeMenu BuildMenu()
@@ -120,6 +122,7 @@ public sealed class TrayController : ITrayController
 
     private void Dispatch(AppCommandKind kind)
     {
+        TraydioTrace.Debug("Tray", "Dispatching tray command: " + kind);
         _commandDispatcher.Dispatch(new AppCommand { Kind = kind });
     }
 
@@ -133,6 +136,7 @@ public sealed class TrayController : ITrayController
             }
 
             _trayIcon.Menu = BuildMenu();
+            TraydioTrace.Debug("Tray", "Tray menu refreshed.");
 
             if (OperatingSystem.IsWindows())
             {

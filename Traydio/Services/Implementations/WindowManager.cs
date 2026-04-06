@@ -35,10 +35,12 @@ public sealed class WindowManager(
     {
         if (_mainWindow is { IsVisible: true })
         {
+            TraydioTrace.Debug("WindowManager", "Activating existing main window.");
             _mainWindow.Activate();
             return;
         }
 
+        TraydioTrace.Info("WindowManager", "Creating main window.");
         _mainWindow = serviceProvider.GetRequiredService<MainWindow>();
         _mainWindow.Closed += (_, _) => _mainWindow = null;
         _mainWindow.Show();
@@ -53,6 +55,7 @@ public sealed class WindowManager(
         }
 
         ShowMainWindowCore();
+        TraydioTrace.Debug("WindowManager", "Navigating to Stations page.");
         navigationService.Navigate(AppPage.Stations);
     }
 
@@ -65,6 +68,7 @@ public sealed class WindowManager(
         }
 
         ShowMainWindowCore();
+        TraydioTrace.Debug("WindowManager", "Navigating to Search page.");
         navigationService.Navigate(AppPage.Search);
     }
 
@@ -77,6 +81,7 @@ public sealed class WindowManager(
         }
 
         ShowMainWindowCore();
+        TraydioTrace.Debug("WindowManager", "Navigating to Plugins page.");
         navigationService.Navigate(AppPage.Plugins);
     }
 
@@ -89,6 +94,7 @@ public sealed class WindowManager(
         }
 
         ShowMainWindowCore();
+        TraydioTrace.Debug("WindowManager", "Navigating to Settings page.");
         navigationService.Navigate(AppPage.Settings);
     }
 
@@ -115,10 +121,12 @@ public sealed class WindowManager(
 
         if (_mainWindow is { IsVisible: true })
         {
+            TraydioTrace.Debug("WindowManager", "Showing command tester as dialog.");
             window.ShowDialog(_mainWindow).ForgetWithErrorHandling("Show command tester dialog", showDialog: true);
             return;
         }
 
+        TraydioTrace.Debug("WindowManager", "Showing command tester as top-level window.");
         window.Show();
     }
 
@@ -178,6 +186,7 @@ public sealed class WindowManager(
         }
 
         ShowMainWindowCore();
+        TraydioTrace.Debug("WindowManager", "Opening plugin settings for pluginId=" + plugin.Id);
 
         var settingsWindow = new Window
         {
