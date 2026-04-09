@@ -228,15 +228,27 @@ public class FmStreamOrgPluginSettingsView : UserControl
         }
     }
 
-    private async void OnAboutConditionsClick(object? sender, RoutedEventArgs e)
+    private void OnAboutConditionsClick(object? sender, RoutedEventArgs e)
     {
-        var shown = await _settingsAccessor.ShowInstallDisclaimerAsync(
-            FmStreamOrgPlugin.PLUGIN_ID,
-            FmStreamOrgPlugin.InstallDisclaimer,
-            requireAcceptance: false);
-        if (!shown)
+        _ = ShowConditionsAsync();
+    }
+
+    private async Task ShowConditionsAsync()
+    {
+        try
         {
-            _statusText.Text = "Could not display disclaimer dialog.";
+            var shown = await _settingsAccessor.ShowInstallDisclaimerAsync(
+                FmStreamOrgPlugin.PLUGIN_ID,
+                FmStreamOrgPlugin.InstallDisclaimer,
+                requireAcceptance: false);
+            if (!shown)
+            {
+                _statusText.Text = "Could not display disclaimer dialog.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _statusText.Text = "Could not display disclaimer dialog: " + ex.Message;
         }
     }
 

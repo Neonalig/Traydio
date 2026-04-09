@@ -222,7 +222,12 @@ public partial class BassPluginSettingsView : UserControl
         }
     }
 
-    private async void OnShowDisclaimerClick(object? sender, RoutedEventArgs e)
+    private void OnShowDisclaimerClick(object? sender, RoutedEventArgs e)
+    {
+        RunSafelyAsync(OnShowDisclaimerClickAsync(), "Show disclaimer");
+    }
+
+    private async Task OnShowDisclaimerClickAsync()
     {
         var shown = await _settingsAccessor.ShowInstallDisclaimerAsync(
             ManagedBassPlugin.PLUGIN_ID,

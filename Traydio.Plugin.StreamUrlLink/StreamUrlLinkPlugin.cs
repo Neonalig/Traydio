@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -268,15 +269,27 @@ public sealed partial class StreamUrlLinkPlugin : ITraydioPlugin
             }
         }
 
-        private async void OnShowDisclaimerClick(object? sender, RoutedEventArgs e)
+        private void OnShowDisclaimerClick(object? sender, RoutedEventArgs e)
         {
-            var shown = await _settingsAccessor.ShowInstallDisclaimerAsync(
-                PLUGIN_ID,
-                SettingsDisclaimer,
-                requireAcceptance: false);
-            if (!shown)
+            _ = ShowDisclaimerAsync();
+        }
+
+        private async Task ShowDisclaimerAsync()
+        {
+            try
             {
-                _statusText.Text = "Could not display disclaimer dialog.";
+                var shown = await _settingsAccessor.ShowInstallDisclaimerAsync(
+                    PLUGIN_ID,
+                    SettingsDisclaimer,
+                    requireAcceptance: false);
+                if (!shown)
+                {
+                    _statusText.Text = "Could not display disclaimer dialog.";
+                }
+            }
+            catch (Exception ex)
+            {
+                _statusText.Text = "Could not display disclaimer dialog: " + ex.Message;
             }
         }
     }

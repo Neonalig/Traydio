@@ -976,16 +976,28 @@ public sealed partial class RadioBrowserPlugin : ITraydioPlugin
             }
         }
 
-        private async void OnShowDisclaimerClick(object? sender, RoutedEventArgs e)
+        private void OnShowDisclaimerClick(object? sender, RoutedEventArgs e)
         {
-            var shown = await _settingsAccessor.ShowInstallDisclaimerAsync(
-                PLUGIN_ID,
-                InstallDisclaimer,
-                requireAcceptance: false);
+            _ = ShowDisclaimerAsync();
+        }
 
-            if (!shown)
+        private async Task ShowDisclaimerAsync()
+        {
+            try
             {
-                _statusText.Text = "Could not display disclaimer dialog.";
+                var shown = await _settingsAccessor.ShowInstallDisclaimerAsync(
+                    PLUGIN_ID,
+                    InstallDisclaimer,
+                    requireAcceptance: false);
+
+                if (!shown)
+                {
+                    _statusText.Text = "Could not display disclaimer dialog.";
+                }
+            }
+            catch (Exception ex)
+            {
+                _statusText.Text = "Could not display disclaimer dialog: " + ex.Message;
             }
         }
     }
