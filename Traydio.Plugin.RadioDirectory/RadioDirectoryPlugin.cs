@@ -323,9 +323,9 @@ public sealed class RadioDirectoryPlugin : ITraydioPlugin
             {
                 Watermark = RadioDirectoryPluginSettings.DEFAULT_API_BASE_URL,
                 HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+                Text = _settingsAccessor.GetValue(RadioDirectoryPluginSettings.API_BASE_URL_KEY)
+                    ?? RadioDirectoryPluginSettings.DEFAULT_API_BASE_URL
             };
-            _baseUrlTextBox.Text = _settingsAccessor.GetValue(RadioDirectoryPluginSettings.API_BASE_URL_KEY)
-                               ?? RadioDirectoryPluginSettings.DEFAULT_API_BASE_URL;
             _baseUrlTextBox.LostFocus += OnBaseUrlLostFocus;
 
             var baseUrlPanel = new StackPanel { Spacing = 6 };

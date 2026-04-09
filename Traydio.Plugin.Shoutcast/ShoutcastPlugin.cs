@@ -380,8 +380,8 @@ public sealed class ShoutcastPlugin : ITraydioPlugin
             {
                 Watermark = "API key",
                 HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+                Text = _settingsAccessor.GetValue(ShoutcastPluginSettings.API_KEY_KEY) ?? string.Empty
             };
-            _apiKeyTextBox.Text = _settingsAccessor.GetValue(ShoutcastPluginSettings.API_KEY_KEY) ?? string.Empty;
             _apiKeyTextBox.LostFocus += OnApiKeyLostFocus;
 
             var keyPanel = new StackPanel { Spacing = 6 };
@@ -394,9 +394,9 @@ public sealed class ShoutcastPlugin : ITraydioPlugin
             {
                 Watermark = ShoutcastPluginSettings.DEFAULT_API_BASE_URL,
                 HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+                Text = _settingsAccessor.GetValue(ShoutcastPluginSettings.API_BASE_URL_KEY)
+                    ?? ShoutcastPluginSettings.DEFAULT_API_BASE_URL
             };
-            _apiBaseUrlTextBox.Text = _settingsAccessor.GetValue(ShoutcastPluginSettings.API_BASE_URL_KEY)
-                                  ?? ShoutcastPluginSettings.DEFAULT_API_BASE_URL;
             _apiBaseUrlTextBox.LostFocus += OnApiBaseUrlLostFocus;
 
             var baseUrlPanel = new StackPanel { Spacing = 6 };
