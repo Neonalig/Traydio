@@ -76,7 +76,7 @@ public sealed class RadioDirectoryPlugin : ITraydioPlugin
         var requestUri = BuildRequestUri(settings, request);
         var seenUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        JsonDocument? document = null;
+        JsonDocument document;
         try
         {
             using var response = await _httpClient.GetAsync(requestUri, cancellationToken);
@@ -85,7 +85,7 @@ public sealed class RadioDirectoryPlugin : ITraydioPlugin
                 yield break;
             }
 
-            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
             document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
         }
         catch (Exception ex)
@@ -96,11 +96,6 @@ public sealed class RadioDirectoryPlugin : ITraydioPlugin
 
         using (document)
         {
-            if (document is null)
-            {
-                yield break;
-            }
-
             foreach (var item in EnumerateStationItems(document.RootElement))
             {
                 cancellationToken.ThrowIfCancellationRequested();

@@ -698,9 +698,7 @@ public sealed partial class RadioBrowserPlugin : ITraydioPlugin
 
     [JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
     [JsonSerializable(typeof(RadioBrowserStationDto[]))]
-    private sealed partial class RadioBrowserJsonContext : JsonSerializerContext
-    {
-    }
+    private sealed partial class RadioBrowserJsonContext : JsonSerializerContext;
 
     private sealed class StationDiscoveryCapability(RadioBrowserPlugin plugin) : IStationDiscoveryCapability
     {
@@ -785,7 +783,7 @@ public sealed partial class RadioBrowserPlugin : ITraydioPlugin
             var reverseToggle = new CheckBox
             {
                 Content = "Descending",
-                IsChecked = bool.TryParse(accessor.GetValue(_OPTION_REVERSE), out var rev) ? rev : true,
+                IsChecked = !bool.TryParse(accessor.GetValue(_OPTION_REVERSE), out var rev) || rev,
                 VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center,
             };
             reverseToggle.IsCheckedChanged += (_, _) => accessor.SetValue(_OPTION_REVERSE, reverseToggle.IsChecked == true ? "true" : "false");

@@ -158,7 +158,7 @@ public sealed class FmStreamOrgPlugin : ITraydioPlugin
                 yield break;
             }
 
-            using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
             using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
             stations = ParseStations(doc.RootElement);
         }
