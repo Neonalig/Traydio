@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Linq;
 using System.Net;
@@ -21,7 +22,7 @@ using Traydio.Common;
 namespace Traydio.Plugin.RadioBrowser;
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-public sealed class RadioBrowserPlugin : ITraydioPlugin
+public sealed partial class RadioBrowserPlugin : ITraydioPlugin
 {
     public const string PLUGIN_ID = "plugin.radio-browser.info";
 
@@ -464,11 +465,6 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
     private sealed class RadioBrowserApiClient(HttpClient httpClient, ILogger logger)
     {
         private const string _MIRROR_SEED_HOST = "all.api.radio-browser.info";
-        private static readonly JsonSerializerOptions _jsonOptions = new()
-        {
-            PropertyNameCaseInsensitive = true,
-        };
-
         private static readonly SemaphoreSlim _mirrorRefreshLock = new(1, 1);
 
         private static string[] _cachedMirrors = [];
@@ -530,7 +526,10 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
             response.EnsureSuccessStatusCode();
 
             await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            var stations = await JsonSerializer.DeserializeAsync<RadioBrowserStationDto[]>(stream, _jsonOptions, cancellationToken);
+            var stations = await JsonSerializer.DeserializeAsync(
+                stream,
+                RadioBrowserJsonContext.Default.RadioBrowserStationDtoArray,
+                cancellationToken);
 
             return stations ?? [];
         }
@@ -704,6 +703,12 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
         public int Votes { get; init; }
     }
 
+    [JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
+    [JsonSerializable(typeof(RadioBrowserStationDto[]))]
+    private sealed partial class RadioBrowserJsonContext : JsonSerializerContext
+    {
+    }
+
     private sealed class StationDiscoveryCapability(RadioBrowserPlugin plugin) : IStationDiscoveryCapability
     {
         public string CapabilityId => "station-discovery";
@@ -778,8 +783,8 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
                 SelectedValueBinding = new Avalonia.Data.Binding(nameof(Option.Value)),
                 DisplayMemberBinding = new Avalonia.Data.Binding(nameof(Option.Text)),
                 HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+                SelectedValue = accessor.GetValue(_OPTION_ORDER) ?? "Votes"
             };
-            orderCombo.SelectedValue = accessor.GetValue(_OPTION_ORDER) ?? "Votes";
             orderCombo.SelectionChanged += (_, _) => accessor.SetValue(_OPTION_ORDER, orderCombo.SelectedValue?.ToString());
             Grid.SetColumn(orderCombo, 1);
             root.Children.Add(orderCombo);
@@ -837,6 +842,7 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
             Content = root;
         }
 
+        [SuppressMessage("ReSharper", "NotAccessedPositionalProperty.Local", Justification = "Used for data binding in the UI.")]
         private sealed record Option(string Value, string Text);
     }
 
@@ -877,9 +883,9 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
             {
                 Watermark = RadioBrowserPluginSettings.DEFAULT_API_BASE_URL,
                 HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
+                Text = _settingsAccessor.GetValue(RadioBrowserPluginSettings.API_BASE_URL_KEY)
+                    ?? RadioBrowserPluginSettings.DEFAULT_API_BASE_URL
             };
-            _baseUrlTextBox.Text = _settingsAccessor.GetValue(RadioBrowserPluginSettings.API_BASE_URL_KEY)
-                               ?? RadioBrowserPluginSettings.DEFAULT_API_BASE_URL;
             _baseUrlTextBox.LostFocus += OnBaseUrlLostFocus;
 
             var baseUrlPanel = new StackPanel { Spacing = 6 };
