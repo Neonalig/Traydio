@@ -1,17 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using JetBrains.Annotations;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using RadioBrowser.Net.Entities;
-using RadioBrowser.Net.Services;
 using Traydio.Common;
 
 namespace Traydio.Plugin.RadioBrowser;
@@ -43,8 +47,7 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
         RejectButtonText = "Reject",
     };
 
-    private static readonly Lazy<ServiceProvider> _serviceProvider = new(CreateServiceProvider, isThreadSafe: true);
-    private static readonly Lazy<IStationService> _stationService = new(() => _serviceProvider.Value.GetRequiredService<IStationService>(), isThreadSafe: true);
+    private static readonly HttpClient _httpClient = CreateHttpClient();
 
     private static readonly StationSearchProviderFeatures _features = new()
     {
@@ -61,12 +64,21 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
 
     private readonly ILogger<RadioBrowserPlugin> _logger;
     private readonly IPluginSettingsProvider? _settingsProvider;
+    private readonly RadioBrowserApiClient _apiClient;
 
     public RadioBrowserPlugin(ILogger<RadioBrowserPlugin> logger, IPluginSettingsProvider? settingsProvider = null)
     {
         _logger = logger;
         _settingsProvider = settingsProvider;
-        Capabilities = [new StationDiscoveryCapability(this), new StationSearchMetadataCapability(), new StationSearchSettingsCapability(), new SettingsCapability()];
+        _apiClient = new RadioBrowserApiClient(_httpClient, logger);
+
+        Capabilities =
+        [
+            new StationDiscoveryCapability(this),
+            new StationSearchMetadataCapability(),
+            new StationSearchSettingsCapability(),
+            new SettingsCapability(),
+        ];
     }
 
     public string Id => PLUGIN_ID;
@@ -82,11 +94,24 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
         return _settingsProvider?.GetPluginSettings(PLUGIN_ID) ?? new Dictionary<string, string>();
     }
 
-    private static ServiceProvider CreateServiceProvider()
+    private static HttpClient CreateHttpClient()
     {
-        var services = new ServiceCollection();
-        services.AddRadioBrowserServices(_USER_AGENT);
-        return services.BuildServiceProvider();
+        var handler = new SocketsHttpHandler
+        {
+            AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
+            PooledConnectionLifetime = TimeSpan.FromMinutes(5),
+            PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+        };
+
+        var client = new HttpClient(handler, disposeHandler: true)
+        {
+            Timeout = TimeSpan.FromSeconds(12),
+        };
+
+        client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", _USER_AGENT);
+        client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "application/json");
+
+        return client;
     }
 
     private async IAsyncEnumerable<DiscoveredStation> SearchStationsAsync(
@@ -94,11 +119,11 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var seenUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        IReadOnlyCollection<Station> stations;
+        IReadOnlyCollection<RadioBrowserStationDto> stations;
 
         try
         {
-            stations = await FetchStationsAsync(request, cancellationToken);
+            stations = await _apiClient.FetchStationsAsync(request, cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -125,116 +150,15 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
                 continue;
             }
 
-            var genre = JoinValues(station.Tags, maxCount: 4);
-            var country = station.CountryCode;
-
             yield return new DiscoveredStation
             {
                 Name = string.IsNullOrWhiteSpace(station.Name) ? "Unknown Station" : station.Name,
                 StreamUrl = streamUrl!,
                 Description = BuildDescription(station),
-                Genre = genre,
-                Country = country,
+                Genre = JoinValues(SplitValues(station.Tags), maxCount: 4),
+                Country = station.CountryCode,
             };
         }
-    }
-
-    private async Task<IReadOnlyCollection<Station>> FetchStationsAsync(StationSearchRequest request, CancellationToken cancellationToken)
-    {
-        var stationService = _stationService.Value;
-        var filter = BuildSearchFilter(request);
-        var exactMatch = GetOptionBool(request, _OPTION_EXACT_MATCH, defaultValue: false);
-
-        if (request.Mode == StationSearchMode.Random)
-        {
-            filter.Order = StationSortOrder.Random;
-            filter.Reverse = false;
-            return await FetchWithRetryAsync(
-                mode: request.Mode,
-                query: request.Query,
-                cancellationToken,
-                static async (service, token, payload) => (await service.FetchAsync(payload.Filter, token)).ToArray(),
-                stationService,
-                new FetchPayload(filter, null, exactMatch));
-        }
-
-        if (request.Mode == StationSearchMode.Featured || IsDefaultFeaturedRequest(request))
-        {
-            filter.Order = StationSortOrder.Votes;
-            filter.Reverse = true;
-            return await FetchWithRetryAsync(
-                mode: request.Mode,
-                query: request.Query,
-                cancellationToken,
-                static async (service, token, payload) => (await service.FetchAsync(payload.Filter, token)).ToArray(),
-                stationService,
-                new FetchPayload(filter, null, exactMatch));
-        }
-
-        if (!string.IsNullOrWhiteSpace(request.Query))
-        {
-            return await FetchWithRetryAsync(
-                mode: request.Mode,
-                query: request.Query,
-                cancellationToken,
-                static async (service, token, payload) =>
-                    (await service.FetchByNameAsync(payload.Query!, payload.ExactMatch, payload.Filter, token)).ToArray(),
-                stationService,
-                new FetchPayload(filter, request.Query.Trim(), exactMatch));
-        }
-
-        var advanced = BuildAdvancedSearch(request, filter);
-        return await FetchWithRetryAsync(
-            mode: request.Mode,
-            query: request.Query,
-            cancellationToken,
-            static async (service, token, payload) => (await service.AdvancedSearchAsync(payload.Advanced!, token)).ToArray(),
-            stationService,
-            new FetchPayload(filter, null, exactMatch, advanced));
-    }
-
-    private async Task<IReadOnlyCollection<Station>> FetchWithRetryAsync(
-        StationSearchMode mode,
-        string query,
-        CancellationToken cancellationToken,
-        Func<IStationService, CancellationToken, FetchPayload, Task<IReadOnlyCollection<Station>>> fetch,
-        IStationService stationService,
-        FetchPayload payload)
-    {
-        Exception? lastError = null;
-
-        for (var attempt = 1; attempt <= _FETCH_RETRY_ATTEMPTS; attempt++)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            try
-            {
-                return await fetch(stationService, cancellationToken, payload);
-            }
-            catch (OperationCanceledException)
-            {
-                throw;
-            }
-            catch (Exception ex) when (attempt < _FETCH_RETRY_ATTEMPTS)
-            {
-                lastError = ex;
-                var backoff = TimeSpan.FromMilliseconds(250 * Math.Pow(2, attempt - 1) + Random.Shared.Next(0, 120));
-                _logger.LogDebug(ex,
-                    "Radio Browser fetch retry {Attempt}/{MaxAttempts} after {DelayMs}ms. mode={Mode}, query={Query}",
-                    attempt,
-                    _FETCH_RETRY_ATTEMPTS,
-                    backoff.TotalMilliseconds,
-                    mode,
-                    query);
-                await Task.Delay(backoff, cancellationToken);
-            }
-            catch (Exception ex)
-            {
-                lastError = ex;
-                break;
-            }
-        }
-
-        throw lastError ?? new InvalidOperationException("Radio Browser fetch failed.");
     }
 
     private static bool IsDefaultFeaturedRequest(StationSearchRequest request)
@@ -245,61 +169,100 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
                && string.IsNullOrWhiteSpace(request.Language);
     }
 
-    private static StationSearchFilter BuildSearchFilter(StationSearchRequest request)
+    private static IReadOnlyDictionary<string, string> BuildSearchParameters(StationSearchRequest request)
     {
-        var filter = new StationSearchFilter
+        var exactMatch = GetOptionBool(request, _OPTION_EXACT_MATCH, defaultValue: false);
+
+        var parameters = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            HideBroken = GetOptionBool(request, _OPTION_HIDE_BROKEN, defaultValue: true),
-            Offset = Math.Max(0, request.Offset),
-            Limit = Math.Clamp(request.Limit, 1, 500),
+            ["hidebroken"] = GetOptionBool(request, _OPTION_HIDE_BROKEN, defaultValue: true) ? "true" : "false",
+            ["offset"] = Math.Max(0, request.Offset).ToString(CultureInfo.InvariantCulture),
+            ["limit"] = Math.Clamp(request.Limit, 1, 500).ToString(CultureInfo.InvariantCulture),
+            ["bitrateMax"] = "1000000",
         };
 
-        var rawOrder = GetOptionValue(request, _OPTION_ORDER) ?? request.Order;
-        if (TryParseSortOrder(rawOrder, out var parsedOrder, out var reverse))
+        var order = ResolveOrder(request, out var reverse);
+        parameters["order"] = order;
+        parameters["reverse"] = reverse ? "true" : "false";
+
+        var query = request.Query.Trim();
+        if (!string.IsNullOrWhiteSpace(query))
         {
-            filter.Order = parsedOrder;
-            var explicitReverse = GetOptionBoolOrNull(request, _OPTION_REVERSE);
-            filter.Reverse = explicitReverse ?? reverse;
+            parameters["name"] = query;
+            parameters["nameExact"] = exactMatch ? "true" : "false";
         }
 
-        return filter;
+        var country = request.Country?.Trim();
+        if (!string.IsNullOrWhiteSpace(country))
+        {
+            if (country.Length == 2)
+            {
+                parameters["countrycode"] = country.ToUpperInvariant();
+            }
+            else
+            {
+                parameters["country"] = country;
+                parameters["countryExact"] = exactMatch ? "true" : "false";
+            }
+        }
+
+        var language = request.Language?.Trim();
+        if (!string.IsNullOrWhiteSpace(language))
+        {
+            parameters["language"] = language;
+            parameters["languageExact"] = exactMatch ? "true" : "false";
+        }
+
+        var genre = request.Genre?.Trim();
+        if (!string.IsNullOrWhiteSpace(genre))
+        {
+            parameters["tag"] = genre;
+            parameters["tagExact"] = exactMatch ? "true" : "false";
+
+            var tagList = string.Join(",", SplitValues(genre));
+            if (!string.IsNullOrWhiteSpace(tagList))
+            {
+                parameters["tagList"] = tagList;
+            }
+        }
+
+        var codec = GetOptionValue(request, _OPTION_CODEC);
+        if (!string.IsNullOrWhiteSpace(codec))
+        {
+            parameters["codec"] = codec;
+        }
+
+        var minBitrate = GetMinimumBitrate(request);
+        if (minBitrate > 0)
+        {
+            parameters["bitrateMin"] = minBitrate.ToString(CultureInfo.InvariantCulture);
+        }
+
+        return parameters;
     }
 
-    private static AdvancedStationSearch BuildAdvancedSearch(StationSearchRequest request, StationSearchFilter filter)
+    private static string ResolveOrder(StationSearchRequest request, out bool reverse)
     {
-        var genre = request.Genre?.Trim() ?? string.Empty;
-        var language = request.Language?.Trim() ?? string.Empty;
-        var country = request.Country?.Trim() ?? string.Empty;
-
-        var advanced = new AdvancedStationSearch
+        if (request.Mode == StationSearchMode.Random)
         {
-            Name = request.Query.Trim(),
-            NameExact = GetOptionBool(request, _OPTION_EXACT_MATCH, defaultValue: false),
-            Language = language,
-            LanguageExact = GetOptionBool(request, _OPTION_EXACT_MATCH, defaultValue: false),
-            Tag = genre,
-            TagExact = GetOptionBool(request, _OPTION_EXACT_MATCH, defaultValue: false),
-            TagList = SplitValues(genre),
-            Offset = filter.Offset,
-            Limit = filter.Limit,
-            HideBroken = filter.HideBroken,
-            Order = filter.Order,
-            Reverse = filter.Reverse,
-            MinimumBitrate = GetMinimumBitrate(request),
-            MaximumBitrate = 1_000_000,
-            Codec = GetOptionValue(request, _OPTION_CODEC) ?? string.Empty,
-        };
-
-        if (country.Length == 2)
-        {
-            advanced.CountryCode = country;
-        }
-        else
-        {
-            advanced.Country = country;
+            reverse = false;
+            return "random";
         }
 
-        return advanced;
+        if (request.Mode == StationSearchMode.Featured || IsDefaultFeaturedRequest(request))
+        {
+            reverse = true;
+            return "votes";
+        }
+
+        var rawOrder = GetOptionValue(request, _OPTION_ORDER) ?? request.Order;
+        if (TryResolveApiOrder(rawOrder, out var parsedOrder, out reverse))
+        {
+            return parsedOrder;
+        }
+
+        reverse = false;
+        return "name";
     }
 
     private static int GetMinimumBitrate(StationSearchRequest request)
@@ -333,25 +296,17 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
             : defaultValue;
     }
 
-    private static bool? GetOptionBoolOrNull(StationSearchRequest request, string key)
-    {
-        var raw = GetOptionValue(request, key);
-        return bool.TryParse(raw, out var parsed)
-            ? parsed
-            : null;
-    }
-
     private static int? GetOptionInt(StationSearchRequest request, string key)
     {
         var raw = GetOptionValue(request, key);
-        return int.TryParse(raw, out var parsed)
+        return int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
             ? parsed
             : null;
     }
 
-    private static bool TryParseSortOrder(string? rawOrder, out StationSortOrder order, out bool reverse)
+    private static bool TryResolveApiOrder(string? rawOrder, out string order, out bool reverse)
     {
-        order = default;
+        order = string.Empty;
         reverse = false;
 
         if (string.IsNullOrWhiteSpace(rawOrder))
@@ -360,6 +315,7 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
         }
 
         var token = rawOrder.Trim();
+
         if (token.StartsWith('-'))
         {
             reverse = true;
@@ -376,37 +332,72 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
             token = token[..^4];
         }
 
-        token = token.Trim();
-        if (string.Equals(token, "top", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(token, "popular", StringComparison.OrdinalIgnoreCase))
+        switch (token.Trim().ToLowerInvariant())
         {
-            order = StationSortOrder.Votes;
-            reverse = true;
-            return true;
-        }
+            case "top":
+            case "popular":
+            case "votes":
+            case "vote":
+            case "topvote":
+                order = "votes";
+                reverse = true;
+                return true;
 
-        if (Enum.TryParse<StationSortOrder>(token, ignoreCase: true, out var parsed))
-        {
-            order = parsed;
-            return true;
-        }
+            case "name":
+                order = "name";
+                return true;
 
-        return false;
+            case "bitrate":
+                order = "bitrate";
+                return true;
+
+            case "clickcount":
+            case "clicks":
+            case "click":
+            case "topclick":
+                order = "clickcount";
+                return true;
+
+            case "country":
+                order = "country";
+                return true;
+
+            case "language":
+                order = "language";
+                return true;
+
+            case "codec":
+                order = "codec";
+                return true;
+
+            case "random":
+                order = "random";
+                reverse = false;
+                return true;
+
+            default:
+                return false;
+        }
     }
 
-    private static IEnumerable<string> SplitValues(string value)
+    private static IEnumerable<string> SplitValues(string? value)
     {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return Array.Empty<string>();
+        }
+
         return value
             .Split([',', ';', '|'], StringSplitOptions.RemoveEmptyEntries)
-            .Select(v => v.Trim())
-            .Where(v => !string.IsNullOrWhiteSpace(v));
+            .Select(static v => v.Trim())
+            .Where(static v => !string.IsNullOrWhiteSpace(v));
     }
 
-    private static string? BuildDescription(Station station)
+    private static string? BuildDescription(RadioBrowserStationDto station)
     {
         var chunks = new List<string>();
 
-        var languages = JoinValues(station.Languages, maxCount: 2);
+        var languages = JoinValues(SplitValues(station.Language), maxCount: 2);
         if (!string.IsNullOrWhiteSpace(languages))
         {
             chunks.Add("Lang: " + languages);
@@ -433,8 +424,8 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
         }
 
         var selected = values
-            .Where(v => !string.IsNullOrWhiteSpace(v))
-            .Select(v => v.Trim())
+            .Where(static v => !string.IsNullOrWhiteSpace(v))
+            .Select(static v => v.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Take(maxCount)
             .ToArray();
@@ -442,11 +433,11 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
         return selected.Length == 0 ? null : string.Join(", ", selected);
     }
 
-    private static string? GetStreamUrl(Station station)
+    private static string? GetStreamUrl(RadioBrowserStationDto station)
     {
-        if (IsValidStreamUrl(station.ResolvedUrl))
+        if (IsValidStreamUrl(station.UrlResolved))
         {
-            return station.ResolvedUrl;
+            return station.UrlResolved;
         }
 
         return IsValidStreamUrl(station.Url)
@@ -470,11 +461,248 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
     }
 
-    private readonly record struct FetchPayload(
-        StationSearchFilter Filter,
-        string? Query,
-        bool ExactMatch,
-        AdvancedStationSearch? Advanced = null);
+    private sealed class RadioBrowserApiClient(HttpClient httpClient, ILogger logger)
+    {
+        private const string _MIRROR_SEED_HOST = "all.api.radio-browser.info";
+        private static readonly JsonSerializerOptions _jsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true,
+        };
+
+        private static readonly SemaphoreSlim _mirrorRefreshLock = new(1, 1);
+
+        private static string[] _cachedMirrors = [];
+        private static DateTimeOffset _mirrorCacheExpiresUtc = DateTimeOffset.MinValue;
+
+        public async Task<IReadOnlyCollection<RadioBrowserStationDto>> FetchStationsAsync(
+            StationSearchRequest request,
+            CancellationToken cancellationToken)
+        {
+            var parameters = BuildSearchParameters(request);
+            Exception? lastError = null;
+
+            for (var attempt = 1; attempt <= _FETCH_RETRY_ATTEMPTS; attempt++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var mirrors = await GetMirrorsAsync(forceRefresh: attempt > 1, cancellationToken);
+                foreach (var mirror in ShuffleCopy(mirrors))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    try
+                    {
+                        var stations = await FetchFromMirrorAsync(mirror, parameters, cancellationToken);
+                        return stations;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        throw;
+                    }
+                    catch (Exception ex) when (IsTransient(ex, cancellationToken))
+                    {
+                        lastError = ex;
+
+                        logger.LogDebug(
+                            ex,
+                            "Radio Browser mirror failed. attempt={Attempt}/{MaxAttempts}, mirror={Mirror}, query={Query}",
+                            attempt,
+                            _FETCH_RETRY_ATTEMPTS,
+                            mirror,
+                            request.Query);
+
+                        InvalidateMirrorCache();
+                    }
+                }
+            }
+
+            throw lastError ?? new HttpRequestException("Radio Browser search failed after trying all discovered mirrors.");
+        }
+
+        private async Task<IReadOnlyCollection<RadioBrowserStationDto>> FetchFromMirrorAsync(
+            string mirrorHost,
+            IReadOnlyDictionary<string, string> parameters,
+            CancellationToken cancellationToken)
+        {
+            var uri = BuildSearchUri(mirrorHost, parameters);
+
+            using var response = await httpClient.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            var stations = await JsonSerializer.DeserializeAsync<RadioBrowserStationDto[]>(stream, _jsonOptions, cancellationToken);
+
+            return stations ?? [];
+        }
+
+        private static Uri BuildSearchUri(string mirrorHost, IReadOnlyDictionary<string, string> parameters)
+        {
+            var builder = new StringBuilder();
+            var first = true;
+
+            foreach (var (key, value) in parameters)
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    continue;
+                }
+
+                if (!first)
+                {
+                    builder.Append('&');
+                }
+
+                first = false;
+                builder.Append(Uri.EscapeDataString(key));
+                builder.Append('=');
+                builder.Append(Uri.EscapeDataString(value));
+            }
+
+            return new Uri($"https://{mirrorHost}/json/stations/search?{builder}", UriKind.Absolute);
+        }
+
+        private static async Task<IReadOnlyList<string>> GetMirrorsAsync(bool forceRefresh, CancellationToken cancellationToken)
+        {
+            if (!forceRefresh &&
+                _cachedMirrors.Length > 0 &&
+                DateTimeOffset.UtcNow < _mirrorCacheExpiresUtc)
+            {
+                return _cachedMirrors;
+            }
+
+            await _mirrorRefreshLock.WaitAsync(cancellationToken);
+            try
+            {
+                if (!forceRefresh &&
+                    _cachedMirrors.Length > 0 &&
+                    DateTimeOffset.UtcNow < _mirrorCacheExpiresUtc)
+                {
+                    return _cachedMirrors;
+                }
+
+                var discovered = await DiscoverMirrorsAsync();
+                _cachedMirrors = discovered.ToArray();
+                _mirrorCacheExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(5);
+
+                return _cachedMirrors;
+            }
+            finally
+            {
+                _mirrorRefreshLock.Release();
+            }
+        }
+
+        private static async Task<IReadOnlyList<string>> DiscoverMirrorsAsync()
+        {
+            var results = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            IPAddress[] addresses;
+            try
+            {
+                addresses = await Dns.GetHostAddressesAsync(_MIRROR_SEED_HOST);
+            }
+            catch (SocketException)
+            {
+                return [_MIRROR_SEED_HOST];
+            }
+
+            foreach (var address in addresses)
+            {
+                try
+                {
+                    var reverse = await Dns.GetHostEntryAsync(address);
+                    var host = reverse.HostName.Trim().TrimEnd('.');
+
+                    if (string.IsNullOrWhiteSpace(host))
+                    {
+                        continue;
+                    }
+
+                    var forward = await Dns.GetHostAddressesAsync(host);
+                    if (forward.Length > 0)
+                    {
+                        results.Add(host);
+                    }
+                }
+                catch (SocketException)
+                {
+                    // Skip dead or non-resolvable mirrors.
+                }
+            }
+
+            if (results.Count == 0)
+            {
+                results.Add(_MIRROR_SEED_HOST);
+            }
+
+            return results.ToArray();
+        }
+
+        private static string[] ShuffleCopy(IReadOnlyList<string> source)
+        {
+            var buffer = source.ToArray();
+
+            for (var i = buffer.Length - 1; i > 0; i--)
+            {
+                var swapIndex = Random.Shared.Next(i + 1);
+                (buffer[i], buffer[swapIndex]) = (buffer[swapIndex], buffer[i]);
+            }
+
+            return buffer;
+        }
+
+        private static bool IsTransient(Exception ex, CancellationToken cancellationToken)
+        {
+            if (ex is OperationCanceledException && cancellationToken.IsCancellationRequested)
+            {
+                return false;
+            }
+
+            if (ex is TaskCanceledException)
+            {
+                return true;
+            }
+
+            if (ex is HttpRequestException)
+            {
+                return true;
+            }
+
+            return ex.InnerException is SocketException;
+        }
+
+        private static void InvalidateMirrorCache()
+        {
+            _mirrorCacheExpiresUtc = DateTimeOffset.MinValue;
+        }
+    }
+
+    private sealed class RadioBrowserStationDto
+    {
+        [JsonPropertyName("name")]
+        public string? Name { get; init; }
+
+        [JsonPropertyName("url")]
+        public string? Url { get; init; }
+
+        [JsonPropertyName("url_resolved")]
+        public string? UrlResolved { get; init; }
+
+        [JsonPropertyName("tags")]
+        public string? Tags { get; init; }
+
+        [JsonPropertyName("countrycode")]
+        public string? CountryCode { get; init; }
+
+        [JsonPropertyName("language")]
+        public string? Language { get; init; }
+
+        [JsonPropertyName("bitrate")]
+        public int Bitrate { get; init; }
+
+        [JsonPropertyName("votes")]
+        public int Votes { get; init; }
+    }
 
     private sealed class StationDiscoveryCapability(RadioBrowserPlugin plugin) : IStationDiscoveryCapability
     {
@@ -639,7 +867,7 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
 
             var description = new TextBlock
             {
-                Text = "RadioBrowser.Net selects official mirrors automatically. This custom endpoint field is kept for compatibility but is not currently used by the package client.",
+                Text = "Mirror selection is automatic. This custom endpoint field is legacy-only and is not used by the current client.",
                 TextWrapping = Avalonia.Media.TextWrapping.Wrap,
             };
             Grid.SetRow(description, 1);
@@ -757,6 +985,7 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
                 PLUGIN_ID,
                 InstallDisclaimer,
                 requireAcceptance: false);
+
             if (!shown)
             {
                 _statusText.Text = "Could not display disclaimer dialog.";
@@ -764,4 +993,3 @@ public sealed class RadioBrowserPlugin : ITraydioPlugin
         }
     }
 }
-
