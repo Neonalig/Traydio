@@ -190,15 +190,27 @@ public partial class LibVlcPluginSettingsView : UserControl
         }
     }
 
-    private async void OnShowDisclaimerClick(object? sender, RoutedEventArgs e)
+    private void OnShowDisclaimerClick(object? sender, RoutedEventArgs e)
     {
-        var shown = await _settingsAccessor.ShowInstallDisclaimerAsync(
-            LibVlcPlugin.PLUGIN_ID,
-            LibVlcPlugin.SettingsDisclaimer,
-            requireAcceptance: false);
-        if (!shown)
+        _ = ShowDisclaimerAsync();
+    }
+
+    private async Task ShowDisclaimerAsync()
+    {
+        try
         {
-            _statusText.Text = "Could not display disclaimer dialog.";
+            var shown = await _settingsAccessor.ShowInstallDisclaimerAsync(
+                LibVlcPlugin.PLUGIN_ID,
+                LibVlcPlugin.SettingsDisclaimer,
+                requireAcceptance: false);
+            if (!shown)
+            {
+                _statusText.Text = "Could not display disclaimer dialog.";
+            }
+        }
+        catch (Exception ex)
+        {
+            _statusText.Text = "Could not display disclaimer dialog: " + ex.Message;
         }
     }
 

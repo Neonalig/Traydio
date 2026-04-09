@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using JetBrains.Annotations;
@@ -497,15 +498,27 @@ public sealed class ShoutcastPlugin : ITraydioPlugin
             }
         }
 
-        private async void OnShowDisclaimerClick(object? sender, RoutedEventArgs e)
+        private void OnShowDisclaimerClick(object? sender, RoutedEventArgs e)
         {
-            var shown = await _settingsAccessor.ShowInstallDisclaimerAsync(
-                PLUGIN_ID,
-                InstallDisclaimer,
-                requireAcceptance: false);
-            if (!shown)
+            _ = ShowDisclaimerAsync();
+        }
+
+        private async Task ShowDisclaimerAsync()
+        {
+            try
             {
-                _statusText.Text = "Could not display disclaimer dialog.";
+                var shown = await _settingsAccessor.ShowInstallDisclaimerAsync(
+                    PLUGIN_ID,
+                    InstallDisclaimer,
+                    requireAcceptance: false);
+                if (!shown)
+                {
+                    _statusText.Text = "Could not display disclaimer dialog.";
+                }
+            }
+            catch (Exception ex)
+            {
+                _statusText.Text = "Could not display disclaimer dialog: " + ex.Message;
             }
         }
     }
