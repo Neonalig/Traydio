@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -120,23 +120,7 @@ public sealed partial class RadioBrowserPlugin : ITraydioPlugin
         [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         var seenUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        IReadOnlyCollection<RadioBrowserStationDto> stations;
-
-        try
-        {
-            stations = await _apiClient.FetchStationsAsync(request, cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            yield break;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Radio Browser search failed for mode={Mode}, query={Query}", request.Mode, request.Query);
-            throw;
-        }
-
-        foreach (var station in stations)
+        await foreach (var station in _apiClient.FetchStationsAsync(request, cancellationToken))
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -470,9 +454,9 @@ public sealed partial class RadioBrowserPlugin : ITraydioPlugin
         private static string[] _cachedMirrors = [];
         private static DateTimeOffset _mirrorCacheExpiresUtc = DateTimeOffset.MinValue;
 
-        public async Task<IReadOnlyCollection<RadioBrowserStationDto>> FetchStationsAsync(
+        public async IAsyncEnumerable<RadioBrowserStationDto> FetchStationsAsync(
             StationSearchRequest request,
-            CancellationToken cancellationToken)
+            [EnumeratorCancellation] CancellationToken cancellationToken)
         {
             var parameters = BuildSearchParameters(request);
             Exception? lastError = null;
@@ -486,10 +470,10 @@ public sealed partial class RadioBrowserPlugin : ITraydioPlugin
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
+                    RadioBrowserStationDto[] stations;
                     try
                     {
-                        var stations = await FetchFromMirrorAsync(mirror, parameters, cancellationToken);
-                        return stations;
+                        stations = await FetchFromMirrorAsync(mirror, parameters, cancellationToken);
                     }
                     catch (OperationCanceledException)
                     {
@@ -508,14 +492,23 @@ public sealed partial class RadioBrowserPlugin : ITraydioPlugin
                             request.Query);
 
                         InvalidateMirrorCache();
+                        continue;
                     }
+
+                    foreach (var station in stations)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        yield return station;
+                    }
+
+                    yield break;
                 }
             }
 
             throw lastError ?? new HttpRequestException("Radio Browser search failed after trying all discovered mirrors.");
         }
 
-        private async Task<IReadOnlyCollection<RadioBrowserStationDto>> FetchFromMirrorAsync(
+        private async Task<RadioBrowserStationDto[]> FetchFromMirrorAsync(
             string mirrorHost,
             IReadOnlyDictionary<string, string> parameters,
             CancellationToken cancellationToken)
