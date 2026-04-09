@@ -4,7 +4,6 @@ using System.Net.Http;
 using System.Text.Json;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.Extensions.Logging;
 using Traydio.Common;
@@ -81,15 +80,11 @@ public sealed class FmStreamOrgPlugin : ITraydioPlugin
 
         while (emitted < targetCount && page < _MAX_PAGE_COUNT)
         {
-            var pageResults = await SearchOfficialApiAsync(request, offset, cancellationToken);
-            if (pageResults.Count == 0)
-            {
-                yield break;
-            }
-
+            var pageResultCount = 0;
             var newlyAdded = 0;
-            foreach (var station in pageResults)
+            await foreach (var station in SearchOfficialApiAsync(request, offset, cancellationToken))
             {
+                pageResultCount++;
                 cancellationToken.ThrowIfCancellationRequested();
 
                 if (!seenStreamUrls.Add(station.StreamUrl))
@@ -107,13 +102,18 @@ public sealed class FmStreamOrgPlugin : ITraydioPlugin
                 }
             }
 
+            if (pageResultCount == 0)
+            {
+                yield break;
+            }
+
             // If offset paging is ignored by the API, this prevents a duplicate-only loop.
             if (newlyAdded == 0)
             {
                 yield break;
             }
 
-            offset += pageResults.Count;
+            offset += pageResultCount;
             page++;
         }
     }
@@ -123,11 +123,13 @@ public sealed class FmStreamOrgPlugin : ITraydioPlugin
         return _settingsProvider?.GetPluginSettings(PLUGIN_ID) ?? new Dictionary<string, string>();
     }
 
-    private async Task<List<DiscoveredStation>> SearchOfficialApiAsync(
+    private async IAsyncEnumerable<DiscoveredStation> SearchOfficialApiAsync(
         StationSearchRequest request,
         int offset,
-        CancellationToken cancellationToken)
+        [EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        List<DiscoveredStation> stations;
+
         try
         {
             var settings = GetSettings();
@@ -142,25 +144,23 @@ public sealed class FmStreamOrgPlugin : ITraydioPlugin
                 : new HttpRequestMessage(HttpMethod.Get, BuildApiQueryUri(queryPairs));
             requestMessage.Headers.Accept.ParseAdd("application/json");
 
-            using (var response = await _httpClient.SendAsync(requestMessage, cancellationToken).ConfigureAwait(false))
+            using var response = await _httpClient.SendAsync(requestMessage, cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
             {
-                if (!response.IsSuccessStatusCode)
-                {
-                    _logger.LogDebug(
-                        "fmstream request failed for status={StatusCode}, query={Query}, country={Country}, genre={Genre}, offset={Offset}, method={Method}",
-                        response.StatusCode,
-                        request.Query,
-                        request.Country,
-                        request.Genre,
-                        offset,
-                        requestMessage.Method);
-                    return [];
-                }
-
-                using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
-                using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
-                return ParseStations(doc.RootElement);
+                _logger.LogDebug(
+                    "fmstream request failed for status={StatusCode}, query={Query}, country={Country}, genre={Genre}, offset={Offset}, method={Method}",
+                    response.StatusCode,
+                    request.Query,
+                    request.Country,
+                    request.Genre,
+                    offset,
+                    requestMessage.Method);
+                yield break;
             }
+
+            await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken).ConfigureAwait(false);
+            using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken).ConfigureAwait(false);
+            stations = ParseStations(doc.RootElement);
         }
         catch (Exception ex)
         {
@@ -171,7 +171,13 @@ public sealed class FmStreamOrgPlugin : ITraydioPlugin
                 request.Country,
                 request.Genre,
                 offset);
-            return [];
+            yield break;
+        }
+
+        foreach (var station in stations)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            yield return station;
         }
     }
 

@@ -89,25 +89,25 @@ public partial class LibVlcPluginSettingsView : UserControl
         if (OperatingSystem.IsWindows())
         {
             options.AddRange([
-                new("mmdevice", "mmdevice"),
-                new("directsound", "directsound"),
-                new("waveout", "waveout"),
-                new("wasapi", "wasapi"),
+                new OptionItem("mmdevice", "mmdevice"),
+                new OptionItem("directsound", "directsound"),
+                new OptionItem("waveout", "waveout"),
+                new OptionItem("wasapi", "wasapi"),
             ]);
         }
         else if (OperatingSystem.IsLinux())
         {
             options.AddRange([
-                new("pulse", "pulse"),
-                new("alsa", "alsa"),
-                new("jack", "jack"),
+                new OptionItem("pulse", "pulse"),
+                new OptionItem("alsa", "alsa"),
+                new OptionItem("jack", "jack"),
             ]);
         }
         else if (OperatingSystem.IsMacOS())
         {
             options.AddRange([
-                new("coreaudio", "coreaudio"),
-                new("auhal", "auhal"),
+                new OptionItem("coreaudio", "coreaudio"),
+                new OptionItem("auhal", "auhal"),
             ]);
         }
 
@@ -127,21 +127,21 @@ public partial class LibVlcPluginSettingsView : UserControl
             if (string.Equals(module, "waveout", StringComparison.OrdinalIgnoreCase))
             {
                 options.AddRange([
-                    new("default", "Default device"),
-                    new("communications", "Default communications device"),
+                    new OptionItem("default", "Default device"),
+                    new OptionItem("communications", "Default communications device"),
                 ]);
             }
             else
             {
                 options.AddRange([
-                    new("default", "Default device"),
-                    new("communications", "Default communications device"),
+                    new OptionItem("default", "Default device"),
+                    new OptionItem("communications", "Default communications device"),
                 ]);
             }
         }
         else
         {
-            options.Add(new("default", "Default device"));
+            options.Add(new OptionItem("default", "Default device"));
         }
 
         AddCustomOptionIfNeeded(options, savedDevice);
@@ -160,7 +160,7 @@ public partial class LibVlcPluginSettingsView : UserControl
             return;
         }
 
-        options.Add(new(value, "Saved custom: " + value));
+        options.Add(new OptionItem(value, "Saved custom: " + value));
     }
 
     private static OptionItem FindOption(IReadOnlyList<OptionItem> options, string? value)
